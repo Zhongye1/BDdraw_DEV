@@ -27,6 +27,7 @@ export interface CanvasElement {
   strokeWidth: number
   alpha?: number
   points?: number[][]
+  rotation?: number // 新增：弧度制 (radians)元素旋转要用
 
   // [新增] 文本相关属性
   text?: string // 存储 HTML 字符串

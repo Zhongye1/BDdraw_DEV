@@ -3,7 +3,7 @@ import { Viewport } from 'pixi-viewport'
 import { ElementRenderer } from '../rendering/ElementRenderer'
 import { TransformerRenderer } from '../rendering/TransformerRenderer'
 import { InteractionHandler } from '../interaction/InteractionHandler'
-import { useStore, type ToolType } from '@/stores/canvasStore'
+import { useStore, type ToolType, type CanvasElement } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import type { HandleType, StageManagerState } from './types'
 
@@ -14,11 +14,9 @@ export class StageManagerCore {
   private elementLayer: PIXI.Container = new PIXI.Container()
   private uiLayer: PIXI.Container = new PIXI.Container()
 
-  // 使用独立的渲染器模块
   private elementRenderer = new ElementRenderer()
   private transformerRenderer = new TransformerRenderer()
 
-  // 使用独立的交互处理器
   private interactionHandler!: InteractionHandler
 
   private selectionRectGraphic = new PIXI.Graphics()
@@ -29,6 +27,10 @@ export class StageManagerCore {
     startPos: { x: 0, y: 0 },
     currentId: null,
     initialElementState: null,
+    // --- 新增初始化 ---
+    initialElementsMap: null,
+    initialGroupBounds: null,
+    // ----------------
     activeHandle: null,
     isSpacePressed: false,
     destroyed: false,
@@ -44,7 +46,6 @@ export class StageManagerCore {
       this.uiLayer.addChild(this.eraserGraphic)
       this.uiLayer.addChild(this.transformerRenderer.getGraphic())
 
-      // 初始化交互处理器
       this.interactionHandler = new InteractionHandler(
         this.viewport,
         this.onPointerDown,
@@ -112,6 +113,30 @@ export class StageManagerCore {
     this.viewport.drag({ mouseButtons: 'middle' }).pinch().wheel()
   }
 
+  // --- 辅助方法：计算选中元素的整体包围盒 ---
+  private getSelectionBounds(selectedIds: string[], elements: Record<string, CanvasElement>) {
+    let minX = Infinity,
+      minY = Infinity,
+      maxX = -Infinity,
+      maxY = -Infinity
+
+    let hasValid = false
+    selectedIds.forEach((id) => {
+      const el = elements[id]
+      if (!el) return
+      hasValid = true
+      // 使用数据模型中的宽高计算
+      // 如果想要更精确的 Text 包围盒，可以结合 ElementRenderer 的 spriteMap
+      minX = Math.min(minX, el.x)
+      minY = Math.min(minY, el.y)
+      maxX = Math.max(maxX, el.x + el.width)
+      maxY = Math.max(maxY, el.y + el.height)
+    })
+
+    if (!hasValid) return null
+    return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+  }
+
   // --- 交互逻辑 ---
   private onPointerDown = (e: PIXI.FederatedPointerEvent) => {
     if (e.button === 1) return
@@ -129,10 +154,8 @@ export class StageManagerCore {
     // Eraser Mode
     if (tool === 'eraser') {
       this.state.mode = 'erasing'
-      // 检查当前点击位置是否有元素
       if (e.target && e.target.label) {
         const hitId = e.target.label
-        // 删除点击到的元素
         state.removeElements([hitId])
       }
       return
@@ -151,7 +174,6 @@ export class StageManagerCore {
         fill: '#000000',
         stroke: '#000000',
         strokeWidth: 0,
-        // 初始文本带个标签比较好，方便 HTMLText 解析
         text: '<p>请输入文本</p>',
         fontSize: state.currentStyle.fontSize || 20,
         fontFamily: state.currentStyle.fontFamily || 'Arial',
@@ -208,12 +230,30 @@ export class StageManagerCore {
   }
 
   private onHandleDown = (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => {
+    e.stopPropagation()
     this.state.mode = 'resizing'
     this.state.activeHandle = handle as HandleType | null
     this.state.currentId = elementId
-    const el = useStore.getState().elements[elementId]
-    this.state.initialElementState = { ...el, points: el.points ? [...el.points.map((p) => [...p])] : undefined }
     this.state.startPos = e.getLocalPosition(this.viewport)
+
+    const state = useStore.getState()
+    const { elements, selectedIds } = state
+
+    // 1. 捕捉所有选中元素的初始状态 (深拷贝 points)
+    const initialMap: Record<string, Partial<CanvasElement>> = {}
+    selectedIds.forEach((id) => {
+      const el = elements[id]
+      if (el) {
+        initialMap[id] = {
+          ...el,
+          points: el.points ? el.points.map((p) => [...p]) : undefined,
+        }
+      }
+    })
+    this.state.initialElementsMap = initialMap
+
+    // 2. 计算初始的群组包围盒
+    this.state.initialGroupBounds = this.getSelectionBounds(selectedIds, elements)
   }
 
   private onPointerMove = (e: PIXI.FederatedPointerEvent) => {
@@ -232,51 +272,58 @@ export class StageManagerCore {
         .fill({ color: 0x3b82f6, alpha: 0.2 })
         .stroke({ width: 1, color: 0x3b82f6 })
     } else if (this.state.mode === 'erasing') {
-      // 在橡皮擦模式下，鼠标移动时继续检测并删除元素
       if (e.target && e.target.label) {
         const hitId = e.target.label
-        // 删除鼠标悬停到的元素
         state.removeElements([hitId])
       } else {
-        // 显示橡皮擦圆形指示器
         const eraserSize = 20
         const worldPos = e.getLocalPosition(this.viewport)
         this.eraserGraphic.clear()
         this.eraserGraphic.circle(worldPos.x, worldPos.y, eraserSize)
         this.eraserGraphic.stroke({ width: 2, color: 0xff0000 })
       }
-    } else if (this.state.mode === 'dragging' && this.state.currentId) {
+    } else if (this.state.mode === 'dragging') {
       const dx = currentPos.x - this.state.startPos.x
       const dy = currentPos.y - this.state.startPos.y
-      state.selectedIds.forEach((id) => {
-        const el = state.elements[id]
-        state.updateElement(id, { x: el.x + dx, y: el.y + dy })
-      })
-      this.state.startPos = { x: currentPos.x, y: currentPos.y }
-    } else if (this.state.mode === 'resizing' && this.state.initialElementState && this.state.currentId) {
-      const el = state.elements[this.state.currentId]
 
-      if ((el.type === 'line' || el.type === 'arrow') && this.state.initialElementState.points) {
-        // ... 直线 Resize 逻辑 ...
-        const initX = this.state.initialElementState?.x ?? 0
-        const initY = this.state.initialElementState.y ?? 0
-        const p0Abs = {
-          x: initX + this.state.initialElementState.points[0][0],
-          y: initY + this.state.initialElementState.points[0][1],
-        }
-        const p1Abs = {
-          x: initX + this.state.initialElementState.points[1][0],
-          y: initY + this.state.initialElementState.points[1][1],
-        }
+      if (state.selectedIds.length > 0) {
+        state.selectedIds.forEach((id) => {
+          const el = state.elements[id]
+          // 注意：这里假设 onPointerMove 频率较高，dx/dy 是相对上一次的增量
+          // 但我们现在的 dx 是 current - start，所以需要基于 snapshot 移动，或者每次重置 startPos
+          // 原代码使用的是 "每次移动 state 后重置 startPos" 的策略 (见下方)
+          state.updateElement(id, { x: el.x + dx, y: el.y + dy })
+        })
+        // 重置起点，使 dx/dy 成为增量
+        this.state.startPos = { x: currentPos.x, y: currentPos.y }
+      }
+    } else if (this.state.mode === 'resizing' && this.state.initialElementsMap && this.state.initialGroupBounds) {
+      // === 修复后的 Resize 逻辑 ===
+      const selectedIds = state.selectedIds
+      const initBounds = this.state.initialGroupBounds
+      const handle = this.state.activeHandle
 
-        if (this.state.activeHandle === 'p0') {
+      // 1. 处理单个线段/箭头的端点拖拽 (特例)
+      const singleId = selectedIds[0]
+      const singleEl = this.state.initialElementsMap[singleId]
+      if (
+        selectedIds.length === 1 &&
+        (singleEl.type === 'line' || singleEl.type === 'arrow') &&
+        (handle === 'p0' || handle === 'p1')
+      ) {
+        const initX = singleEl.x ?? 0
+        const initY = singleEl.y ?? 0
+        const points = singleEl.points!
+        const p0Abs = { x: initX + points[0][0], y: initY + points[0][1] }
+        const p1Abs = { x: initX + points[1][0], y: initY + points[1][1] }
+
+        if (handle === 'p0') {
           p0Abs.x = currentPos.x
           p0Abs.y = currentPos.y
-        } else if (this.state.activeHandle === 'p1') {
+        } else {
           p1Abs.x = currentPos.x
           p1Abs.y = currentPos.y
         }
-
         const newX = Math.min(p0Abs.x, p1Abs.x)
         const newY = Math.min(p0Abs.y, p1Abs.y)
         const newW = Math.abs(p0Abs.x - p1Abs.x)
@@ -285,44 +332,70 @@ export class StageManagerCore {
           [p0Abs.x - newX, p0Abs.y - newY],
           [p1Abs.x - newX, p1Abs.y - newY],
         ]
-
-        state.updateElement(this.state.currentId, { x: newX, y: newY, width: newW, height: newH, points: newPoints })
+        state.updateElement(singleId, { x: newX, y: newY, width: newW, height: newH, points: newPoints })
         return
       }
 
-      // 普通 Resize
-      const dx = currentPos.x - this.state.startPos.x
-      const dy = currentPos.y - this.state.startPos.y
-      const init = this.state.initialElementState
-      let newX = init.x ?? 0
-      let newY = init.y ?? 0
-      let newW = init.width ?? 0
-      let newH = init.height ?? 0
+      // 2. 通用群组缩放逻辑
+      // 计算鼠标相对于点击时的位移
+      const totalDx = currentPos.x - this.state.startPos.x
+      const totalDy = currentPos.y - this.state.startPos.y
 
-      if (this.state.activeHandle?.includes('l')) {
-        newX += dx
-        newW -= dx
+      // 基于初始包围盒计算新的包围盒
+      let finalL = initBounds.x
+      let finalR = initBounds.x + initBounds.width
+      let finalT = initBounds.y
+      let finalB = initBounds.y + initBounds.height
+
+      // 根据手柄方向应用位移
+      if (handle?.includes('l')) finalL += totalDx
+      if (handle?.includes('r')) finalR += totalDx
+      if (handle?.includes('t')) finalT += totalDy
+      if (handle?.includes('b')) finalB += totalDy
+
+      // 处理翻转（如果拉过了头）
+      if (finalR < finalL) {
+        ;[finalL, finalR] = [finalR, finalL]
       }
-      if (this.state.activeHandle?.includes('r')) {
-        newW += dx
-      }
-      if (this.state.activeHandle?.includes('t')) {
-        newY += dy
-        newH -= dy
-      }
-      if (this.state.activeHandle?.includes('b')) {
-        newH += dy
-      }
-      if (newW < 0) {
-        newX += newW
-        newW = Math.abs(newW)
-      }
-      if (newH < 0) {
-        newY += newH
-        newH = Math.abs(newH)
+      if (finalB < finalT) {
+        ;[finalT, finalB] = [finalB, finalT]
       }
 
-      state.updateElement(this.state.currentId, { x: newX, y: newY, width: newW, height: newH })
+      const newBoundsW = finalR - finalL
+      const newBoundsH = finalB - finalT
+
+      // 3. 计算缩放比例
+      const scaleX = initBounds.width === 0 ? 1 : newBoundsW / initBounds.width
+      const scaleY = initBounds.height === 0 ? 1 : newBoundsH / initBounds.height
+
+      // 4. 应用到所有选中的元素
+      selectedIds.forEach((id) => {
+        const initEl = this.state.initialElementsMap![id]
+        if (!initEl) return
+
+        // 计算新位置：新原点 + (相对位移 * 缩放)
+        const relX = initEl.x! - initBounds.x
+        const relY = initEl.y! - initBounds.y
+
+        const finalElX = finalL + relX * scaleX
+        const finalElY = finalT + relY * scaleY
+        const finalElW = initEl.width! * scaleX
+        const finalElH = initEl.height! * scaleY
+
+        const updatePayload: any = {
+          x: finalElX,
+          y: finalElY,
+          width: finalElW,
+          height: finalElH,
+        }
+
+        // 如果有内部点集，也需要缩放
+        if (initEl.points) {
+          updatePayload.points = initEl.points.map((p) => [p[0] * scaleX, p[1] * scaleY])
+        }
+
+        state.updateElement(id, updatePayload)
+      })
     } else if (this.state.mode === 'drawing' && this.state.currentId) {
       const el = state.elements[this.state.currentId]
       if (!el) return
@@ -361,7 +434,6 @@ export class StageManagerCore {
   private onPointerUp = () => {
     const state = useStore.getState()
     if (this.state.mode === 'erasing') {
-      // 橡皮擦模式结束，重置状态
       this.state.mode = 'idle'
       this.eraserGraphic.clear()
     }
@@ -406,6 +478,9 @@ export class StageManagerCore {
     this.state.currentId = null
     this.state.activeHandle = null
     this.state.initialElementState = null
+    // --- 清理状态 ---
+    this.state.initialElementsMap = null
+    this.state.initialGroupBounds = null
   }
 
   public updateViewportState(tool: ToolType) {
