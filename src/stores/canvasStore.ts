@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
+import { nanoid } from 'nanoid'
 
 export type ToolType =
   | 'select'
@@ -48,6 +49,10 @@ interface CanvasState {
   elements: Record<string, CanvasElement>
   selectedIds: string[]
   editingId: string | null
+  // 添加剪贴板状态
+  clipboard: CanvasElement[] | null
+  // 添加粘贴偏移计数
+  pasteOffset: number
 
   currentStyle: {
     fill: string
@@ -66,14 +71,19 @@ interface CanvasState {
   removeElements: (ids: string[]) => void
   setSelected: (ids: string[]) => void
   setEditingId: (id: string | null) => void
+  // 添加复制粘贴方法
+  copyElements: (ids: string[]) => void
+  pasteElements: () => void
 }
 
 export const useStore = create<CanvasState>()(
-  subscribeWithSelector((set) => ({
+  subscribeWithSelector((set, get) => ({
     tool: 'select',
     elements: {},
     selectedIds: [],
     editingId: null,
+    clipboard: null,
+    pasteOffset: 0,
     currentStyle: {
       fill: '#fbfbfdd2', // 默认文字颜色
       stroke: '#000000',
@@ -99,6 +109,43 @@ export const useStore = create<CanvasState>()(
         const newElements = { ...state.elements }
         ids.forEach((id) => delete newElements[id])
         return { elements: newElements, selectedIds: [] }
+      }),
+    // 实现复制方法
+    copyElements: (ids) =>
+      set((state) => {
+        const elementsToCopy = ids.map((id) => state.elements[id]).filter(Boolean)
+        return { clipboard: elementsToCopy }
+      }),
+    // 实现粘贴方法
+    pasteElements: () =>
+      set((state) => {
+        if (!state.clipboard || state.clipboard.length === 0) return state
+
+        // 增加粘贴偏移量
+        const newOffset = state.pasteOffset + 1
+
+        const newElements: Record<string, CanvasElement> = {}
+        const newIds: string[] = []
+
+        state.clipboard.forEach((element) => {
+          const newId = nanoid()
+          const randomSign = Math.random() > 0.5 ? 1 : -1 // 随机选择正负
+          const randomOffset = Math.random() * 20 // 0-20的随机偏移量
+          newIds.push(newId)
+          newElements[newId] = {
+            ...element,
+            id: newId,
+            // 每次粘贴都在前一次的基础上继续偏移
+            x: element.x + randomOffset * randomSign,
+            y: element.y + randomOffset * randomSign,
+          }
+        })
+
+        return {
+          elements: { ...state.elements, ...newElements },
+          selectedIds: newIds,
+          pasteOffset: newOffset,
+        }
       }),
   })),
 )

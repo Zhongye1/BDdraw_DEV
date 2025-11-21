@@ -183,15 +183,25 @@ export class StageManagerCore {
       return
     }
 
+    // Check if we're clicking on an element (regardless of current tool)
+    // This allows direct selection when hovering over elements with "move" cursor
+    if (e.target && e.target.label && !e.target.label.startsWith('handle:')) {
+      const hitId = e.target.label
+      // If we're not already in select mode, switch to it
+      if (tool !== 'select') {
+        state.setTool('select')
+      }
+      // Select the element and start dragging
+      this.state.mode = 'dragging'
+      this.state.currentId = hitId
+      if (!state.selectedIds.includes(hitId)) {
+        state.setSelected([hitId])
+      }
+      return
+    }
+
     // Select Mode
     if (tool === 'select') {
-      if (e.target && e.target.label && !e.target.label.startsWith('handle:')) {
-        const hitId = e.target.label
-        this.state.mode = 'dragging'
-        this.state.currentId = hitId
-        if (!state.selectedIds.includes(hitId)) state.setSelected([hitId])
-        return
-      }
       this.state.mode = 'selecting'
       state.setSelected([])
       return
