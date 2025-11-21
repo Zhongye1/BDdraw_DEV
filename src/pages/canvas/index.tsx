@@ -5,11 +5,15 @@ import { useStore } from '@/stores/canvasStore'
 import PropertyPanel from '@/components/property-panel'
 import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
 import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
+import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management.ts'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const stageManagerRef = useRef<StageManager | null>(null)
   const { elements } = useStore()
+
+  // 使用自定义hook管理快捷键
+  useCanvasShortcuts({ stageManagerRef })
 
   // 初始化 StageManager
   useEffect(() => {
@@ -21,30 +25,6 @@ export default function PixiCanvas() {
     return () => {
       stageManagerRef.current?.destroy()
       stageManagerRef.current = null
-    }
-  }, [])
-
-  // 键盘事件监听
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 按下空格，且没有处于输入框中
-      if (e.code === 'Space' && !e.repeat && (e.target as HTMLElement).tagName !== 'INPUT') {
-        stageManagerRef.current?.setSpacePressed(true)
-      }
-    }
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space') {
-        stageManagerRef.current?.setSpacePressed(false)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    window.addEventListener('keyup', handleKeyUp)
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown)
-      window.removeEventListener('keyup', handleKeyUp)
     }
   }, [])
 
