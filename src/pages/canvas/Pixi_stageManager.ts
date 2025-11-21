@@ -502,11 +502,14 @@ export class StageManager {
         // 这里的 width/height 必须是正数 (Bounding Box 尺寸)
         const width = Math.abs(localX)
         const height = Math.abs(localY)
+        // 确保最小宽度和高度，避免出现0值导致选中困难
+        const minWidth = Math.max(width, 1)
+        const minHeight = Math.max(height, 1)
 
         state.updateElement(this.currentId, {
           points: newPoints,
-          width,
-          height,
+          width: minWidth,
+          height: minHeight,
         })
       }
 
@@ -553,13 +556,16 @@ export class StageManager {
     // 绘图结束后的数据整理 (Normalization)
     // 对于 Pencil，我们在 drawing 时没有调整 x,y，现在需要把 x,y 移动到包围盒左上角，
     // 并让所有 points 减去偏移量。这样 Transformer 框才会贴合图形。
+    // 对于 Line/Arrow，我们也需要进行类似处理
     if (this.mode === 'drawing' && this.currentId) {
       const el = state.elements[this.currentId]
-      if (el.type === 'pencil' && el.points) {
+      if ((el.type === 'pencil' || el.type === 'line' || el.type === 'arrow') && el.points) {
         const xs = el.points.map((p) => p[0])
         const ys = el.points.map((p) => p[1])
         const minX = Math.min(...xs)
         const minY = Math.min(...ys)
+        const maxX = Math.max(...xs)
+        const maxY = Math.max(...ys)
 
         // 只有当图形不在原点时才需要调整
         if (minX !== 0 || minY !== 0) {
@@ -570,6 +576,8 @@ export class StageManager {
             x: newX,
             y: newY,
             points: newPoints,
+            width: maxX - minX,
+            height: maxY - minY,
           })
         }
       }
