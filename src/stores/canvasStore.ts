@@ -2,12 +2,22 @@ import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
 // 在文件顶部添加或更新类型定义
-export type ToolType = 'select' | 'rect' | 'circle' | 'triangle' | 'hand'
+// 1. 新增工具类型
+export type ToolType =
+  | 'select'
+  | 'hand'
+  | 'rect'
+  | 'circle'
+  | 'triangle'
+  | 'diamond' // 形状
+  | 'line'
+  | 'arrow'
+  | 'pencil' // 路径类
 
 // 定义元素结构
 export interface CanvasElement {
   id: string
-  type: 'rect' | 'circle' | 'triangle'
+  type: 'rect' | 'circle' | 'triangle' | 'diamond' | 'line' | 'arrow' | 'pencil'
   x: number
   y: number
   width: number
@@ -17,6 +27,7 @@ export interface CanvasElement {
   strokeWidth: number
   radius?: number
   alpha?: number
+  points?: number[][] //  points 字段：用于存储 线条/箭头/铅笔 的相对坐标点
 }
 
 interface CanvasState {
@@ -47,7 +58,7 @@ export const useStore = create<CanvasState>()(
     elements: {},
     selectedIds: [],
     currentStyle: {
-      fill: '#3b82f6',
+      fill: '#fdfdfee9',
       stroke: '#000000',
       strokeWidth: 2,
       radius: 0,
