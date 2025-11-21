@@ -1,7 +1,8 @@
 import { create } from 'zustand'
 import { subscribeWithSelector } from 'zustand/middleware'
 
-export type ToolType = 'select' | 'rect' | 'circle' | 'triangle'
+// 在文件顶部添加或更新类型定义
+export type ToolType = 'select' | 'rect' | 'circle' | 'triangle' | 'hand'
 
 // 定义元素结构
 export interface CanvasElement {

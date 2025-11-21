@@ -14,6 +14,7 @@
         "immer": "^10.2.0",
         "lucide-react": "^0.554.0",
         "nanoid": "^5.1.6",
+        "pixi-viewport": "^6.0.3",
         "pixi.js": "^8.14.3",
         "react": "^18.2.0",
         "react-dom": "^18.2.0",
@@ -1439,6 +1440,8 @@
     "pify": ["pify@4.0.1", "https://registry.npmmirror.com/pify/-/pify-4.0.1.tgz", {}, "sha512-uB80kBFb/tfd68bVleG9T5GGsGPjJrLAUpR5PZIrhBnIaRTQRjqdJSsIKkOP6OAIFbj7GOrcudc5pNjZ+geV2g=="],
 
     "pirates": ["pirates@4.0.7", "https://registry.npmmirror.com/pirates/-/pirates-4.0.7.tgz", {}, "sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA=="],
+
+    "pixi-viewport": ["pixi-viewport@6.0.3", "https://registry.npmmirror.com/pixi-viewport/-/pixi-viewport-6.0.3.tgz", { "peerDependencies": { "pixi.js": ">=8" } }, "sha512-2+qPJ0/n+8hQYhWvY+795+x9y3MiUrCOWacK0DY53whowWaGdx9iDocy7z1pBwjkZhC52YvrJQuZKK0sdVLtBw=="],
 
     "pixi.js": ["pixi.js@8.14.3", "https://registry.npmmirror.com/pixi.js/-/pixi.js-8.14.3.tgz", { "dependencies": { "@pixi/colord": "^2.9.6", "@types/css-font-loading-module": "^0.0.12", "@types/earcut": "^3.0.0", "@webgpu/types": "^0.1.40", "@xmldom/xmldom": "^0.8.10", "earcut": "^3.0.2", "eventemitter3": "^5.0.1", "gifuct-js": "^2.1.2", "ismobilejs": "^1.1.1", "parse-svg-path": "^0.1.2", "tiny-lru": "^11.4.5" } }, "sha512-6xGYARV8D9E/fO1c2NmYn+k2dQ5oZldVm5tNlLQJ8obTlOQXdL5QpMc217qTpRyHVDFaw5eoFCLF1gr6p5ZcjQ=="],
 

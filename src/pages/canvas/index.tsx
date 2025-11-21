@@ -10,6 +10,7 @@ export default function PixiCanvas() {
   const stageManagerRef = useRef<StageManager | null>(null)
   const { elements } = useStore()
 
+  // 初始化 StageManager
   useEffect(() => {
     if (!containerRef.current) return
 
@@ -22,8 +23,32 @@ export default function PixiCanvas() {
     }
   }, [])
 
+  // 键盘事件监听
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // 按下空格，且没有处于输入框中
+      if (e.code === 'Space' && !e.repeat && (e.target as HTMLElement).tagName !== 'INPUT') {
+        stageManagerRef.current?.setSpacePressed(true)
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        stageManagerRef.current?.setSpacePressed(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+    }
+  }, [])
+
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-white">
+    <div className="relative h-[90vh] w-auto overflow-hidden bg-blue-200">
       {/* 1. 悬浮工具栏 (内部已经配置了 fixed 定位) */}
       <TopToolbar />
 
