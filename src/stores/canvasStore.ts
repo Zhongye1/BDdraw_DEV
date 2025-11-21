@@ -11,7 +11,8 @@ export type ToolType =
   | 'line'
   | 'arrow'
   | 'pencil'
-  | 'text' // [新增] text 类型
+  | 'text'
+  | 'eraser' // 添加 eraser 类型
 
 export interface CanvasElement {
   id: string
@@ -50,6 +51,7 @@ interface CanvasState {
     fontSize: number
     fontFamily: string
     textAlign: 'left' | 'center' | 'right'
+    eraserSize: number // 添加橡皮擦大小属性
   }
 
   setTool: (tool: ToolType) => void
@@ -74,6 +76,7 @@ export const useStore = create<CanvasState>()(
       fontSize: 20,
       fontFamily: 'Arial',
       textAlign: 'left',
+      eraserSize: 20, // 默认橡皮擦大小
     },
 
     setTool: (tool) => set({ tool, selectedIds: [], editingId: null }),

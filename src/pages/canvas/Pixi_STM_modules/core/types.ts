@@ -1,6 +1,14 @@
 import type { CanvasElement, ToolType } from '@/stores/canvasStore'
 
-export type InteractionMode = 'idle' | 'panning' | 'selecting' | 'dragging' | 'resizing' | 'drawing'
+export type InteractionMode =
+  | 'idle'
+  | 'panning'
+  | 'selecting'
+  | 'dragging'
+  | 'resizing'
+  | 'drawing'
+  | 'texting'
+  | 'erasing'
 export type HandleType = 'tl' | 't' | 'tr' | 'r' | 'br' | 'b' | 'bl' | 'l' | 'p0' | 'p1'
 
 export interface StageManagerState {

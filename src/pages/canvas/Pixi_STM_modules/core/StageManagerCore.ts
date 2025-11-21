@@ -22,6 +22,7 @@ export class StageManagerCore {
   private interactionHandler!: InteractionHandler
 
   private selectionRectGraphic = new PIXI.Graphics()
+  private eraserGraphic = new PIXI.Graphics()
 
   private state: StageManagerState = {
     mode: 'idle',
@@ -40,6 +41,7 @@ export class StageManagerCore {
       this.viewport.addChild(this.elementLayer)
       this.viewport.addChild(this.uiLayer)
       this.uiLayer.addChild(this.selectionRectGraphic)
+      this.uiLayer.addChild(this.eraserGraphic)
       this.uiLayer.addChild(this.transformerRenderer.getGraphic())
 
       // 初始化交互处理器
@@ -120,8 +122,21 @@ export class StageManagerCore {
 
     this.state.startPos = { x: worldPos.x, y: worldPos.y }
     this.selectionRectGraphic.clear()
+    this.eraserGraphic.clear()
 
     if (tool === 'hand' || this.state.isSpacePressed) return
+
+    // Eraser Mode
+    if (tool === 'eraser') {
+      this.state.mode = 'erasing' as any
+      // 检查当前点击位置是否有元素
+      if (e.target && e.target.label) {
+        const hitId = e.target.label
+        // 删除点击到的元素
+        state.removeElements([hitId])
+      }
+      return
+    }
 
     // Text Mode
     if (tool === 'text') {
@@ -133,7 +148,7 @@ export class StageManagerCore {
         y: worldPos.y,
         width: 200,
         height: 40,
-        fill: state.currentStyle.fill,
+        fill: '#000000',
         stroke: '#000000',
         strokeWidth: 0,
         // 初始文本带个标签比较好，方便 HTMLText 解析
@@ -216,6 +231,20 @@ export class StageManagerCore {
         .rect(x, y, w, h)
         .fill({ color: 0x3b82f6, alpha: 0.2 })
         .stroke({ width: 1, color: 0x3b82f6 })
+    } else if (this.state.mode === 'erasing') {
+      // 在橡皮擦模式下，鼠标移动时继续检测并删除元素
+      if (e.target && e.target.label) {
+        const hitId = e.target.label
+        // 删除鼠标悬停到的元素
+        state.removeElements([hitId])
+      } else {
+        // 显示橡皮擦圆形指示器
+        const eraserSize = 20
+        const worldPos = e.getLocalPosition(this.viewport)
+        this.eraserGraphic.clear()
+        this.eraserGraphic.circle(worldPos.x, worldPos.y, eraserSize)
+        this.eraserGraphic.stroke({ width: 2, color: 0xff0000 })
+      }
     } else if (this.state.mode === 'dragging' && this.state.currentId) {
       const dx = currentPos.x - this.state.startPos.x
       const dy = currentPos.y - this.state.startPos.y
@@ -331,6 +360,11 @@ export class StageManagerCore {
 
   private onPointerUp = () => {
     const state = useStore.getState()
+    if (this.state.mode === 'erasing') {
+      // 橡皮擦模式结束，重置状态
+      this.state.mode = 'idle'
+      this.eraserGraphic.clear()
+    }
     if (this.state.mode === 'selecting') {
       const endPos = this.app.renderer.events.pointer.getLocalPosition(this.viewport)
       const minX = Math.min(this.state.startPos.x, endPos.x)
