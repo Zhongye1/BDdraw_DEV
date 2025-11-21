@@ -4,11 +4,13 @@ import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
 import { RouterProvider } from 'react-router-dom'
 import { createRouter } from './router'
 import { HelmetProvider } from 'react-helmet-async'
+import { Inspector } from 'react-dev-inspector'
 
 export default function App() {
   const queryClient = useMemo(() => new QueryClient({}), [])
   return (
     <HelmetProvider>
+      <Inspector keys={['control', 'shift', 'q']} />
       <QueryClientProvider client={queryClient}>
         <RouterProvider router={createRouter()} />
         <ReactQueryDevtools />

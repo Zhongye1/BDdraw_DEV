@@ -3,6 +3,7 @@ import react from '@vitejs/plugin-react'
 import svgr from 'vite-plugin-svgr'
 import path from 'path'
 import { vitePluginForArco } from '@arco-plugins/vite-react'
+import { inspectorServer } from '@react-dev-inspector/vite-plugin'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -13,6 +14,7 @@ export default defineConfig({
     }),
     vitePluginForArco(),
     react(),
+    inspectorServer(),
   ],
   resolve: {
     alias: {
