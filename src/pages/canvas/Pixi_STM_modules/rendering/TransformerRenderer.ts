@@ -83,9 +83,12 @@ export class TransformerRenderer {
     })
 
     const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+
+    // 绘制包围盒边框
     this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
     this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
+    // 如果只有一个元素被选中，显示各个控制手柄
     if (selectedIds.length === 1) {
       const handleSize = 8 / viewportScale
       const handles: Record<string, { x: number; y: number }> = {
@@ -99,6 +102,7 @@ export class TransformerRenderer {
         l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
       }
 
+      // 绘制控制手柄
       Object.entries(handles).forEach(([type, pos]) => {
         this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
         this.transformerGraphic.fill({ color: 0xffffff })
@@ -118,6 +122,70 @@ export class TransformerRenderer {
 
         this.transformerGraphic.addChild(hitZone)
       })
+    } else if (selectedIds.length > 1) {
+      // 多元素选择模式 - 显示包围盒控制手柄
+      const handleSize = 8 / viewportScale
+      const handles: Record<string, { x: number; y: number }> = {
+        tl: { x: bounds.x, y: bounds.y },
+        t: { x: bounds.x + bounds.width / 2, y: bounds.y },
+        tr: { x: bounds.x + bounds.width, y: bounds.y },
+        r: { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 },
+        br: { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+        b: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height },
+        bl: { x: bounds.x, y: bounds.y + bounds.height },
+        l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
+      }
+
+      // 绘制控制手柄
+      Object.entries(handles).forEach(([type, pos]) => {
+        this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
+        this.transformerGraphic.fill({ color: 0xffffff })
+        this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+        const hitZone = new PIXI.Graphics()
+        hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
+        hitZone.fill({ color: 0x000000, alpha: 0.0001 })
+        hitZone.eventMode = 'static'
+        hitZone.cursor = this.getCursorForHandle(type as HandleType)
+        hitZone.label = `handle:${type}`
+
+        hitZone.on('pointerdown', (e) => {
+          e.stopPropagation()
+          // 对于多选，我们只需要传递第一个元素的ID作为参考，实际操作会在其他地方处理
+          onHandleDown(e, type as HandleType, selectedIds[0])
+        })
+
+        this.transformerGraphic.addChild(hitZone)
+      })
+
+      // 绘制旋转手柄
+      const rotationHandleY = bounds.y - 20 / viewportScale
+      const rotationHandleX = bounds.x + bounds.width / 2
+
+      // 连接线
+      this.transformerGraphic.moveTo(rotationHandleX, bounds.y)
+      this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
+      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+      // 旋转手柄圆圈
+      this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
+      this.transformerGraphic.fill({ color: 0xffffff })
+      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+      // 旋转手柄点击区域
+      const rotationHitZone = new PIXI.Graphics()
+      rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
+      rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
+      rotationHitZone.eventMode = 'static'
+      rotationHitZone.cursor = 'grab'
+      rotationHitZone.label = 'handle:rotate'
+
+      rotationHitZone.on('pointerdown', (e) => {
+        e.stopPropagation()
+        onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
+      })
+
+      this.transformerGraphic.addChild(rotationHitZone)
     }
   }
 
@@ -136,6 +204,8 @@ export class TransformerRenderer {
       case 'l':
       case 'r':
         return 'ew-resize'
+      case 'rotate':
+        return 'grab'
       default:
         return 'default'
     }
