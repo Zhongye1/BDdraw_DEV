@@ -146,7 +146,7 @@ export default function TopToolbar() {
 
         {/* 2. 下方的提示文字 (Hint)  */}
         <div className="pointer-events-none select-none text-xs text-gray-400">
-          To move canvas, hold mouse wheel or spacebar while dragging, or use the hand tool
+          按住鼠标中键或空格键拖动画布，或使用手形工具
         </div>
       </div>
 

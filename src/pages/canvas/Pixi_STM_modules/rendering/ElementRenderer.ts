@@ -40,8 +40,8 @@ export class ElementRenderer {
             PIXI.Assets.load(data.imageUrl)
               .then((loadedTexture) => {
                 // 加载完成：存入缓存
-                this.textureCache.set(data.imageUrl!, loadedTexture)
-                this.loadingSet.delete(data.imageUrl!)
+                this.textureCache.set(data.imageUrl ?? '', loadedTexture)
+                this.loadingSet.delete(data.imageUrl ?? '')
 
                 // *** 立即更新图形显示 ***
                 // 纹理加载完成后立即更新图形，不再等待定时检查
@@ -105,7 +105,7 @@ export class ElementRenderer {
               })
               .catch((err) => {
                 console.error('Failed to load asset:', err)
-                this.loadingSet.delete(data.imageUrl!)
+                this.loadingSet.delete(data.imageUrl ?? '')
 
                 // 加载失败也停止定时检查
                 if (this.imageUpdateTimers.has(id)) {
@@ -233,7 +233,7 @@ export class ElementRenderer {
           fontSize: data.fontSize || 20, // 默认字体大小 (会被 HTML 内联样式覆盖)
           fontFamily: data.fontFamily || 'Arial',
           fill: data.fill || '#000000', // 默认颜色 (会被 HTML 内联样式覆盖)
-          align: data.textAlign || ('left' as any),
+          align: data.textAlign || ('left' as 'left' | 'center' | 'right'),
           // CSS 重置，消除 p 标签自带的 margin
           cssOverrides: ['p { margin: 0; padding: 0; }', 'span { display: inline; }'],
         }
@@ -364,7 +364,7 @@ export class ElementRenderer {
 
         // 清理定时器
         if (this.imageUpdateTimers.has(id)) {
-          clearInterval(this.imageUpdateTimers.get(id)!)
+          clearInterval(this.imageUpdateTimers.get(id) ?? '')
           this.imageUpdateTimers.delete(id)
         }
       }

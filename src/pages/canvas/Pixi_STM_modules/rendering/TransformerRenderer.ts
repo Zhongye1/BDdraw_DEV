@@ -12,7 +12,7 @@ export class TransformerRenderer {
   public renderTransformer(
     elements: Record<string, CanvasElement>,
     selectedIds: string[],
-    spriteMap: Map<string, PIXI.Graphics | any>,
+    spriteMap: Map<string, PIXI.Graphics | PIXI.HTMLText | PIXI.Sprite>,
     onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
     viewportScale: number,
   ) {
@@ -27,7 +27,7 @@ export class TransformerRenderer {
 
     // --- A. 直线/箭头模式 ---
     if (isLinearElement) {
-      const points = el.points!
+      const points = el.points ?? []
       const p0 = { x: el.x + points[0][0], y: el.y + points[0][1] }
       const p1 = { x: el.x + points[1][0], y: el.y + points[1][1] }
       const handleSize = 10 / viewportScale
