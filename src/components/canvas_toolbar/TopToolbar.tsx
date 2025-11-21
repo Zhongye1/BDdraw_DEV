@@ -18,6 +18,7 @@ import {
   Unlock,
   LayoutGrid, // 用作最后的那个库图标
 } from 'lucide-react'
+import ImageInsertModal from '@/components/image-insert-modal'
 
 // --- 类型定义 ---
 type ToolType =
@@ -45,6 +46,7 @@ interface ToolItemConfig {
 export default function TopToolbar() {
   const { tool, setTool } = useStore()
   const [locked, setLocked] = useState(false)
+  const [imageModalVisible, setImageModalVisible] = useState(false)
 
   // 简单的 className 拼接函数（如果你没有引入 clsx/tailwind-merge）
   const cls = (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' ')
@@ -69,7 +71,14 @@ export default function TopToolbar() {
     { id: 'line', value: 'line', icon: Minus, label: 'Line (L)', shortcut: '6' },
     { id: 'pencil', value: 'pencil', icon: Pencil, label: 'Draw (P)', shortcut: '7' },
     { id: 'text', value: 'text', icon: Type, label: 'Text (T)', shortcut: '8' },
-    { id: 'image', value: 'image', icon: ImageIcon, label: 'Insert image', shortcut: '9' },
+    {
+      id: 'image',
+      value: 'image',
+      icon: ImageIcon,
+      label: 'Insert image',
+      shortcut: '9',
+      onClick: () => setImageModalVisible(true),
+    },
     { id: 'eraser', value: 'eraser', icon: Eraser, label: 'Eraser (E)', shortcut: '0' },
     { isSeparator: true },
     {
@@ -87,57 +96,61 @@ export default function TopToolbar() {
   ]
 
   return (
-    <div className="fixed left-1/2 top-20 z-50 flex -translate-x-1/2 flex-col items-center gap-3">
-      {/* 1. 药丸形状的主工具栏 */}
-      <div className="flex items-center rounded-lg border border-gray-200/60 bg-white p-1 shadow-[0_0_6px_rgba(0,0,0,0.1)]">
-        {tools.map((item, index) => {
-          // 渲染分隔线
-          if (item.isSeparator) {
-            return <div key={`sep-${index}`} className="mx-1 h-6 w-px bg-gray-200" />
-          }
+    <>
+      <div className="fixed left-1/2 top-20 z-50 flex -translate-x-1/2 flex-col items-center gap-3">
+        {/* 1. 药丸形状的主工具栏 */}
+        <div className="flex items-center rounded-lg border border-gray-200/60 bg-white p-1 shadow-[0_0_6px_rgba(0,0,0,0.1)]">
+          {tools.map((item, index) => {
+            // 渲染分隔线
+            if (item.isSeparator) {
+              return <div key={`sep-${index}`} className="mx-1 h-6 w-px bg-gray-200" />
+            }
 
-          // 渲染按钮
-          const isActive = tool === item.value && item.type !== 'action'
-          const Icon = item.icon
+            // 渲染按钮
+            const isActive = tool === item.value && item.type !== 'action'
+            const Icon = item.icon
 
-          return (
-            <button
-              key={item.id || index}
-              title={item.label}
-              onClick={() => {
-                if (item.onClick) item.onClick()
-                if (item.value) setTool(item.value as any)
-              }}
-              className={cls(
-                'relative flex h-9 w-9 items-center justify-center transition-colors duration-100',
-                // 选中状态：淡紫色背景，深紫色图标
-                isActive ? 'bg-violet-100 text-violet-700' : 'bg-transparent text-gray-600 hover:bg-gray-100',
-                // 锁的特殊样式
-                item.id === 'lock' && locked ? 'text-gray-900' : '',
-              )}
-            >
-              {Icon && (
-                <Icon
-                  className={cls('h-4 w-4', item.value === 'line' ? 'rotate-45' : '')} // 线条图标旋转一下更像 Excalidraw
-                  strokeWidth={2}
-                />
-              )}
+            return (
+              <button
+                key={item.id || index}
+                title={item.label}
+                onClick={() => {
+                  if (item.onClick) item.onClick()
+                  if (item.value) setTool(item.value as any)
+                }}
+                className={cls(
+                  'relative flex h-9 w-9 items-center justify-center transition-colors duration-100',
+                  // 选中状态：淡紫色背景，深紫色图标
+                  isActive ? 'bg-violet-100 text-violet-700' : 'bg-transparent text-gray-600 hover:bg-gray-100',
+                  // 锁的特殊样式
+                  item.id === 'lock' && locked ? 'text-gray-900' : '',
+                )}
+              >
+                {Icon && (
+                  <Icon
+                    className={cls('h-4 w-4', item.value === 'line' ? 'rotate-45' : '')} // 线条图标旋转一下更像 Excalidraw
+                    strokeWidth={2}
+                  />
+                )}
 
-              {/* 右下角的快捷键数字 */}
-              {item.shortcut && (
-                <span className="absolute bottom-[2px] right-[2px] text-[9px] font-medium leading-none opacity-50">
-                  {item.shortcut}
-                </span>
-              )}
-            </button>
-          )
-        })}
+                {/* 右下角的快捷键数字 */}
+                {item.shortcut && (
+                  <span className="absolute bottom-[2px] right-[2px] text-[9px] font-medium leading-none opacity-50">
+                    {item.shortcut}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </div>
+
+        {/* 2. 下方的提示文字 (Hint)  */}
+        <div className="pointer-events-none select-none text-xs text-gray-400">
+          To move canvas, hold mouse wheel or spacebar while dragging, or use the hand tool
+        </div>
       </div>
 
-      {/* 2. 下方的提示文字 (Hint)  */}
-      <div className="pointer-events-none select-none text-xs text-gray-400">
-        To move canvas, hold mouse wheel or spacebar while dragging, or use the hand tool
-      </div>
-    </div>
+      <ImageInsertModal visible={imageModalVisible} onClose={() => setImageModalVisible(false)} />
+    </>
   )
 }

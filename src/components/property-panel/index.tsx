@@ -22,15 +22,25 @@ const PropertyPanel = () => {
       <ColorPicker value={element.stroke} onChange={(val) => handleChange('stroke', val)} className="w-full" />
 
       <div className="my-2">边框宽: {element.strokeWidth}</div>
-      <Slider value={element.strokeWidth} max={20} onChange={(val) => handleChange('strokeWidth', val)} />
+      <Slider value={element.strokeWidth || 0} max={20} onChange={(val) => handleChange('strokeWidth', val)} />
 
-      <div className="my-2">透明度: {element.alpha}</div>
-      <Slider value={element.alpha} min={0} max={1} step={0.1} onChange={(val) => handleChange('alpha', val)} />
+      <div className="my-2">透明度: {element.alpha ?? 1}</div>
+      <Slider value={element.alpha ?? 1} min={0} max={1} step={0.1} onChange={(val) => handleChange('alpha', val)} />
 
       {element.type === 'rect' && (
         <>
           <div className="my-2">圆角: {element.radius ?? 0}</div>
           <Slider value={element.radius ?? 0} max={100} onChange={(val) => handleChange('radius', val)} />
+        </>
+      )}
+
+      {element.type !== 'image' && (
+        <>
+          <div className="my-2">边框色</div>
+          <ColorPicker value={element.stroke} onChange={(val) => handleChange('stroke', val)} className="w-full" />
+
+          <div className="my-2">边框宽: {element.strokeWidth}</div>
+          <Slider value={element.strokeWidth || 0} max={20} onChange={(val) => handleChange('strokeWidth', val)} />
         </>
       )}
     </div>

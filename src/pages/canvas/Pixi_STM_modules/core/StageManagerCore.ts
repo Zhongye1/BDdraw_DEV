@@ -128,7 +128,7 @@ export class StageManagerCore {
 
     // Eraser Mode
     if (tool === 'eraser') {
-      this.state.mode = 'erasing' as any
+      this.state.mode = 'erasing'
       // 检查当前点击位置是否有元素
       if (e.target && e.target.label) {
         const hitId = e.target.label
@@ -258,15 +258,15 @@ export class StageManagerCore {
 
       if ((el.type === 'line' || el.type === 'arrow') && this.state.initialElementState.points) {
         // ... 直线 Resize 逻辑 ...
-        const initX = this.state.initialElementState.x!
-        const initY = this.state.initialElementState.y!
+        const initX = this.state.initialElementState?.x ?? 0
+        const initY = this.state.initialElementState.y ?? 0
         const p0Abs = {
-          x: initX + this.state.initialElementState.points![0][0],
-          y: initY + this.state.initialElementState.points![0][1],
+          x: initX + this.state.initialElementState.points[0][0],
+          y: initY + this.state.initialElementState.points[0][1],
         }
         const p1Abs = {
-          x: initX + this.state.initialElementState.points![1][0],
-          y: initY + this.state.initialElementState.points![1][1],
+          x: initX + this.state.initialElementState.points[1][0],
+          y: initY + this.state.initialElementState.points[1][1],
         }
 
         if (this.state.activeHandle === 'p0') {
@@ -294,10 +294,10 @@ export class StageManagerCore {
       const dx = currentPos.x - this.state.startPos.x
       const dy = currentPos.y - this.state.startPos.y
       const init = this.state.initialElementState
-      let newX = init.x!
-      let newY = init.y!
-      let newW = init.width!
-      let newH = init.height!
+      let newX = init.x ?? 0
+      let newY = init.y ?? 0
+      let newW = init.width ?? 0
+      let newH = init.height ?? 0
 
       if (this.state.activeHandle?.includes('l')) {
         newX += dx

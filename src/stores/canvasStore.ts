@@ -12,7 +12,8 @@ export type ToolType =
   | 'arrow'
   | 'pencil'
   | 'text'
-  | 'eraser' // 添加 eraser 类型
+  | 'image' // 添加 image 类型
+  | 'eraser'
 
 export interface CanvasElement {
   id: string
@@ -32,6 +33,10 @@ export interface CanvasElement {
   fontSize?: number
   fontFamily?: string
   textAlign?: 'left' | 'center' | 'right'
+
+  // [新增] 图像相关属性
+  imageUrl?: string
+  filter?: 'none' | 'blur' | 'brightness' | 'grayscale' // 三种滤镜加一个无滤镜选项
 
   // 矩形圆角属性
   radius?: number
