@@ -24,6 +24,7 @@
     "experimentalDecorators": true,
     "rootDir": ".",
     "jsx": "react-jsx",
+    "moduleResolution": "node",
     "paths": {
       "@/*": [
         "./src/*"
