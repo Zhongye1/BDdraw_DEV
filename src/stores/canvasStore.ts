@@ -67,7 +67,7 @@ export const useStore = create<CanvasState>()(
     selectedIds: [],
     editingId: null,
     currentStyle: {
-      fill: '#000000', // 默认文字颜色
+      fill: '#fbfbfdd2', // 默认文字颜色
       stroke: '#000000',
       strokeWidth: 2,
       alpha: 1,
