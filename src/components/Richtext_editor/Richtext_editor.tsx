@@ -49,7 +49,7 @@ export const RichTextEditor = ({ value, onChange, className }: RichTextEditorPro
   }, [editor])
 
   return (
-    <div className={`flex flex-col border-t border-gray-200 bg-white shadow-2xl ${className || ''}`}>
+    <div className={`flex flex-col border-t border-gray-50 bg-white shadow-xl ${className || ''}`}>
       {/* 工具栏 */}
       <Toolbar
         editor={editor}

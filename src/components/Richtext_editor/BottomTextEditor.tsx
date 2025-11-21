@@ -31,12 +31,12 @@ export default function BottomTextEditor() {
   }
 
   return (
-    <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center">
-      <div className="animate-slide-up pointer-events-auto w-full max-w-3xl shadow-2xl">
+    <div className="pointer-events-none fixed bottom-8 left-0 right-0 z-50 flex justify-center">
+      <div className="animate-slide-up pointer-events-auto mx-4 w-full max-w-3xl shadow-xl">
         <RichTextEditor
           value={localHtml}
           onChange={handleChange}
-          className="rounded-t-lg border-t-2 border-blue-500 bg-white"
+          className="rounded-lg border-t-2 border-blue-500 bg-white"
         />
       </div>
     </div>

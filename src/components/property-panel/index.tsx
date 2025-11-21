@@ -33,16 +33,6 @@ const PropertyPanel = () => {
           <Slider value={element.radius ?? 0} max={100} onChange={(val) => handleChange('radius', val)} />
         </>
       )}
-
-      {element.type !== 'image' && (
-        <>
-          <div className="my-2">边框色</div>
-          <ColorPicker value={element.stroke} onChange={(val) => handleChange('stroke', val)} className="w-full" />
-
-          <div className="my-2">边框宽: {element.strokeWidth}</div>
-          <Slider value={element.strokeWidth || 0} max={20} onChange={(val) => handleChange('strokeWidth', val)} />
-        </>
-      )}
     </div>
   )
 }
