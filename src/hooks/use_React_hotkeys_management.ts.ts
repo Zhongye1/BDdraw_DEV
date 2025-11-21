@@ -7,7 +7,7 @@ interface UseCanvasShortcutsProps {
 }
 
 export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps) => {
-  const { selectedIds, removeElements, setTool } = useStore()
+  const { selectedIds, removeElements, setTool, copyElements, pasteElements } = useStore()
 
   // 删除选中元素
   useHotkeys(
@@ -22,6 +22,34 @@ export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps)
       ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
     },
     [selectedIds, removeElements],
+  )
+
+  // 复制元素
+  useHotkeys(
+    'ctrl+c, cmd+c',
+    () => {
+      if (selectedIds.length > 0) {
+        copyElements(selectedIds)
+      }
+    },
+    {
+      enableOnFormTags: false,
+      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+    },
+    [selectedIds, copyElements],
+  )
+
+  // 粘贴元素
+  useHotkeys(
+    'ctrl+v, cmd+v',
+    () => {
+      pasteElements()
+    },
+    {
+      enableOnFormTags: false,
+      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+    },
+    [pasteElements],
   )
 
   // 切换到选择工具
