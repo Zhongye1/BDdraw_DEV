@@ -1,145 +1,205 @@
 import { Helmet } from 'react-helmet-async'
-import { Button, Card, Space, Typography, Divider, Tag } from '@arco-design/web-react'
-import { IconApps, IconBulb, IconCode, IconThunderbolt, IconRight } from '@arco-design/web-react/icon'
+import { Button, Card, Typography, Divider, Tag } from '@arco-design/web-react'
+
+import { useNavigate } from 'react-router-dom'
 
 const { Title, Paragraph } = Typography
 
 export default function Home() {
+  const navigate = useNavigate()
+
+  const handleStartDrawing = () => {
+    navigate('/canvas')
+  }
+
   return (
     <>
       <Helmet>
-        <title>BDdraw_DEV</title>
+        <title>BDdraw_DEV - 项目任务看板</title>
       </Helmet>
 
-      {/* Hero Section */}
       <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 px-4 py-12 sm:px-6">
         <div className="mx-auto max-w-7xl">
-          <div className="mb-16 mt-8 text-center">
-            <Title heading={1} className="mb-6 text-4xl font-bold text-gray-900 md:text-6xl">
-              Arco Design Plugins
-            </Title>
-            <Paragraph className="mx-auto max-w-3xl text-xl text-gray-600">
-              强大且灵活的 React UI 组件库，提供丰富的插件和工具，帮助您快速构建现代化的 Web 应用。
-            </Paragraph>
-          </div>
+          <div className="mb-8 overflow-hidden rounded-2xl bg-white shadow-lg">
+            <div className="p-6">
+              {/* Project Requirements */}
+              <div className="mb-8">
+                <Title heading={3} className="mb-4 border-b pb-2 text-xl font-bold text-gray-800">
+                  课题要求
+                </Title>
 
-          {/* Features Grid */}
-          <div className="mb-16 grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-            <Card className="rounded-xl transition-shadow hover:shadow-lg">
-              <Space align="start" className="mb-4">
-                <div className="rounded-full bg-blue-100 p-3">
-                  <IconApps className="text-xl text-blue-600" />
-                </div>
-                <Title heading={4}>丰富的组件</Title>
-              </Space>
-              <Paragraph type="secondary">
-                提供超过 60 个高质量组件，涵盖各种常见 UI 场景，满足您的多样化需求。
-              </Paragraph>
-            </Card>
-
-            <Card className="rounded-xl transition-shadow hover:shadow-lg">
-              <Space align="start" className="mb-4">
-                <div className="rounded-full bg-green-100 p-3">
-                  <IconBulb className="text-xl text-green-600" />
-                </div>
-                <Title heading={4}>灵活定制</Title>
-              </Space>
-              <Paragraph type="secondary">支持主题定制和样式覆盖，轻松适配您的品牌风格和设计规范。</Paragraph>
-            </Card>
-
-            <Card className="rounded-xl transition-shadow hover:shadow-lg">
-              <Space align="start" className="mb-4">
-                <div className="rounded-full bg-purple-100 p-3">
-                  <IconCode className="text-xl text-purple-600" />
-                </div>
-                <Title heading={4}>开发者友好</Title>
-              </Space>
-              <Paragraph type="secondary">完善的 TypeScript 类型支持和详细的文档，提升开发效率和代码质量。</Paragraph>
-            </Card>
-
-            <Card className="rounded-xl transition-shadow hover:shadow-lg">
-              <Space align="start" className="mb-4">
-                <div className="rounded-full bg-orange-100 p-3">
-                  <IconThunderbolt className="text-xl text-orange-600" />
-                </div>
-                <Title heading={4}>高性能</Title>
-              </Space>
-              <Paragraph type="secondary">采用虚拟滚动等优化技术，确保在大规模数据场景下的流畅体验。</Paragraph>
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="mb-16 overflow-hidden rounded-2xl bg-white shadow-lg">
-            <div className="p-8">
-              <Title heading={2} className="mb-6">
-                为什么选择 Arco Design？
-              </Title>
-
-              <div className="grid grid-cols-1 gap-8 md:grid-cols-2">
-                <div>
-                  <Title heading={3} className="mb-4 flex items-center">
-                    <IconApps className="mr-2 text-blue-600" />
-                    完整的解决方案
-                  </Title>
-                  <Paragraph className="mb-4">
-                    Arco Design 不仅仅是一个 UI 组件库，它提供了一整套企业级中后台解决方案，
-                    包括设计资源、技术文档、最佳实践等。
-                  </Paragraph>
-                  <ul className="list-disc space-y-2 pl-5">
-                    <li>设计资源（Figma、Sketch）</li>
-                    <li>完整的主题定制系统</li>
-                    <li>国际化支持</li>
-                    <li>无障碍访问支持</li>
-                  </ul>
-                </div>
-
-                <div>
-                  <Title heading={3} className="mb-4 flex items-center">
-                    <IconThunderbolt className="mr-2 text-orange-600" />
-                    强大的插件生态
-                  </Title>
-                  <Paragraph className="mb-4">通过丰富的插件扩展功能，满足各种定制化需求：</Paragraph>
-                  <div className="mb-4 flex flex-wrap gap-2">
-                    <Tag color="blue">Vite Plugin</Tag>
-                    <Tag color="green">Webpack Plugin</Tag>
-                    <Tag color="purple">ESLint Plugin</Tag>
-                    <Tag color="orange">Figma Plugin</Tag>
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                  <div>
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      技术限制
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>禁止使用 react-flow、tldraw、konva 等开源图形库</li>
+                      <li>允许使用基础渲染库（pixi）</li>
+                      <li>局部功能使用三方库可接受</li>
+                      <li>主要业务逻辑需自行实现</li>
+                      <li>允许使用 Cursor/Trae 等 AI 编辑器</li>
+                    </ul>
                   </div>
-                  <Paragraph>
-                    这些插件可以帮助您在开发流程中更高效地使用 Arco Design， 从构建优化到设计协作，全面提升开发体验。
-                  </Paragraph>
+
+                  <div>
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      竞品参考
+                    </Title>
+                    <div className="ml-6">
+                      <Tag color="blue" className="mb-2 mr-2">
+                        Figma
+                      </Tag>
+                      <Tag color="green" className="mb-2 mr-2">
+                        Canva
+                      </Tag>
+                      <Tag color="purple" className="mb-2 mr-2">
+                        Excalidraw
+                      </Tag>
+                      <Tag color="orange" className="mb-2 mr-2">
+                        ProcessOn
+                      </Tag>
+                      <Tag color="red" className="mb-2 mr-2">
+                        即梦画布
+                      </Tag>
+                      <Tag color="cyan" className="mb-2 mr-2">
+                        飞书 Slide
+                      </Tag>
+                    </div>
+                  </div>
                 </div>
               </div>
 
               <Divider className="my-8" />
 
-              <div className="text-center">
-                <Title heading={3} className="mb-6">
-                  开始使用 Arco Design
+              {/* Project Schedule */}
+              <div className="mb-8">
+                <Title heading={3} className="mb-4 border-b pb-2 text-xl font-bold text-gray-800">
+                  项目节奏
                 </Title>
-                <Space size="large">
-                  <Button type="primary" size="large">
-                    查看文档
-                  </Button>
-                  <Button size="large">
-                    GitHub 仓库 <IconRight />
-                  </Button>
-                </Space>
+
+                <ol className="ml-6 list-decimal space-y-3">
+                  <li>明确 MVP 范围与技术选型（渲染层 DOM/Canvas + 框架 Vue/React）</li>
+                  <li>完成人员分工、项目框架搭建、确定草稿数据结构、最小画布可运行的 Demo</li>
+                  <li>完成基础渲染、视口缩放/拖拽、选区（点击/框选）、浮动工具栏的属性设置</li>
+                  <li>文本编辑、图层删除/拖拽/缩放；持久化（刷新后恢复）</li>
+                  <li>可选功能：如撤销/重做、旋转、组合或协同</li>
+                  <li>作业完成之后，交付代码仓库（可以是 Github 地址）、演示视频、项目说明文档三部分</li>
+                </ol>
+              </div>
+
+              <Divider className="my-8" />
+
+              {/* Task Breakdown */}
+              <div className="mb-8">
+                <Title heading={3} className="mb-4 border-b pb-2 text-xl font-bold text-gray-800">
+                  任务拆解
+                </Title>
+
+                <div className="space-y-6">
+                  <Card className="border-l-4 border-red-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P0】基础渲染
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>支持图形渲染，需要支持至少 3 种不同图形（矩形、圆角矩形、圆形、三角形等）</li>
+                      <li>
+                        支持以下图形属性：背景色（background）、边框宽度（border-width）、边框颜色（border-color）
+                      </li>
+                      <li>支持图片渲染，需要支持 png、jpeg 格式，支持设置三种简单滤镜</li>
+                      <li>
+                        支持富文本文字渲染，需要支持以下文本属性：
+                        字体（font-family）、字号（font-size）、颜色（color）、背景色（background）、
+                        BIUS（加粗、斜体、下划线、删除线）
+                      </li>
+                    </ul>
+                  </Card>
+
+                  <Card className="border-l-4 border-yellow-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P0】画布交互
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>支持无限画布的缩放、滚动、拖拽</li>
+                      <li>【挑战 ⭐️⭐️】支持无限画布滚动条</li>
+                      <li>【挑战 ⭐️⭐️⭐️】支持无限画布的 minimap 功能</li>
+                      <li>支持选区功能：点击选中单个元素、框选选中多个元素</li>
+                      <li>支持数据持久化，每次操作后自动保存数据，刷新页面数据仍然存在</li>
+                      <li>快捷键复制选中元素，粘贴后刷新页面还存在</li>
+                      <li>【挑战 ⭐️⭐️⭐️】支持辅助线功能</li>
+                    </ul>
+                  </Card>
+
+                  <Card className="border-l-4 border-blue-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P0】调参工具栏
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>
+                        浮动工具栏：
+                        <ul className="list-circle ml-6 mt-1">
+                          <li>当选中文本元素时出现在上方，支持设置不同文本属性</li>
+                          <li>当选中图形元素时出现在上方，支持设置不同图形属性</li>
+                          <li>当选中图片元素时出现在上方，支持设置不同图片属性</li>
+                        </ul>
+                      </li>
+                      <li>【挑战 ⭐️⭐️】选中文本元素的部分文字时也能够出现，支持设置局部文本的文本属性</li>
+                    </ul>
+                  </Card>
+
+                  <Card className="border-l-4 border-green-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P0】元素编辑
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>支持双击文本进入编辑，可以输入/删除文本内容</li>
+                      <li>支持对选中元素（单个或多个）删除</li>
+                      <li>支持对选中元素（单个或多个）拖拽</li>
+                      <li>支持对选中元素（单个或多个）缩放</li>
+                      <li>【挑战 ⭐️】支持对选中元素（单个或多个）旋转</li>
+                      <li>【挑战 ⭐️⭐️】支持对多个元素进行组合操作，组合可以嵌套</li>
+                      <li>【挑战 ⭐️⭐️⭐️】支持对多个元素进行打组、解组</li>
+                    </ul>
+                  </Card>
+
+                  <Card className="border-l-4 border-purple-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P0】性能优化
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>画布存在 100 个元素，打开页面到渲染完成 {'<'} 3s</li>
+                      <li>【挑战 ⭐️⭐️】同时操作 100 个元素，FPS 50+</li>
+                    </ul>
+                  </Card>
+
+                  <Card className="border-l-4 border-orange-500">
+                    <Title heading={4} className="mb-3 text-lg font-semibold">
+                      【P1】协同
+                    </Title>
+                    <ul className="ml-6 list-disc space-y-2">
+                      <li>【挑战 ⭐️⭐️⭐️】支持 undo & redo 操作</li>
+                      <li>【挑战 ⭐️⭐️⭐️⭐️⭐️】支持协同编辑，多人打开同一个画布可以协同编辑</li>
+                      <li>【挑战 ⭐️⭐️⭐️⭐️⭐️】支持离线编辑，断网后仍然可以对画布编辑，恢复网络后自动提交数据</li>
+                    </ul>
+                  </Card>
+                </div>
+              </div>
+
+              <Divider className="my-8" />
+
+              {/* FAQ */}
+              <div className="mb-8">
+                <Title heading={3} className="mb-4 border-b pb-2 text-xl font-bold text-gray-800">
+                  杂项说明
+                </Title>
+              </div>
+
+              <div className="text-center">
+                <Button type="primary" size="large" onClick={handleStartDrawing}>
+                  打开画布应用
+                </Button>
               </div>
             </div>
-          </div>
-
-          {/* CTA Section */}
-          <div className="rounded-2xl bg-gradient-to-r from-blue-500 to-indigo-600 p-12 text-center text-white">
-            <Title heading={2} className="mb-4 text-white">
-              准备好开始您的项目了吗？
-            </Title>
-            <Paragraph className="mx-auto mb-8 max-w-2xl text-xl text-blue-100">
-              Arco Design 提供了完整的工具链和丰富的组件，帮助您快速构建美观、易用的现代 Web 应用。
-            </Paragraph>
-            <Button type="primary" size="large" className="bg-white text-blue-600 hover:bg-gray-100">
-              立即开始
-            </Button>
           </div>
         </div>
       </div>
