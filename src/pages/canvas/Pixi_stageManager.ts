@@ -1,12 +1,12 @@
 // src/Pixi_stageManager.ts
 import * as PIXI from 'pixi.js'
+// 引入 HTMLText (PixiJS v8 内置支持，如果是 v7 可能需要安装 @pixi/text-html)
+import { HTMLText } from 'pixi.js'
 import { Viewport } from 'pixi-viewport'
 import { useStore, type CanvasElement, type ToolType } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 
 type InteractionMode = 'idle' | 'panning' | 'selecting' | 'dragging' | 'resizing' | 'drawing'
-
-// 扩展手柄定义，增加直线的 start/end
 type HandleType = 'tl' | 't' | 'tr' | 'r' | 'br' | 'b' | 'bl' | 'l' | 'p0' | 'p1'
 
 export class StageManager {
@@ -15,7 +15,9 @@ export class StageManager {
 
   private elementLayer: PIXI.Container = new PIXI.Container()
   private uiLayer: PIXI.Container = new PIXI.Container()
-  private spriteMap: Map<string, PIXI.Graphics> = new Map()
+
+  // 【修改点1】spriteMap 类型增加 HTMLText
+  private spriteMap: Map<string, PIXI.Graphics | HTMLText> = new Map()
 
   private mode: InteractionMode = 'idle'
   private startPos = { x: 0, y: 0 }
@@ -86,7 +88,7 @@ export class StageManager {
     this.viewport.drag({ mouseButtons: 'middle' }).pinch().wheel()
   }
 
-  // --- 渲染元素 (保持不变) ---
+  // --- 渲染元素 ---
   private renderElements(elements: Record<string, CanvasElement>, selectedIds: string[]) {
     if (this.destroyed) return
     const elementIds = new Set(Object.keys(elements))
@@ -94,70 +96,139 @@ export class StageManager {
     elementIds.forEach((id) => {
       const data = elements[id]
       let graphic = this.spriteMap.get(id)
-      if (!graphic) {
-        graphic = new PIXI.Graphics()
-        graphic.label = id
-        graphic.eventMode = 'static'
-        graphic.cursor = 'move'
-        this.elementLayer.addChild(graphic)
-        this.spriteMap.set(id, graphic)
-      }
 
-      graphic.clear()
-      const strokeWidth = data.strokeWidth ?? 2
-      const strokeColor = new PIXI.Color(data.stroke)
-      const fillColor = new PIXI.Color(data.fill)
-      const alpha = data.alpha ?? 1
-
-      if (strokeWidth > 0) {
-        graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-      }
-
-      if (data.type === 'rect') {
-        graphic.rect(0, 0, data.width, data.height).fill({ color: fillColor, alpha })
-      } else if (data.type === 'circle') {
-        graphic
-          .ellipse(data.width / 2, data.height / 2, data.width / 2, data.height / 2)
-          .fill({ color: fillColor, alpha })
-      } else if (data.type === 'triangle') {
-        graphic.poly([data.width / 2, 0, data.width, data.height, 0, data.height]).fill({ color: fillColor, alpha })
-      } else if (data.type === 'diamond') {
-        graphic
-          .poly([data.width / 2, 0, data.width, data.height / 2, data.width / 2, data.height, 0, data.height / 2])
-          .fill({ color: fillColor, alpha })
-      } else if (
-        (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
-        data.points &&
-        data.points.length > 0
-      ) {
-        graphic.moveTo(data.points[0][0], data.points[0][1])
-        for (let i = 1; i < data.points.length; i++) {
-          graphic.lineTo(data.points[i][0], data.points[i][1])
+      // === 处理 Text 类型 (HTMLText) ===
+      if (data.type === 'text') {
+        // 如果之前的 sprite 不是 HTMLText，销毁重建
+        if (graphic && !(graphic instanceof HTMLText)) {
+          this.elementLayer.removeChild(graphic)
+          graphic.destroy()
+          graphic = undefined
         }
-        graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
 
-        if (data.type === 'arrow' && data.points.length >= 2) {
-          const start = data.points[0]
-          const end = data.points[data.points.length - 1]
-          const dx = end[0] - start[0]
-          const dy = end[1] - start[1]
-          const angle = Math.atan2(dy, dx)
-          const headLength = 15
-          const headAngle = Math.PI / 6
-          graphic.moveTo(end[0], end[1])
-          graphic.lineTo(
-            end[0] - headLength * Math.cos(angle - headAngle),
-            end[1] - headLength * Math.sin(angle - headAngle),
-          )
-          graphic.moveTo(end[0], end[1])
-          graphic.lineTo(
-            end[0] - headLength * Math.cos(angle + headAngle),
-            end[1] - headLength * Math.sin(angle + headAngle),
-          )
-          graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+        if (!graphic) {
+          // 【修改点2】创建 HTMLText
+          graphic = new HTMLText({
+            text: '',
+            // 定义基础样式，具体的颜色/加粗由 HTML 字符串内的 style 决定
+            style: {
+              wordWrap: true, // 开启换行
+              breakWords: true,
+            },
+          })
+          graphic.label = id
+          graphic.eventMode = 'static'
+          graphic.cursor = 'move'
+          this.elementLayer.addChild(graphic)
+          this.spriteMap.set(id, graphic)
         }
+
+        const textObj = graphic as HTMLText
+
+        // 【修改点3】直接赋值 HTML 字符串
+        // HTMLText 会自动解析 span, strong, style 等标签
+        const htmlContent = data.text || '<span style="color:#cccccc">请输入文本</span>'
+
+        if (textObj.text !== htmlContent) {
+          textObj.text = htmlContent
+        }
+
+        // 更新样式配置 (主要是宽高限制和默认字体)
+        // 注意：HTMLText 的 style 实际上是生成 CSS 注入到 foreignObject 中
+        textObj.style = {
+          wordWrap: true,
+          wordWrapWidth: data.width || 400, // 宽度受控于 Store
+          fontSize: data.fontSize || 20, // 默认字体大小 (会被 HTML 内联样式覆盖)
+          fontFamily: data.fontFamily || 'Arial',
+          fill: data.fill || '#000000', // 默认颜色 (会被 HTML 内联样式覆盖)
+          align: data.textAlign || ('left' as any),
+          // CSS 重置，消除 p 标签自带的 margin
+          cssOverrides: ['p { margin: 0; padding: 0; }', 'span { display: inline; }'],
+        }
+
+        textObj.position.set(data.x, data.y)
       }
-      graphic.position.set(data.x, data.y)
+
+      // === 处理其他几何图形 ===
+      else {
+        // 如果之前的 sprite 是 HTMLText，销毁重建
+        if (graphic && graphic instanceof HTMLText) {
+          this.elementLayer.removeChild(graphic)
+          graphic.destroy()
+          graphic = undefined
+        }
+
+        if (!graphic) {
+          graphic = new PIXI.Graphics()
+          graphic.label = id
+          graphic.eventMode = 'static'
+          graphic.cursor = 'move'
+          this.elementLayer.addChild(graphic)
+          this.spriteMap.set(id, graphic)
+        }
+
+        const g = graphic as PIXI.Graphics
+        g.clear()
+        const strokeWidth = data.strokeWidth ?? 2
+        const strokeColor = new PIXI.Color(data.stroke)
+        const fillColor = new PIXI.Color(data.fill)
+        const alpha = data.alpha ?? 1
+
+        if (strokeWidth > 0) {
+          g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+        }
+
+        if (data.type === 'rect') {
+          g.rect(0, 0, data.width, data.height).fill({ color: fillColor, alpha })
+        } else if (data.type === 'circle') {
+          g.ellipse(data.width / 2, data.height / 2, data.width / 2, data.height / 2).fill({ color: fillColor, alpha })
+        } else if (data.type === 'triangle') {
+          g.poly([data.width / 2, 0, data.width, data.height, 0, data.height]).fill({ color: fillColor, alpha })
+        } else if (data.type === 'diamond') {
+          g.poly([
+            data.width / 2,
+            0,
+            data.width,
+            data.height / 2,
+            data.width / 2,
+            data.height,
+            0,
+            data.height / 2,
+          ]).fill({ color: fillColor, alpha })
+        } else if (
+          (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
+          data.points &&
+          data.points.length > 0
+        ) {
+          g.moveTo(data.points[0][0], data.points[0][1])
+          for (let i = 1; i < data.points.length; i++) {
+            g.lineTo(data.points[i][0], data.points[i][1])
+          }
+          g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+
+          if (data.type === 'arrow' && data.points.length >= 2) {
+            const start = data.points[0]
+            const end = data.points[data.points.length - 1]
+            const dx = end[0] - start[0]
+            const dy = end[1] - start[1]
+            const angle = Math.atan2(dy, dx)
+            const headLength = 15
+            const headAngle = Math.PI / 6
+            g.moveTo(end[0], end[1])
+            g.lineTo(
+              end[0] - headLength * Math.cos(angle - headAngle),
+              end[1] - headLength * Math.sin(angle - headAngle),
+            )
+            g.moveTo(end[0], end[1])
+            g.lineTo(
+              end[0] - headLength * Math.cos(angle + headAngle),
+              end[1] - headLength * Math.sin(angle + headAngle),
+            )
+            g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+          }
+        }
+        g.position.set(data.x, data.y)
+      }
     })
 
     this.spriteMap.forEach((graphic, id) => {
@@ -169,7 +240,7 @@ export class StageManager {
     })
   }
 
-  // --- 2. 渲染 Transformer (重要修改：区分直线逻辑) ---
+  // --- 2. 渲染 Transformer ---
   private renderTransformer(elements: Record<string, CanvasElement>, selectedIds: string[]) {
     this.transformerGraphic.clear()
     this.transformerGraphic.removeChildren()
@@ -177,35 +248,26 @@ export class StageManager {
     if (selectedIds.length === 0) return
 
     const el = elements[selectedIds[0]]
-    // 判断是否是 直线 或 箭头 且只有选中了一个
     const isLinearElement =
       selectedIds.length === 1 && (el.type === 'line' || el.type === 'arrow') && el.points?.length === 2
 
-    // --- 场景 A: 直线/箭头模式 (只画两个圆点手柄) ---
+    // --- A. 直线/箭头模式 ---
     if (isLinearElement) {
       const points = el.points!
-      // 计算绝对坐标
       const p0 = { x: el.x + points[0][0], y: el.y + points[0][1] }
       const p1 = { x: el.x + points[1][0], y: el.y + points[1][1] }
-
-      // 绘制连接线（可选，辅助视觉）
-      // this.transformerGraphic.moveTo(p0.x, p0.y).lineTo(p1.x, p1.y).stroke({ width: 1, color: 0x8b5cf6, alpha: 0.5 })
-
       const handleSize = 10 / this.viewport.scale.x
 
-      // 绘制两个手柄
       const drawHandle = (x: number, y: number, type: 'p0' | 'p1') => {
-        // 视觉圆点
         this.transformerGraphic.circle(x, y, handleSize / 2)
         this.transformerGraphic.fill({ color: 0xffffff })
         this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
-        // 交互热区
         const hitZone = new PIXI.Graphics()
-        hitZone.circle(x, y, handleSize) // 热区大一点
+        hitZone.circle(x, y, handleSize)
         hitZone.fill({ color: 0x000000, alpha: 0.0001 })
         hitZone.eventMode = 'static'
-        hitZone.cursor = 'pointer' // 或者 move
+        hitZone.cursor = 'move'
         hitZone.label = `handle:${type}`
         hitZone.on('pointerdown', (e) => {
           e.stopPropagation()
@@ -213,24 +275,37 @@ export class StageManager {
         })
         this.transformerGraphic.addChild(hitZone)
       }
-
       drawHandle(p0.x, p0.y, 'p0')
       drawHandle(p1.x, p1.y, 'p1')
       return
     }
 
-    // --- 场景 B: 普通包围盒模式 (Rect, Circle, Group, Pencil等) ---
+    // --- B. 普通包围盒模式 (Text, Rect, etc) ---
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
       maxY = -Infinity
+
     selectedIds.forEach((id) => {
       const el = elements[id]
-      if (!el) return
-      minX = Math.min(minX, el.x)
-      minY = Math.min(minY, el.y)
-      maxX = Math.max(maxX, el.x + el.width)
-      maxY = Math.max(maxY, el.y + el.height)
+      const sprite = this.spriteMap.get(id)
+
+      if (!el || !sprite) return
+
+      // 【修改点4】针对 Text，读取 sprite 的实时尺寸
+      // 文本的高度是由内容决定的，Store 里的 height 往往不准
+      if (el.type === 'text') {
+        // 注意：Text/HTMLText 的宽高是包含内容的实时边界
+        minX = Math.min(minX, el.x)
+        minY = Math.min(minY, el.y)
+        maxX = Math.max(maxX, el.x + sprite.width)
+        maxY = Math.max(maxY, el.y + sprite.height)
+      } else {
+        minX = Math.min(minX, el.x)
+        minY = Math.min(minY, el.y)
+        maxX = Math.max(maxX, el.x + el.width)
+        maxY = Math.max(maxY, el.y + el.height)
+      }
     })
 
     const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
@@ -282,16 +357,39 @@ export class StageManager {
     const state = useStore.getState()
     const tool = state.tool
     const worldPos = e.getLocalPosition(this.viewport)
-    if (e.target && e.target.label?.startsWith('handle:')) return // 已在 onHandleDown 处理
+    if (e.target && e.target.label?.startsWith('handle:')) return
 
     this.startPos = { x: worldPos.x, y: worldPos.y }
     this.selectionRectGraphic.clear()
 
     if (tool === 'hand' || this.isSpacePressed) return
 
+    // Text Mode
+    if (tool === 'text') {
+      const newId = nanoid()
+      state.addElement({
+        id: newId,
+        type: 'text',
+        x: worldPos.x,
+        y: worldPos.y,
+        width: 200,
+        height: 40,
+        fill: state.currentStyle.fill,
+        stroke: '#000000',
+        strokeWidth: 0,
+        // 初始文本带个标签比较好，方便 HTMLText 解析
+        text: '<p>请输入文本</p>',
+        fontSize: state.currentStyle.fontSize || 20,
+        fontFamily: state.currentStyle.fontFamily || 'Arial',
+      })
+      state.setSelected([newId])
+      state.setTool('select')
+      return
+    }
+
     // Select Mode
     if (tool === 'select') {
-      if (e.target instanceof PIXI.Graphics && e.target.label && !e.target.label.startsWith('handle:')) {
+      if (e.target && e.target.label && !e.target.label.startsWith('handle:')) {
         const hitId = e.target.label
         this.mode = 'dragging'
         this.currentId = hitId
@@ -307,7 +405,6 @@ export class StageManager {
     this.mode = 'drawing'
     const newId = nanoid()
     this.currentId = newId
-
     const commonProps = {
       id: newId,
       type: tool,
@@ -324,7 +421,6 @@ export class StageManager {
     if (tool === 'pencil') {
       state.addElement({ ...commonProps, points: [[0, 0]] })
     } else if (tool === 'line' || tool === 'arrow') {
-      // 初始状态：起点终点重合
       state.addElement({
         ...commonProps,
         points: [
@@ -342,7 +438,7 @@ export class StageManager {
     this.activeHandle = handle
     this.currentId = elementId
     const el = useStore.getState().elements[elementId]
-    this.initialElementState = { ...el, points: el.points ? [...el.points.map((p) => [...p])] : undefined } // Deep copy points
+    this.initialElementState = { ...el, points: el.points ? [...el.points.map((p) => [...p])] : undefined }
     this.startPos = e.getLocalPosition(this.viewport)
   }
 
@@ -369,18 +465,13 @@ export class StageManager {
         state.updateElement(id, { x: el.x + dx, y: el.y + dy })
       })
       this.startPos = { x: currentPos.x, y: currentPos.y }
-    }
-
-    // --- 核心：Resize 逻辑 ---
-    else if (this.mode === 'resizing' && this.initialElementState && this.currentId) {
+    } else if (this.mode === 'resizing' && this.initialElementState && this.currentId) {
       const el = state.elements[this.currentId]
 
-      // === 场景 A: 直线/箭头 编辑逻辑 ===
       if ((el.type === 'line' || el.type === 'arrow') && this.initialElementState.points) {
-        // 我们需要操作的是绝对坐标，防止原点跳变带来的错乱
+        // ... 直线 Resize 逻辑 ...
         const initX = this.initialElementState.x!
         const initY = this.initialElementState.y!
-        // 初始绝对坐标
         const p0Abs = {
           x: initX + this.initialElementState.points![0][0],
           y: initY + this.initialElementState.points![0][1],
@@ -390,8 +481,6 @@ export class StageManager {
           y: initY + this.initialElementState.points![1][1],
         }
 
-        // 根据当前拖拽的手柄，更新对应的绝对坐标
-        // currentPos 是当前鼠标的世界坐标
         if (this.activeHandle === 'p0') {
           p0Abs.x = currentPos.x
           p0Abs.y = currentPos.y
@@ -400,30 +489,20 @@ export class StageManager {
           p1Abs.y = currentPos.y
         }
 
-        // 重新归一化 (Normalize)
-        // 1. 新的包围盒左上角 (作为新的 x,y)
         const newX = Math.min(p0Abs.x, p1Abs.x)
         const newY = Math.min(p0Abs.y, p1Abs.y)
         const newW = Math.abs(p0Abs.x - p1Abs.x)
         const newH = Math.abs(p0Abs.y - p1Abs.y)
-
-        // 2. 重新计算相对坐标
         const newPoints = [
           [p0Abs.x - newX, p0Abs.y - newY],
           [p1Abs.x - newX, p1Abs.y - newY],
         ]
 
-        state.updateElement(this.currentId, {
-          x: newX,
-          y: newY,
-          width: newW,
-          height: newH,
-          points: newPoints,
-        })
+        state.updateElement(this.currentId, { x: newX, y: newY, width: newW, height: newH, points: newPoints })
         return
       }
 
-      // === 场景 B: 普通形状 编辑逻辑 (保持不变) ===
+      // 普通 Resize
       const dx = currentPos.x - this.startPos.x
       const dy = currentPos.y - this.startPos.y
       const init = this.initialElementState
@@ -446,7 +525,6 @@ export class StageManager {
       if (this.activeHandle?.includes('b')) {
         newH += dy
       }
-
       if (newW < 0) {
         newX += newW
         newW = Math.abs(newW)
@@ -457,29 +535,18 @@ export class StageManager {
       }
 
       state.updateElement(this.currentId, { x: newX, y: newY, width: newW, height: newH })
-    }
-
-    // --- Drawing 逻辑 ---
-    else if (this.mode === 'drawing' && this.currentId) {
+    } else if (this.mode === 'drawing' && this.currentId) {
       const el = state.elements[this.currentId]
       if (!el) return
-
       if (el.type === 'line' || el.type === 'arrow') {
-        // 绘制时：startPos 是起点, currentPos 是终点
-        // 此时我们暂时不考虑包围盒归一化，直接用相对坐标方便绘制
-        // 实际上为了兼容 renderElements，我们得算出相对 points
-
-        // 方法：始终保持 el.x, el.y 为 startPos
-        // points[0] = [0,0], points[1] = [dx, dy]
         const dx = currentPos.x - this.startPos.x
         const dy = currentPos.y - this.startPos.y
-
         state.updateElement(this.currentId, {
           points: [
             [0, 0],
             [dx, dy],
           ],
-          width: Math.abs(dx), // 临时存一下宽高供后续计算
+          width: Math.abs(dx),
           height: Math.abs(dy),
         })
       } else if (el.type === 'pencil') {
@@ -494,7 +561,6 @@ export class StageManager {
           height: Math.max(...ys) - Math.min(...ys),
         })
       } else {
-        // Rect / Circle / ...
         const width = currentPos.x - this.startPos.x
         const height = currentPos.y - this.startPos.y
         const x = width < 0 ? this.startPos.x + width : this.startPos.x
@@ -506,7 +572,6 @@ export class StageManager {
 
   private onPointerUp = () => {
     const state = useStore.getState()
-
     if (this.mode === 'selecting') {
       const endPos = this.app.renderer.events.pointer.getLocalPosition(this.viewport)
       const minX = Math.min(this.startPos.x, endPos.x)
@@ -522,16 +587,9 @@ export class StageManager {
       state.setSelected(hitIds)
       this.selectionRectGraphic.clear()
     }
-
-    // Drawing 结束时的归一化 (Normalization)
     if (this.mode === 'drawing' && this.currentId) {
       const el = state.elements[this.currentId]
-      // 对于直线、箭头、铅笔，我们需要把 x,y 移到包围盒左上角，并重算 points
       if ((el.type === 'pencil' || el.type === 'line' || el.type === 'arrow') && el.points) {
-        // 对于 Line/Arrow，绘制时我们假设起点是 0,0。但在 PointerUp 时，
-        // 假如用户往左上角画（dx, dy 为负），当前的 x,y 是在右下角，points 是负的。
-        // 我们需要统一成：x,y 是左上角，points 全是正数。
-
         const absPoints = el.points.map((p) => ({ x: el.x + p[0], y: el.y + p[1] }))
         const xs = absPoints.map((p) => p.x)
         const ys = absPoints.map((p) => p.y)
@@ -539,12 +597,9 @@ export class StageManager {
         const minY = Math.min(...ys)
         const maxX = Math.max(...xs)
         const maxY = Math.max(...ys)
-
-        // 只有当需要调整时才更新（比如画出的线条有负坐标，或者铅笔画出了原点左上方）
         const newX = minX
         const newY = minY
         const newPoints = absPoints.map((p) => [p.x - newX, p.y - newY])
-
         state.updateElement(this.currentId, {
           x: newX,
           y: newY,
@@ -554,16 +609,13 @@ export class StageManager {
         })
       }
     }
-
     this.mode = 'idle'
     this.currentId = null
     this.activeHandle = null
     this.initialElementState = null
   }
 
-  // ... 辅助函数 ...
   private getCursorForHandle(handle: HandleType): string {
-    // 对于直线手柄，统一用 pointer
     if (handle === 'p0' || handle === 'p1') return 'move'
     switch (handle) {
       case 'tl':

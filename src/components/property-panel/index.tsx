@@ -29,8 +29,8 @@ const PropertyPanel = () => {
 
       {element.type === 'rect' && (
         <>
-          <div className="my-2">圆角: {element.radius}</div>
-          <Slider value={element.radius} max={100} onChange={(val) => handleChange('radius', val)} />
+          <div className="my-2">圆角: {element.radius ?? 0}</div>
+          <Slider value={element.radius ?? 0} max={100} onChange={(val) => handleChange('radius', val)} />
         </>
       )}
     </div>

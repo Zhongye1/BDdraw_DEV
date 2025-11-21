@@ -4,6 +4,7 @@ import { StageManager } from './Pixi_stageManager'
 import { useStore } from '@/stores/canvasStore'
 import PropertyPanel from '@/components/property-panel'
 import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
+import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -60,6 +61,9 @@ export default function PixiCanvas() {
 
       {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
       <PropertyPanel />
+
+      {/* 底部文本编辑器：自动根据选中状态显示/隐藏 */}
+      <BottomTextEditor />
 
       {/* 4. 调试面板 (可选) */}
       {/* <div className="pointer-events-none absolute right-4 bottom-4 z-10 rounded-md bg-gray-100/80 p-2 text-xs text-gray-500">
