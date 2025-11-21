@@ -1,0 +1,44 @@
+// src/components/BottomTextEditor.tsx
+import React, { useEffect, useState } from 'react'
+import { useStore } from '@/stores/canvasStore'
+import { RichTextEditor } from './Richtext_editor'
+
+export default function BottomTextEditor() {
+  const { selectedIds, elements, updateElement } = useStore()
+
+  // 获取当前选中的元素
+  const selectedId = selectedIds.length === 1 ? selectedIds[0] : null
+  const element = selectedId ? elements[selectedId] : null
+
+  // 本地中间状态，用于解决输入法（中文拼音）和 Store 更新的冲突
+  const [localHtml, setLocalHtml] = useState('')
+
+  // 当选中元素改变时，同步 Store 的值到本地状态
+  useEffect(() => {
+    if (element && element.type === 'text') {
+      setLocalHtml(element.text || '')
+    }
+  }, [element?.id, element?.text])
+
+  if (!element || element.type !== 'text') {
+    return null
+  }
+
+  const handleChange = (html: string) => {
+    setLocalHtml(html)
+    // 实时更新 Store，驱动 Canvas 重新渲染
+    updateElement(element.id, { text: html })
+  }
+
+  return (
+    <div className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 flex justify-center">
+      <div className="animate-slide-up pointer-events-auto w-full max-w-3xl shadow-2xl">
+        <RichTextEditor
+          value={localHtml}
+          onChange={handleChange}
+          className="rounded-t-lg border-t-2 border-blue-500 bg-white"
+        />
+      </div>
+    </div>
+  )
+}
