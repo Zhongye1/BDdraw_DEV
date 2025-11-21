@@ -1,8 +1,8 @@
 import React from 'react'
 
-type IconCircleProps = React.SVGProps<SVGSVGElement>
+type IconTriangleProps = React.SVGProps<SVGSVGElement>
 
-const IconCircle: React.FC<IconCircleProps> = (props) => {
+const IconTriangle: React.FC<IconTriangleProps> = (props) => {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -13,9 +13,9 @@ const IconCircle: React.FC<IconCircleProps> = (props) => {
       strokeLinejoin="round"
       {...props}
     >
-      <circle cx="12" cy="12" r="9" />
+      <path d="M12 3L21 21H3L12 3Z" />
     </svg>
   )
 }
 
-export default IconCircle
+export default IconTriangle
