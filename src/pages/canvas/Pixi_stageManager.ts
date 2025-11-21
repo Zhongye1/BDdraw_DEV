@@ -100,6 +100,7 @@ export class StageManager {
 
   // --- 渲染核心 ---
 
+  // --- 1. 核心渲染逻辑 (更新) ---
   // 1. 渲染画布元素
   private renderElements(elements: Record<string, CanvasElement>, selectedIds: string[]) {
     if (this.destroyed) return
@@ -123,19 +124,86 @@ export class StageManager {
       // 选中时，元素本身只负责稍微亮一点的边框，主要的框选由 UI Layer 负责
       const strokeWidth = data.strokeWidth ?? 0
       const strokeColor = new PIXI.Color(data.stroke)
+      const fillColor = new PIXI.Color(data.fill)
+      const alpha = data.alpha ?? 1
 
+      // 统一设置描边风格
+      if (strokeWidth > 0) {
+        graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+      }
+
+      // --- A. 形状类 (基于 width/height) ---
       if (data.type === 'rect') {
         graphic.rect(0, 0, data.width, data.height)
+        if (strokeWidth > 0) graphic.stroke()
+        graphic.fill({ color: fillColor, alpha })
       } else if (data.type === 'circle') {
         graphic.ellipse(data.width / 2, data.height / 2, data.width / 2, data.height / 2)
+        if (strokeWidth > 0) graphic.stroke()
+        graphic.fill({ color: fillColor, alpha })
       } else if (data.type === 'triangle') {
         graphic.poly([data.width / 2, 0, data.width, data.height, 0, data.height])
+        if (strokeWidth > 0) graphic.stroke()
+        graphic.fill({ color: fillColor, alpha })
+      } else if (data.type === 'diamond') {
+        // 菱形: 四边中点连线
+        graphic.poly([
+          data.width / 2,
+          0, // Top
+          data.width,
+          data.height / 2, // Right
+          data.width / 2,
+          data.height, // Bottom
+          0,
+          data.height / 2, // Left
+        ])
+        if (strokeWidth > 0) graphic.stroke()
+        graphic.fill({ color: fillColor, alpha })
       }
 
-      graphic.fill({ color: data.fill, alpha: data.alpha ?? 1 })
-      if (strokeWidth > 0) {
-        graphic.stroke({ width: strokeWidth, color: strokeColor })
+      // --- B. 路径类 (基于 points) ---
+      // 注意: 路径类通常不需要闭合填充(fill)，除非是特定需求。这里只做描边。
+      else if (
+        (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
+        data.points &&
+        data.points.length > 0
+      ) {
+        // 1. 绘制主线条
+        graphic.moveTo(data.points[0][0], data.points[0][1])
+        for (let i = 1; i < data.points.length; i++) {
+          graphic.lineTo(data.points[i][0], data.points[i][1])
+        }
+        graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+
+        // 2. 箭头的特殊处理 (画箭头尾巴)
+        if (data.type === 'arrow' && data.points.length >= 2) {
+          const start = data.points[0]
+          const end = data.points[data.points.length - 1]
+
+          // 计算角度
+          const dx = end[0] - start[0]
+          const dy = end[1] - start[1]
+          const angle = Math.atan2(dy, dx)
+          const headLength = 15 // 箭头长度
+          const headAngle = Math.PI / 6 // 30度
+
+          // 左翼
+          graphic.moveTo(end[0], end[1])
+          graphic.lineTo(
+            end[0] - headLength * Math.cos(angle - headAngle),
+            end[1] - headLength * Math.sin(angle - headAngle),
+          )
+          // 右翼
+          graphic.moveTo(end[0], end[1])
+          graphic.lineTo(
+            end[0] - headLength * Math.cos(angle + headAngle),
+            end[1] - headLength * Math.sin(angle + headAngle),
+          )
+          graphic.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+        }
       }
+
+      // 设置整体位置
       graphic.position.set(data.x, data.y)
     })
 
@@ -149,15 +217,15 @@ export class StageManager {
     })
   }
 
-  // 2. 渲染变换控制器 (Transformer)
+  // --- 2. 渲染选框 (Transformer) ---
+  // (保持原代码逻辑，但增加了对 Line/Pencil 这种可能很细的物体的包围盒处理)
   private renderTransformer(elements: Record<string, CanvasElement>, selectedIds: string[]) {
     this.transformerGraphic.clear()
-    this.transformerGraphic.removeChildren() // 清除旧的手柄 HitArea
+    this.transformerGraphic.removeChildren()
 
-    // 简单起见，只支持单选 Resize，多选只画框
     if (selectedIds.length === 0) return
 
-    // 计算包围盒
+    // 计算包围盒 (Bounding Box)
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
@@ -165,6 +233,9 @@ export class StageManager {
     selectedIds.forEach((id) => {
       const el = elements[id]
       if (!el) return
+
+      // 对于路径类元素，包围盒计算稍微复杂一点 (因为 width/height 可能是根据 points 算出来的)
+      // 这里的 el.width/height 应该已经在 onPointerMove 里更新正确了
       minX = Math.min(minX, el.x)
       minY = Math.min(minY, el.y)
       maxX = Math.max(maxX, el.x + el.width)
@@ -173,14 +244,13 @@ export class StageManager {
 
     const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 
-    // A. 绘制紫色包围框
+    // 绘制边框
     this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 }) // purple-500
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
-    // B. 如果是单选，绘制 8 个手柄
+    // 如果是单选，绘制手柄 (保持原逻辑)
     if (selectedIds.length === 1) {
-      const handleSize = 8 / this.viewport.scale.x // 保持手柄大小恒定，反向缩放
-      // 定义手柄位置
+      const handleSize = 8 / this.viewport.scale.x
       const handles: Record<HandleType, { x: number; y: number }> = {
         tl: { x: bounds.x, y: bounds.y },
         t: { x: bounds.x + bounds.width / 2, y: bounds.y },
@@ -191,34 +261,27 @@ export class StageManager {
         bl: { x: bounds.x, y: bounds.y + bounds.height },
         l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
       }
-
       Object.entries(handles).forEach(([type, pos]) => {
-        // 1. 绘制可见的方块
         this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
         this.transformerGraphic.fill({ color: 0xffffff })
         this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
-        // 2. 创建不可见的交互热区 (Hit Area) - 添加到 transformerGraphic 的子节点
-        // 这样我们可以检测点击的是哪个手柄
         const hitZone = new PIXI.Graphics()
-        hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2) // 热区大一点
-        hitZone.fill({ color: 0x000000, alpha: 0.0001 }) // 几乎透明，但必须有填充才能响应事件
+        hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
+        hitZone.fill({ color: 0x000000, alpha: 0.0001 })
         hitZone.eventMode = 'static'
         hitZone.cursor = this.getCursorForHandle(type as HandleType)
-        hitZone.label = `handle:${type}` // 关键：用 label 标记手柄类型
-
-        // 绑定事件到手柄热区
+        hitZone.label = `handle:${type}`
         hitZone.on('pointerdown', (e) => {
-          e.stopPropagation() // 阻止冒泡，防止触发元素拖拽
+          e.stopPropagation()
           this.onHandleDown(e, type as HandleType, selectedIds[0])
         })
-
         this.transformerGraphic.addChild(hitZone)
       })
     }
   }
 
-  // --- 交互逻辑 ---
+  // --- 3. 交互逻辑 (Interaction) ---
 
   private setupInteraction() {
     this.viewport.on('pointerdown', this.onPointerDown)
@@ -263,13 +326,16 @@ export class StageManager {
     if (tool === 'select') {
       this.mode = 'selecting'
       state.setSelected([]) // 点击空白清空选中
-    } else {
-      this.mode = 'drawing' // 比如 rect, circle
+    }
+    // 绘图模式 (核心改动)
+    else {
+      this.mode = 'drawing'
       const newId = nanoid()
       this.currentId = newId
-      state.addElement({
+
+      const commonProps = {
         id: newId,
-        type: tool as any,
+        type: tool,
         x: worldPos.x,
         y: worldPos.y,
         width: 0,
@@ -278,7 +344,19 @@ export class StageManager {
         stroke: state.currentStyle.stroke,
         strokeWidth: state.currentStyle.strokeWidth,
         alpha: state.currentStyle.alpha,
-      })
+      }
+
+      // 根据工具类型初始化不同数据结构
+      if (tool === 'pencil' || tool === 'line' || tool === 'arrow') {
+        // 路径类：初始化 points，起点是 [0,0] (相对于 graphic 自身的 x,y)
+        state.addElement({
+          ...commonProps,
+          points: [[0, 0]],
+        })
+      } else {
+        // 形状类 (Rect, Circle, Diamond...)
+        state.addElement(commonProps)
+      }
     }
   }
 
@@ -335,19 +413,18 @@ export class StageManager {
       this.startPos = { x: currentPos.x, y: currentPos.y }
     }
 
-    // C. 调整大小中 (核心数学逻辑)
+    // C. Resize (保持不变，适用于所有物体)
+    // 当对 Line/Pencil resize 时，这里简单的拉伸 width/height 其实会产生缩放效果，
+    // Pixi 的 Graphics 会根据 width/height 自动缩放内容。这对于简单的 Pencil/Line 缩放是可行的。
     else if (this.mode === 'resizing' && this.initialElementState && this.currentId) {
       const dx = currentPos.x - this.startPos.x
       const dy = currentPos.y - this.startPos.y
       const init = this.initialElementState
-
-      // 计算新的几何属性
       let newX = init.x!
       let newY = init.y!
       let newW = init.width!
       let newH = init.height!
 
-      // 根据手柄调整
       if (this.activeHandle?.includes('l')) {
         newX += dx
         newW -= dx
@@ -363,7 +440,6 @@ export class StageManager {
         newH += dy
       }
 
-      // 处理翻转 (宽高为负)
       if (newW < 0) {
         newX += newW
         newW = Math.abs(newW)
@@ -376,13 +452,78 @@ export class StageManager {
       state.updateElement(this.currentId, { x: newX, y: newY, width: newW, height: newH })
     }
 
-    // D. 绘图中
+    // D. 绘图 (Drawing) - 核心修改
     else if (this.mode === 'drawing' && this.currentId) {
-      const width = currentPos.x - this.startPos.x
-      const height = currentPos.y - this.startPos.y
-      const x = width < 0 ? this.startPos.x + width : this.startPos.x
-      const y = height < 0 ? this.startPos.y + height : this.startPos.y
-      state.updateElement(this.currentId, { x, y, width: Math.abs(width), height: Math.abs(height) })
+      const el = state.elements[this.currentId]
+      if (!el) return
+
+      // 1. 铅笔 (Pencil): 自由绘制
+      if (el.type === 'pencil') {
+        // 计算相对于 graphic 起始位置(x,y) 的坐标
+        const localX = currentPos.x - el.x
+        const localY = currentPos.y - el.y
+
+        // 添加新点
+        const newPoints = [...(el.points || []), [localX, localY]]
+
+        // 更新点数据
+        // 同时我们需要更新 width/height 以便选中框能正确包裹它
+        // 计算 bounds
+        const xs = newPoints.map((p) => p[0])
+        const ys = newPoints.map((p) => p[1])
+        const minX = Math.min(...xs),
+          maxX = Math.max(...xs)
+        const minY = Math.min(...ys),
+          maxY = Math.max(...ys)
+
+        state.updateElement(this.currentId, {
+          points: newPoints,
+          width: maxX - minX,
+          height: maxY - minY,
+          // 注意：铅笔绘图时通常不做 x/y 的动态位移修正，
+          // 否则绘图过程中整个图形会跳动。
+          // 完美的做法是在 onPointerUp 时重新规范化 (normalize) 坐标，把 x,y 移到 minX,minY，并让 points 减去偏移量。
+          // 这里为了简单，暂时不实时修 x,y
+        })
+      }
+
+      // 2. 直线 & 箭头 (Line & Arrow): 两点定位
+      else if (el.type === 'line' || el.type === 'arrow') {
+        const localX = currentPos.x - el.x
+        const localY = currentPos.y - el.y
+
+        // 始终只有两个点：起点 [0,0] 和 终点 [localX, localY]
+        const newPoints = [
+          [0, 0],
+          [localX, localY],
+        ]
+
+        // 更新 width/height 用于包围盒计算
+        // 这里的 width/height 必须是正数 (Bounding Box 尺寸)
+        const width = Math.abs(localX)
+        const height = Math.abs(localY)
+
+        state.updateElement(this.currentId, {
+          points: newPoints,
+          width,
+          height,
+        })
+      }
+
+      // 3. 形状类 (Rect, Circle, Triangle, Diamond)
+      else {
+        const width = currentPos.x - this.startPos.x
+        const height = currentPos.y - this.startPos.y
+        const x = width < 0 ? this.startPos.x + width : this.startPos.x
+        const y = height < 0 ? this.startPos.y + height : this.startPos.y
+
+        state.updateElement(this.currentId, {
+          x,
+          y,
+          width: Math.abs(width),
+          height: Math.abs(height),
+        })
+      }
     }
   }
 
@@ -390,34 +531,48 @@ export class StageManager {
   private onPointerUp = () => {
     const state = useStore.getState()
 
-    // 结算框选
+    // 结算框选 (同上一版)
     if (this.mode === 'selecting') {
-      const bounds = this.selectionRectGraphic.getBounds() // 获取选框的世界包围盒
-      // 这一步稍微有点 tricky，因为 Pixi getBounds 是屏幕坐标还是世界坐标取决于 target
-      // 手动计算更稳：
-      const rect = {
-        x:
-          Math.min(this.startPos.x, this.selectionRectGraphic.x + this.selectionRectGraphic.width + this.startPos.x) -
-          this.selectionRectGraphic.width, // 简化逻辑...其实用下面这个：
-      }
-      // 实际上我们在 onMove 里已经画在了正确的位置，直接拿 geometry 数据
-      // 但更简单的是重新算一次：
       const endPos = this.app.renderer.events.pointer.getLocalPosition(this.viewport)
       const minX = Math.min(this.startPos.x, endPos.x)
       const maxX = Math.max(this.startPos.x, endPos.x)
       const minY = Math.min(this.startPos.y, endPos.y)
       const maxY = Math.max(this.startPos.y, endPos.y)
 
-      // 碰撞检测
       const hitIds: string[] = []
       Object.values(state.elements).forEach((el) => {
-        // AABB 碰撞
+        // 对于 line/pencil，这里的 x,y,width,height 构成的包围盒也能正常工作
         if (el.x < maxX && el.x + el.width > minX && el.y < maxY && el.y + el.height > minY) {
           hitIds.push(el.id)
         }
       })
       state.setSelected(hitIds)
       this.selectionRectGraphic.clear()
+    }
+
+    // 绘图结束后的数据整理 (Normalization)
+    // 对于 Pencil，我们在 drawing 时没有调整 x,y，现在需要把 x,y 移动到包围盒左上角，
+    // 并让所有 points 减去偏移量。这样 Transformer 框才会贴合图形。
+    if (this.mode === 'drawing' && this.currentId) {
+      const el = state.elements[this.currentId]
+      if (el.type === 'pencil' && el.points) {
+        const xs = el.points.map((p) => p[0])
+        const ys = el.points.map((p) => p[1])
+        const minX = Math.min(...xs)
+        const minY = Math.min(...ys)
+
+        // 只有当图形不在原点时才需要调整
+        if (minX !== 0 || minY !== 0) {
+          const newX = el.x + minX
+          const newY = el.y + minY
+          const newPoints = el.points.map((p) => [p[0] - minX, p[1] - minY])
+          state.updateElement(this.currentId, {
+            x: newX,
+            y: newY,
+            points: newPoints,
+          })
+        }
+      }
     }
 
     this.mode = 'idle'
