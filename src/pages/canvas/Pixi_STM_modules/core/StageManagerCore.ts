@@ -316,6 +316,7 @@ export class StageManagerCore {
           y: el.y,
           width: el.width,
           height: el.height,
+          type: el.type,
           // 如果有 points (如铅笔、多边形)，必须解构复制
           points: el.points ? el.points.map((p) => [...p]) : undefined,
         }
@@ -391,12 +392,16 @@ export class StageManagerCore {
       const singleEl = this.state.initialElementsMap[singleId]
       if (
         selectedIds.length === 1 &&
+        singleEl &&
         (singleEl.type === 'line' || singleEl.type === 'arrow') &&
         (handle === 'p0' || handle === 'p1')
       ) {
         const initX = singleEl.x ?? 0
         const initY = singleEl.y ?? 0
-        const points = singleEl.points!
+        const points = singleEl.points || [
+          [0, 0],
+          [0, 0],
+        ]
         const p0Abs = { x: initX + points[0][0], y: initY + points[0][1] }
         const p1Abs = { x: initX + points[1][0], y: initY + points[1][1] }
 
