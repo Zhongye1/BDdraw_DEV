@@ -5,9 +5,12 @@ import { RouterProvider } from 'react-router-dom'
 import { createRouter } from './router'
 import { HelmetProvider } from 'react-helmet-async'
 import { Inspector } from 'react-dev-inspector'
+import { useHotkeysManagement } from '@/hooks/useHotkeysManagement'
 
 export default function App() {
   const queryClient = useMemo(() => new QueryClient({}), [])
+  useHotkeysManagement() // 添加热键管理
+
   return (
     <HelmetProvider>
       <Inspector keys={['control', 'q']} />

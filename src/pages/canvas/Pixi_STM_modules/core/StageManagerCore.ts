@@ -6,6 +6,7 @@ import { InteractionHandler } from '../interaction/InteractionHandler'
 import { useStore, type ToolType, type CanvasElement } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import type { HandleType, StageManagerState } from './types'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
 
 export class StageManagerCore {
   public app: PIXI.Application
@@ -21,6 +22,10 @@ export class StageManagerCore {
 
   private selectionRectGraphic = new PIXI.Graphics()
   private eraserGraphic = new PIXI.Graphics()
+
+  // 防抖相关变量
+  private debounceTimer: number | null = null
+  private readonly DEBOUNCE_DELAY = 1000 // 0.1秒
 
   private state: StageManagerState = {
     mode: 'idle',
@@ -68,6 +73,9 @@ export class StageManagerCore {
             )
             this.updateViewportState(state.tool)
             this.updateCursor(state.tool)
+
+            // 触发防抖检查
+            this.triggerDebounceSnapshot()
           }
         },
         { equalityFn: (prev, next) => JSON.stringify(prev) === JSON.stringify(next) },
@@ -84,6 +92,24 @@ export class StageManagerCore {
       )
       this.updateViewportState(tool)
     })
+  }
+
+  // 添加防抖快照方法
+  private triggerDebounceSnapshot() {
+    // 清除之前的定时器
+    if (this.debounceTimer !== null) {
+      clearTimeout(this.debounceTimer)
+    }
+
+    // 设置新的定时器
+    this.debounceTimer = window.setTimeout(() => {
+      // 这里可以执行保存快照的逻辑
+      // 例如，可以调用一个保存状态的方法
+      console.log('保存画布状态快照')
+
+      // 重置定时器
+      this.debounceTimer = null
+    }, this.DEBOUNCE_DELAY)
   }
 
   private async initApp(container: HTMLElement) {
@@ -139,6 +165,9 @@ export class StageManagerCore {
 
   // --- 交互逻辑 ---
   private onPointerDown = (e: PIXI.FederatedPointerEvent) => {
+    // 触发防抖检查
+    this.triggerDebounceSnapshot()
+
     if (e.button === 1) return
     const state = useStore.getState()
     const tool = state.tool
@@ -197,6 +226,9 @@ export class StageManagerCore {
       if (!state.selectedIds.includes(hitId)) {
         state.setSelected([hitId])
       }
+
+      // 开始拖拽时锁定撤销/重做管理器
+      undoRedoManager.lock()
       return
     }
 
@@ -237,9 +269,15 @@ export class StageManagerCore {
     } else {
       state.addElement(commonProps)
     }
+
+    // 开始绘制时锁定撤销/重做管理器
+    undoRedoManager.lock()
   }
 
   private onHandleDown = (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => {
+    // 触发防抖检查
+    this.triggerDebounceSnapshot()
+
     e.stopPropagation()
     this.state.mode = 'resizing'
     this.state.activeHandle = handle as HandleType | null
@@ -264,9 +302,15 @@ export class StageManagerCore {
 
     // 2. 计算初始的群组包围盒
     this.state.initialGroupBounds = this.getSelectionBounds(selectedIds, elements)
+
+    // 开始调整大小时锁定撤销/重做管理器
+    undoRedoManager.lock()
   }
 
   private onPointerMove = (e: PIXI.FederatedPointerEvent) => {
+    // 触发防抖检查
+    this.triggerDebounceSnapshot()
+
     if (this.state.mode === 'idle') return
     const state = useStore.getState()
     const currentPos = e.getLocalPosition(this.viewport)
@@ -442,6 +486,9 @@ export class StageManagerCore {
   }
 
   private onPointerUp = () => {
+    // 触发防抖检查
+    this.triggerDebounceSnapshot()
+
     const state = useStore.getState()
     if (this.state.mode === 'erasing') {
       this.state.mode = 'idle'
@@ -491,6 +538,9 @@ export class StageManagerCore {
     // --- 清理状态 ---
     this.state.initialElementsMap = null
     this.state.initialGroupBounds = null
+
+    // 操作结束时解锁撤销/重做管理器
+    undoRedoManager.unlock()
   }
 
   public updateViewportState(tool: ToolType) {
@@ -506,6 +556,9 @@ export class StageManagerCore {
   }
 
   public setSpacePressed(pressed: boolean) {
+    // 触发防抖检查
+    this.triggerDebounceSnapshot()
+
     this.state.isSpacePressed = pressed
     this.updateViewportState(useStore.getState().tool)
     this.updateCursor(useStore.getState().tool)
