@@ -1,27 +1,16 @@
-# 静态内容部署到 GitHub Pages 的简易工作流程
 name: Deploy to GitHub Pages
 
 on:
-  # 监听推送到 main 分支的事件
   push:
-    branches: ['main']
-
-  # 允许从 Actions 标签手动触发
+    branches: [main]
   workflow_dispatch:
 
-# 设置 GITHUB_TOKEN 权限以允许部署到 GitHub Pages
 permissions:
   contents: read
   pages: write
   id-token: write
 
-# 允许一次并发部署
-concurrency:
-  group: 'pages'
-  cancel-in-progress: true
-
 jobs:
-  # 单一部署作业
   deploy:
     environment:
       name: github-pages
@@ -48,7 +37,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          # 上传 dist 文件夹
           path: './dist'
 
       - name: Deploy to GitHub Pages
