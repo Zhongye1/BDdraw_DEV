@@ -27,6 +27,12 @@ export interface StageManagerState {
   // 单选时仍然可能用到，但在多选逻辑中主要依赖上面的 Map
   initialElementState: Partial<CanvasElement> | null
 
+  // 用于存储调整大小操作的初始状态
+  resizeInitialStates: Record<string, Partial<CanvasElement>> | null
+
+  // 用于存储拖拽操作的初始状态
+  dragInitialStates: Record<string, Partial<CanvasElement>> | null
+
   // 旋转状态(待写)
   //rotationCenter: { x: number; y: number } | null // 旋转中心
   //initialRotationAngle: number | null // 鼠标初始角度

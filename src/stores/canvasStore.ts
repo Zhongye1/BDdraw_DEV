@@ -105,6 +105,19 @@ export const useStore = create<CanvasState>()(
 
       if (undoRedoManager.isLocked() || isToolChangeOnly || isSelectionChangeOnly) {
         // 如果被锁定，或者只是工具切换，或者是选中操作，直接设置状态
+
+        /**
+          console.log(
+          '[CanvasStore] 状态更新被忽略，锁定状态:',
+          undoRedoManager.isLocked(),
+          '工具切换:',
+          isToolChangeOnly,
+          '选中变化:',
+          isSelectionChangeOnly,
+        )
+         * 
+         */
+
         return replace === true ? set(partial as CanvasState, true) : set(partial)
       }
 
@@ -158,8 +171,34 @@ export const useStore = create<CanvasState>()(
 
       // ========== 撤销/重做机制核心部分 ==========
       // 创建快照命令并执行
-      const command = new SnapshotCommand(currentState, newState)
-      console.log('Executing command:', command) // 打印命令信息
+      // 判断操作类型
+      let operationType = '未知操作'
+      if (typeof partial === 'object' && partial !== null) {
+        if ('elements' in partial) {
+          // 检查是否是添加元素操作
+          const newElements = partial.elements as Record<string, CanvasElement>
+          const oldElements = currentState.elements
+
+          // 检查是否有新增元素
+          const newElementIds = Object.keys(newElements)
+          const oldElementIds = Object.keys(oldElements)
+
+          if (newElementIds.length > oldElementIds.length) {
+            operationType = '添加元素'
+          } else if (newElementIds.length < oldElementIds.length) {
+            operationType = '删除元素'
+          } else {
+            operationType = '修改元素'
+          }
+        } else if ('tool' in partial) {
+          operationType = '切换工具'
+        } else if ('selectedIds' in partial) {
+          operationType = '选择元素'
+        }
+      }
+
+      const command = new SnapshotCommand(currentState, newState, operationType)
+      //console.log('[CanvasStore] 创建并执行快照命令')
       undoRedoManager.executeCommand(command)
       // ======================================
 
