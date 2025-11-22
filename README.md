@@ -6,43 +6,43 @@
 
 核心框架 | Core
 
-<img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React 18"/><img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript"/><img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite"/><img src="https://img.shields.io/badge/React%20Router%20DOM-6-CA4245?logo=reactrouter&logoColor=white" alt="React Router"/>
+<img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React 18"/> <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript"/> <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite"/> <img src="https://img.shields.io/badge/React%20Router%20DOM-6-CA4245?logo=reactrouter&logoColor=white" alt="React Router"/>
 
 构建与样式 | Build & Styling
 
-<img src="https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/><img src="https://img.shields.io/badge/Less-3-1D365D?logo=less&logoColor=white" alt="Less"/><img src="https://img.shields.io/badge/PostCSS-DD3A0A?logo=postcss&logoColor=white" alt="PostCSS"/><img src="https://img.shields.io/badge/SVGR-1.5-DA2C4D?logo=svg&logoColor=white" alt="SVGR"/>
+<img src="https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/> <img src="https://img.shields.io/badge/Less-3-1D365D?logo=less&logoColor=white" alt="Less"/> <img src="https://img.shields.io/badge/PostCSS-DD3A0A?logo=postcss&logoColor=white" alt="PostCSS"/> <img src="https://img.shields.io/badge/SVGR-1.5-DA2C4D?logo=svg&logoColor=white" alt="SVGR"/>
 
 UI 组件库 | UI Library
 
-<img src="https://img.shields.io/badge/shadcn%2Fui-latest-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui"/><img src="https://img.shields.io/badge/Arco%20Design-2-006AFF?logo=arco-design&logoColor=white" alt="Arco Design"/><img src="https://img.shields.io/badge/Radix%20UI-latest-161618?logo=radix-ui&logoColor=white" alt="Radix UI"/>
+<img src="https://img.shields.io/badge/shadcn%2Fui-latest-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui"/> <img src="https://img.shields.io/badge/Arco%20Design-2-006AFF?logo=arco-design&logoColor=white" alt="Arco Design"/> <img src="https://img.shields.io/badge/Radix%20UI-latest-161618?logo=radix-ui&logoColor=white" alt="Radix UI"/>
 
 数据请求与缓存 | Data Fetching
 
-<img src="https://img.shields.io/badge/TanStack%20Query-5-FF4154?logo=reactquery&logoColor=white" alt="React Query"/><img src="https://img.shields.io/badge/React%20Query%20Devtools-FF4154?logo=reactquery&logoColor=white" alt="React Query Devtools"/>
+<img src="https://img.shields.io/badge/TanStack%20Query-5-FF4154?logo=reactquery&logoColor=white" alt="React Query"/> <img src="https://img.shields.io/badge/React%20Query%20Devtools-FF4154?logo=reactquery&logoColor=white" alt="React Query Devtools"/>
 
 状态管理 | State Management
 
-  <img src="https://img.shields.io/badge/Zustand-4-443333?logo=zustand&logoColor=white" alt="Zustand"/>
+<img src="https://img.shields.io/badge/Zustand-4-443333?logo=zustand&logoColor=white" alt="Zustand"/>
 
 图形渲染 | Graphics & Canvas
 
-<img src="https://img.shields.io/badge/PixiJS-8-CC0066?logo=pixijs&logoColor=white" alt="PixiJS v8"/><img src="https://img.shields.io/badge/pixi--viewport-latest-CC0066?logo=pixijs&logoColor=white" alt="pixi-viewport"/>
+<img src="https://img.shields.io/badge/PixiJS-8-CC0066?logo=pixijs&logoColor=white" alt="PixiJS v8"/> <img src="https://img.shields.io/badge/pixi--viewport-latest-CC0066?logo=pixijs&logoColor=white" alt="pixi-viewport"/>
 
 富文本编辑 | Rich Text Editor
 
-  <img src="https://img.shields.io/badge/WangEditor-latest-1F1F1F?logo=tiptap&logoColor=white" alt="Tiptap"/>
+<img src="https://img.shields.io/badge/WangEditor-latest-1F1F1F?logo=tiptap&logoColor=white" alt="Tiptap"/>
 
 图标 | Icons
 
-  <img src="https://img.shields.io/badge/Lucide%20React-1.5-000000?logo=lucide&logoColor=white" alt="Lucide React"/>
+<img src="https://img.shields.io/badge/Lucide%20React-1.5-000000?logo=lucide&logoColor=white" alt="Lucide React"/>
 
 工具库 | Utilities
 
-<img src="https://img.shields.io/badge/nanoid-3-000000" alt="nanoid"/><img src="https://img.shields.io/badge/Immer-10-00E0C8?logo=immer&logoColor=white" alt="Immer"/>
+<img src="https://img.shields.io/badge/nanoid-3-000000" alt="nanoid"/> <img src="https://img.shields.io/badge/Immer-10-00E0C8?logo=immer&logoColor=white" alt="Immer"/>
 
 代码质量 | Code Quality
 
-<img src="https://img.shields.io/badge/ESLint-8-4B32C3?logo=eslint&logoColor=white" alt="ESLint"/><img src="https://img.shields.io/badge/Stylelint-5-000000?logo=stylelint&logoColor=white" alt="Stylelint"/><img src="https://img.shields.io/badge/Prettier-3-F7B93E?logo=prettier&logoColor=white" alt="Prettier"/><img src="https://img.shields.io/badge/Husky-latest-7711A4?logoColor=white" alt="Husky"/><img src="https://img.shields.io/badge/lint--staged-latest-7711A4?logoColor=white" alt="lint-staged"/><img src="https://img.shields.io/badge/commitlint-latest-00C853?logo=commitlint&logoColor=white" alt="commitlint"/><img src="https://img.shields.io/badge/EditorConfig-latest-FFFFFF?logo=editorconfig&logoColor=black" alt="EditorConfig"/>
+<img src="https://img.shields.io/badge/ESLint-8-4B32C3?logo=eslint&logoColor=white" alt="ESLint"/> <img src="https://img.shields.io/badge/Stylelint-5-000000?logo=stylelint&logoColor=white" alt="Stylelint"/> <img src="https://img.shields.io/badge/Prettier-3-F7B93E?logo=prettier&logoColor=white" alt="Prettier"/> <img src="https://img.shields.io/badge/Husky-latest-7711A4?logoColor=white" alt="Husky"/> <img src="https://img.shields.io/badge/lint--staged-latest-7711A4?logoColor=white" alt="lint-staged"/> <img src="https://img.shields.io/badge/commitlint-latest-00C853?logo=commitlint&logoColor=white" alt="commitlint"/> <img src="https://img.shields.io/badge/EditorConfig-latest-FFFFFF?logo=editorconfig&logoColor=black" alt="EditorConfig"/>
 
 #### 项目架构树
 
@@ -124,7 +124,7 @@ BDdraw_DEV/
 ```shell
 git clone git@github.com:Zhongye1/BDdraw_DEV.git
 
-cd BDdraw_DEV
+cd BDdraw_DEV (进入项目)
 bun install (安装依赖包)
 bun start (启动服务)
 ```
@@ -133,12 +133,14 @@ bun start (启动服务)
 
 [关于前端包管理器 npm,pnpm,yarn 和 bun 以及我为何选择后者](https://zhongye1.github.io/Arknight-notes/posts/15722.html)
 
----
+#### 整体架构设计
+
+项目采用了模块化的架构设计，将不同的功能划分为独立的模块，以方便后续维护和扩展
 
 ## 特性
 
 - 60 FPS 渲染（得益于 PixiJS WebGL）
-- 完整撤销/重做（历史栈操作（redo 栈，undo 栈））
+- 完整撤销/重做（Command Pattern + 防抖快照）
 - 多元素选择与群组操作
 - 画布元素变换控制器
 - 富文本所见即所得编辑（WanngEditor + PIXI.HTMLText）
@@ -177,17 +179,15 @@ bun start (启动服务)
 
 用户界面技术要素
 
-- UI组件库使用情况
+- UI 组件库使用情况
 - 样式系统（Tailwind CSS、Less、PostCSS）
 
 开发工具链
 
-- 代码质量工具（ESLint、Stylelint、Prettier等）
+- 代码质量工具（ESLint、Stylelint、Prettier 等）
 - 构建和部署支持
 
 ---
-
-
 
 ### TODO
 
@@ -242,11 +242,10 @@ bun start (启动服务)
 
 #### 【P1】协同
 
-
-- ~~【挑战 ⭐️⭐️⭐️】支持 undo & redo 操作~~ （实现了，可能要修一下 undo，redo 栈，有个不能稳定复现的 bug）
+- ~~【挑战 ⭐️⭐️⭐️】支持 undo & redo 操作~~ （大体实现了，可能要修一下 undo，redo 栈，有个不能稳定复现的 bug）
 - 【挑战 ⭐️⭐️⭐️⭐️⭐️】支持协同编辑，多人打开同一个画布可以协同编辑
 - 【挑战 ⭐️⭐️⭐️⭐️⭐️】支持离线编辑，断网后仍然可以对画布编辑，恢复网络后自动提交数据
 
 > 各模块的技术文档补充中
 >
-> 此文档最后编辑于 2025.11.22by wcx
+> 此文档最后编辑于 2025.11.22 by wcx
