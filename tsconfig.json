@@ -3,6 +3,7 @@
     "module": "esnext",
     "useDefineForClassFields": true,
     "target": "ESNext",
+    "sourceMap": true,
     "lib": [
       "esnext",
       "dom"
@@ -16,7 +17,6 @@
     "strictFunctionTypes": true,
     "skipLibCheck": true,
     "preserveConstEnums": true,
-    "sourceMap": true,
     "declaration": true,
     "downlevelIteration": true,
     "resolveJsonModule": true,
