@@ -15,7 +15,7 @@ export default function App() {
     <HelmetProvider>
       <Inspector keys={['control', 'q']} />
       <QueryClientProvider client={queryClient}>
-        <RouterProvider router={createRouter()} />
+        <RouterProvider router={createRouter()} future={{ v7_startTransition: true }} />
         <ReactQueryDevtools />
       </QueryClientProvider>
     </HelmetProvider>
