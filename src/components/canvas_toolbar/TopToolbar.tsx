@@ -17,6 +17,8 @@ import {
   Lock,
   Unlock,
   LayoutGrid, // 用作最后的那个库图标
+  RotateCcw,
+  RotateCw,
 } from 'lucide-react'
 import ImageInsertModal from '@/components/image-insert-modal'
 
@@ -44,7 +46,7 @@ interface ToolItemConfig {
 }
 
 export default function TopToolbar() {
-  const { tool, setTool } = useStore()
+  const { tool, setTool, undo, redo, canUndo, canRedo } = useStore()
   const [locked, setLocked] = useState(false)
   const [imageModalVisible, setImageModalVisible] = useState(false)
 
@@ -142,6 +144,31 @@ export default function TopToolbar() {
               </button>
             )
           })}
+
+          {/* 撤销/重做按钮 */}
+          <div className="mx-1 h-6 w-px bg-gray-200"></div>
+          <button
+            title="撤销 (Ctrl+Z)"
+            onClick={undo}
+            disabled={!canUndo()}
+            className={cls(
+              'relative flex h-9 w-9 items-center justify-center transition-colors duration-100',
+              canUndo() ? 'text-gray-600 hover:bg-gray-100' : 'cursor-not-allowed text-gray-300',
+            )}
+          >
+            <RotateCcw className="h-4 w-4" />
+          </button>
+          <button
+            title="重做 (Ctrl+Y)"
+            onClick={redo}
+            disabled={!canRedo()}
+            className={cls(
+              'relative flex h-9 w-9 items-center justify-center transition-colors duration-100',
+              canRedo() ? 'text-gray-600 hover:bg-gray-100' : 'cursor-not-allowed text-gray-300',
+            )}
+          >
+            <RotateCw className="h-4 w-4" />
+          </button>
         </div>
 
         {/* 2. 下方的提示文字 (Hint)  */}
