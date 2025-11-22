@@ -18,7 +18,7 @@ UI 组件库 | UI Library
 
 数据请求与缓存 | Data Fetching
 
-<img src="https://img.shields.io/badge/TanStack%20Query-5-FF4154?logo=reactquery&logoColor=white" alt="React Query"/> <img src="https://img.shields.io/badge/React%20Query%20Devtools-FF4154?logo=reactquery&logoColor=white" alt="React Query Devtools"/>
+<img src="https://img.shields.io/badge/react--query-v5-FF4154.svg?style=flat&logo=react-query&logoColor=white" alt="React Query"/> <img src="https://img.shields.io/badge/React%20Query%20Devtools-FF4154?logo=reactquery&logoColor=white" alt="React Query Devtools"/>
 
 状态管理 | State Management
 
