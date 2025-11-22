@@ -76,7 +76,7 @@ const TASK_PROGRESS = [
       { label: 'Minimap 缩略图', done: false },
       { label: '选区功能 (点选/框选)', done: true },
       { label: '数据持久化 (自动保存)', done: false },
-      { label: '快捷键复制/粘贴', done: false },
+      { label: '快捷键复制/粘贴', done: true },
       { label: '辅助线功能', done: false },
     ],
   },
@@ -328,7 +328,7 @@ export default function Home() {
                     </div>
                     <div className="mb-2 select-all">
                       <span className="mr-2 text-slate-400">$</span>
-                      bun install && bun start
+                      bun install && bun dev
                     </div>
                   </div>
                   <Paragraph className="mt-4 text-xs text-slate-500">* 推荐使用 Bun 包管理器以获得最佳性能</Paragraph>
