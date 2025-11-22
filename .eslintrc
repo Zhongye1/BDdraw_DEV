@@ -1,4 +1,4 @@
-{
+{ 
   "root": true,
   "env": {
     "browser": true,
