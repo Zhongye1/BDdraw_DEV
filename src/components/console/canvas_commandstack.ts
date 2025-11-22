@@ -33,11 +33,7 @@ class ConsoleCommandStack {
    * @param commandId 命令ID
    */
   logCommandExecution(commandType: string, commandId?: number | string) {
-    if (commandId) {
-      commandStackLogger.debug(`[执行] ${commandType} 命令 ID: ${commandId}`)
-    } else {
-      commandStackLogger.debug(`[执行] ${commandType}`)
-    }
+    commandStackLogger.debug(`[执行] ${commandType} 命令 ID: ${commandId}`)
   }
 
   /**

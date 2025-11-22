@@ -7,6 +7,7 @@ import { useStore, type ToolType, type CanvasElement } from '@/stores/canvasStor
 import { nanoid } from 'nanoid'
 import type { HandleType, StageManagerState } from './types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { UpdateElementCommand } from '@/lib/UpdateElementCommand'
 
 export class StageManagerCore {
   public app: PIXI.Application
@@ -32,13 +33,15 @@ export class StageManagerCore {
     startPos: { x: 0, y: 0 },
     currentId: null,
     initialElementState: null,
-    // --- 新增初始化 ---
-    initialElementsMap: null,
-    initialGroupBounds: null,
-    // ----------------
+    initialElementsMap: null, // 用于 Resize
+    initialGroupBounds: null, // 用于 Resize
     activeHandle: null,
     isSpacePressed: false,
     destroyed: false,
+    resizeInitialStates: null, // 用于 Resize
+
+    // [新增] 用于 Move 操作的初始状态记录
+    dragInitialStates: null as Record<string, Partial<CanvasElement>> | null,
   }
 
   constructor(container: HTMLElement) {
@@ -175,8 +178,8 @@ export class StageManagerCore {
     if (e.target && e.target.label?.startsWith('handle:')) return
 
     this.state.startPos = { x: worldPos.x, y: worldPos.y }
-    this.selectionRectGraphic.clear()
-    this.eraserGraphic.clear()
+    //this.selectionRectGraphic.clear()
+    //this.eraserGraphic.clear()
 
     if (tool === 'hand' || this.state.isSpacePressed) return
 
@@ -212,8 +215,7 @@ export class StageManagerCore {
       return
     }
 
-    // Check if we're clicking on an element (regardless of current tool)
-    // This allows direct selection when hovering over elements with "move" cursor
+    // Check if we're clicking on an element (Drag Start)
     if (e.target && e.target.label && !e.target.label.startsWith('handle:')) {
       const hitId = e.target.label
       // If we're not already in select mode, switch to it
@@ -226,6 +228,21 @@ export class StageManagerCore {
       if (!state.selectedIds.includes(hitId)) {
         state.setSelected([hitId])
       }
+
+      // [新增] 捕获所有选中元素在拖拽前的初始状态
+      const initialDragMap: Record<string, Partial<CanvasElement>> = {}
+      state.selectedIds.forEach((id) => {
+        const el = state.elements[id]
+        if (el) {
+          // 记录 x, y (如果是直线/箭头，可能也需要记录 points)
+          initialDragMap[id] = {
+            x: el.x,
+            y: el.y,
+            points: el.points ? [...el.points.map((p) => [...p])] : undefined,
+          }
+        }
+      })
+      this.state.dragInitialStates = initialDragMap
 
       // 开始拖拽时锁定撤销/重做管理器
       undoRedoManager.lock()
@@ -287,24 +304,36 @@ export class StageManagerCore {
     const state = useStore.getState()
     const { elements, selectedIds } = state
 
+    console.log('[StageManager] 开始调整大小操作')
+
     // 1. 捕捉所有选中元素的初始状态 (深拷贝 points)
     const initialMap: Record<string, Partial<CanvasElement>> = {}
     selectedIds.forEach((id) => {
       const el = elements[id]
       if (el) {
         initialMap[id] = {
-          ...el,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height,
+          // 如果有 points (如铅笔、多边形)，必须解构复制
           points: el.points ? el.points.map((p) => [...p]) : undefined,
         }
       }
     })
-    this.state.initialElementsMap = initialMap
+    this.state.resizeInitialStates = initialMap
 
     // 2. 计算初始的群组包围盒
     this.state.initialGroupBounds = this.getSelectionBounds(selectedIds, elements)
 
+    // 3. 保存初始元素映射用于调整大小计算
+    this.state.initialElementsMap = initialMap
+
+    console.log('[StageManager] 保存调整大小初始状态:', initialMap)
+
     // 开始调整大小时锁定撤销/重做管理器
     undoRedoManager.lock()
+    console.log('[StageManager] 锁定撤销/重做管理器')
   }
 
   private onPointerMove = (e: PIXI.FederatedPointerEvent) => {
@@ -530,7 +559,100 @@ export class StageManagerCore {
           points: newPoints,
         })
       }
+
+      // 解锁撤销/重做管理器
+      undoRedoManager.unlock()
+      console.log('[StageManager] 解锁撤销/重做管理器')
     }
+
+    // [新增] 处理 Dragging (移动) 结束的命令记录
+    if (this.state.mode === 'dragging' && this.state.dragInitialStates) {
+      console.log('[StageManager] 结束移动操作')
+
+      // 操作结束时解锁撤销/重做管理器
+      undoRedoManager.unlock()
+      console.log('[StageManager] 解锁撤销/重做管理器')
+
+      const operations: any[] = []
+      let hasChanges = false
+
+      Object.entries(this.state.dragInitialStates).forEach(([id, initialAttrs]) => {
+        const finalElement = state.elements[id]
+        if (!finalElement) return
+
+        // 检查是否真的发生了移动，避免微小抖动或原地点击产生历史记录
+        const isMoved = finalElement.x !== initialAttrs.x || finalElement.y !== initialAttrs.y
+
+        if (isMoved) {
+          hasChanges = true
+          operations.push({
+            id,
+            initialAttrs, // 只有 x, y, points
+            finalAttrs: {
+              x: finalElement.x,
+              y: finalElement.y,
+              points: finalElement.points ? [...finalElement.points] : undefined,
+            },
+          })
+        }
+      })
+
+      if (hasChanges && operations.length > 0) {
+        const moveCommand = new UpdateElementCommand(operations, '移动元素')
+        undoRedoManager.executeCommand(moveCommand)
+        console.log('[StageManager] 创建并执行 Move Command')
+      }
+    }
+
+    // [修改] 处理 Resizing (调整大小) 结束的命令记录
+    // 使用通用的 UpdateElementCommand
+    if (this.state.mode === 'resizing' && this.state.resizeInitialStates) {
+      console.log('[StageManager] 结束调整大小操作')
+
+      // 操作结束时解锁撤销/重做管理器
+      undoRedoManager.unlock()
+      console.log('[StageManager] 解锁撤销/重做管理器')
+
+      const operations: any[] = []
+
+      // 遍历记录的初始状态
+      Object.entries(this.state.resizeInitialStates).forEach(([id, initialAttrs]) => {
+        const finalElement = state.elements[id]
+        if (!finalElement) return
+
+        // 构造"修改后"的属性
+        const finalAttrs = {
+          x: finalElement.x,
+          y: finalElement.y,
+          width: finalElement.width,
+          height: finalElement.height,
+          points: finalElement.points ? [...finalElement.points] : undefined, // 同样深拷贝
+        }
+
+        // 只有当属性真的发生变化时才记录（防止原地点击一下也记录）
+        const hasChanged =
+          initialAttrs.x !== finalAttrs.x ||
+          initialAttrs.y !== finalAttrs.y ||
+          initialAttrs.width !== finalAttrs.width ||
+          initialAttrs.height !== finalAttrs.height ||
+          (initialAttrs.points &&
+            finalAttrs.points &&
+            JSON.stringify(initialAttrs.points) !== JSON.stringify(finalAttrs.points))
+
+        if (hasChanged) {
+          operations.push({ id, initialAttrs, finalAttrs })
+        }
+      })
+
+      // 如果有有效操作，生成命令并执行
+      if (operations.length > 0) {
+        const resizeCommand = new UpdateElementCommand(operations, '调整元素大小')
+        // executeCommand 会把命令推入 UndoStack，并清空 RedoStack
+        undoRedoManager.executeCommand(resizeCommand)
+        console.log('[StageManager] Resize 操作已入栈')
+      }
+    }
+
     this.state.mode = 'idle'
     this.state.currentId = null
     this.state.activeHandle = null
@@ -538,9 +660,10 @@ export class StageManagerCore {
     // --- 清理状态 ---
     this.state.initialElementsMap = null
     this.state.initialGroupBounds = null
+    this.state.resizeInitialStates = null
+    this.state.dragInitialStates = null // 清理
 
-    // 操作结束时解锁撤销/重做管理器
-    undoRedoManager.unlock()
+    // 移除了原来在此处的解锁操作
   }
 
   public updateViewportState(tool: ToolType) {
