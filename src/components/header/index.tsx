@@ -22,6 +22,7 @@ export function Header(props: IProps) {
             >
               BDdraw_DEV
             </a>
+
             <Button
               type="secondary"
               size="large"
@@ -36,12 +37,12 @@ export function Header(props: IProps) {
                   d="M15 3v4a1 1 0 001 1h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
                 />
               </svg>
-              <span>主页</span>
+              <span>画布</span>
             </Button>
             <Button
               type="secondary"
               size="large"
-              onClick={() => navigate('/canvas')}
+              onClick={() => navigate('/about')}
               className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
             >
               <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -52,7 +53,7 @@ export function Header(props: IProps) {
                   d="M15 3v4a1 1 0 001 1h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
                 />
               </svg>
-              <span>画布</span>
+              <span>关于</span>
             </Button>
           </div>
 
