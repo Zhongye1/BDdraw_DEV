@@ -1,5 +1,5 @@
 import * as React from 'react'
-import { Slot } from '@radix-ui/react-slot'
+// 移除 Radix UI Slot 的引入
 import { cva, type VariantProps } from 'class-variance-authority'
 
 import { cn } from 'src/lib/utils'
@@ -39,8 +39,9 @@ export interface ButtonProps
 
 const Button = React.forwardRef<HTMLButtonElement, PropsWithChildren<ButtonProps>>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : 'button'
-    return <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+    // 移除 Slot 的使用，简化实现
+    // 当 asChild 为 true 时，我们忽略这个属性，因为没有 Slot 组件可用
+    return <button className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
   },
 )
 Button.displayName = 'Button'
