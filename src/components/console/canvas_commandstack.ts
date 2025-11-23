@@ -33,7 +33,7 @@ class ConsoleCommandStack {
    * @param commandId 命令ID
    */
   logCommandExecution(commandType: string, commandId?: number | string) {
-    commandStackLogger.debug(`[执行] ${commandType} 命令 ID: ${commandId}`)
+    //commandStackLogger.debug(`[执行] ${commandType} 命令 ID: ${commandId}`)
   }
 
   /**
@@ -72,18 +72,19 @@ class ConsoleCommandStack {
     commandStackLogger.log(`命令栈状态 -> 撤销栈: ${undoCount} 个命令, 重做栈: ${redoCount} 个命令`)
 
     if (undoCount > 0) {
-      commandStackLogger.debug('撤销栈内容预览:')
-      undoRedoManager['undoStack'].slice(-3).forEach((cmd, index) => {
-        const position = undoCount - index
-        commandStackLogger.debug(`  ${position}. ${cmd.constructor.name}`)
-      })
+      const undoCommands = undoRedoManager['undoStack']
+        .map((cmd, index) => `${index + 1}.${cmd.constructor.name}`)
+        .join(', ')
+      // 直接打印撤销栈内容
+      console.warn('撤销栈:', undoRedoManager['undoStack'])
     }
 
     if (redoCount > 0) {
-      commandStackLogger.debug('重做栈内容预览:')
-      undoRedoManager['redoStack'].forEach((cmd, index) => {
-        commandStackLogger.debug(`  ${index + 1}. ${cmd.constructor.name}`)
-      })
+      const redoCommands = undoRedoManager['redoStack']
+        .map((cmd, index) => `${index + 1}.${cmd.constructor.name}`)
+        .join(', ')
+      // 直接打印重做栈内容
+      console.warn('重做栈:', undoRedoManager['redoStack'])
     }
   }
 

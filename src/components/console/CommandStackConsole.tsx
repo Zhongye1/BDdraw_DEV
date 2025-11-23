@@ -46,7 +46,7 @@ const CommandStackConsole: React.FC = () => {
     refreshStacks()
 
     // 定期刷新状态
-    const interval = setInterval(refreshStacks, 1000)
+    const interval = setInterval(refreshStacks, 100)
     return () => clearInterval(interval)
   }, [])
 
