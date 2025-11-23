@@ -5,7 +5,7 @@ import { useStore } from '@/stores/canvasStore'
 import PropertyPanel from '@/components/property-panel'
 import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
 import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
-import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management.ts'
+import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
