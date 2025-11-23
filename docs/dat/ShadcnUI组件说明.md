@@ -4,11 +4,11 @@
 
 虽然项目中包含了 Shadcn UI 的引用，但实际上项目主要使用的是 Radix UI 和自定义组件，而不是完整地使用 Shadcn UI 组件库。从项目结构和代码来看，项目采用了类似 Shadcn UI 的组件组织方式，但实际实现是基于 Radix UI 和自定义代码。
 
-项目中与 Shadcn UI 相关的配置文件 [components.json](file:///E:/ADF-workbase/BDdraw_DEV/components.json) 显示了项目使用了 Shadcn UI 的配置结构，但实际组件实现是基于 Radix UI 构建的。
+项目中与 Shadcn UI 相关的配置文件 [components.json](/components.json) 显示了项目使用了 Shadcn UI 的配置结构，但实际组件实现是基于 Radix UI 构建的。
 
 ## 2. 组件结构
 
-项目在 [src/components/ui](file:///E:/ADF-workbase/BDdraw_DEV/src/components/ui) 目录下实现了多个 UI 组件，这些组件遵循了 Shadcn UI 的组织方式，但底层使用了 Radix UI 和其他库：
+项目在 [src/components/ui](/src/components/ui) 目录下实现了多个 UI 组件，这些组件遵循了 Shadcn UI 的组织方式，但底层使用了 Radix UI 和其他库：
 
 ### 2.1 Button 组件
 

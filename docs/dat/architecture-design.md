@@ -10,25 +10,25 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 
 **技术实现**:
 - 使用 Zustand 作为状态管理库
-- 数据存储在 [canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts) 中
+- 数据存储在 [canvasStore.ts](/src/stores/canvasStore.ts) 中
 - 采用函数式更新方式，通过展开运算符实现不可变更新
 
 **核心功能**:
-- 存储画布元素数据 ([elements](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L79-L79))
-- 管理选中状态 ([selectedIds](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L81-L81))
-- 管理当前工具 ([tool](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L78-L78))
-- 管理样式设置 ([currentStyle](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L90-L100))
-- 提供状态更新方法 ([addElement](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L104-L104), [updateElement](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L105-L105), [removeElements](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L106-L106) 等)
+- 存储画布元素数据 ([elements](/src/stores/canvasStore.ts#L79-L79))
+- 管理选中状态 ([selectedIds](/src/stores/canvasStore.ts#L81-L81))
+- 管理当前工具 ([tool](/src/stores/canvasStore.ts#L78-L78))
+- 管理样式设置 ([currentStyle](/src/stores/canvasStore.ts#L90-L100))
+- 提供状态更新方法 ([addElement](/src/stores/canvasStore.ts#L104-L104), [updateElement](/src/stores/canvasStore.ts#L105-L105), [removeElements](/src/stores/canvasStore.ts#L106-L106) 等)
 
-**代码位置**: [src/stores/canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts)
+**代码位置**: [src/stores/canvasStore.ts](/src/stores/canvasStore.ts)
 
 ### 2.2 渲染层 (Rendering)
 
 **技术实现**:
 - 使用 PixiJS v8 作为渲染引擎
 - 使用 HTMLText 实现富文本渲染
-- 通过 [ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) 管理元素渲染
-- 使用 Map 缓存图形对象 ([spriteMap](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts#L5-L5))
+- 通过 [ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) 管理元素渲染
+- 使用 Map 缓存图形对象 ([spriteMap](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts#L5-L5))
 
 **核心功能**:
 - 根据元素类型选择合适的 PixiJS 对象进行渲染
@@ -40,26 +40,26 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 图片资源的异步加载和缓存管理
 
 **代码位置**: 
-- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
-- [src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts)
 
 ### 2.3 交互层 (Interaction)
 
 **技术实现**:
 - 使用 pixi-viewport 实现无限画布
-- 通过 [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) 管理核心交互逻辑
-- 使用 [InteractionHandler.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts) 处理指针事件
+- 通过 [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) 管理核心交互逻辑
+- 使用 [InteractionHandler.ts](/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts) 处理指针事件
 
 **核心功能**:
 - 处理鼠标/触摸事件 (点击、拖拽、释放)
-- 管理交互状态 ([mode](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts#L22-L22): idle, selecting, dragging, resizing 等)
+- 管理交互状态 ([mode](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts#L22-L22): idle, selecting, dragging, resizing 等)
 - 实现选区功能
 - 处理元素的拖拽、缩放等操作
 - 管理视口的平移和缩放
 
 **代码位置**:
-- [src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts)
-- [src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts)
+- [src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts)
+- [src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts](/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts)
 
 ### 2.4 UI 层 (User Interface)
 
@@ -69,13 +69,13 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 使用 Tailwind CSS 进行样式设计
 
 **核心功能**:
-- 工具栏 ([TopToolbar.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/canvas_toolbar/TopToolbar.tsx))
-- 属性面板 ([property-panel/index.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/property-panel/index.tsx))
-- 文本编辑器 ([BottomTextEditor.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/Richtext_editor/BottomTextEditor.tsx))
-- 图片插入模态框 ([image-insert-modal/index.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/image-insert-modal/index.tsx))
+- 工具栏 ([TopToolbar.tsx](/src/components/canvas_toolbar/TopToolbar.tsx))
+- 属性面板 ([property-panel/index.tsx](/src/components/property-panel/index.tsx))
+- 文本编辑器 ([BottomTextEditor.tsx](/src/components/Richtext_editor/BottomTextEditor.tsx))
+- 图片插入模态框 ([image-insert-modal/index.tsx](/src/components/image-insert-modal/index.tsx))
 
 **代码位置**:
-- [src/components/](file:///e:/ADF-workbase/BDdraw_DEV/src/components/)
+- [src/components/](/src/components/)
 
 ## 3. 核心设计要素实现
 
@@ -92,7 +92,7 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - HTMLText 支持复杂的富文本格式
 
 **代码位置**:
-- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
 
 ### 3.2 状态管理
 
@@ -107,12 +107,12 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 响应式更新，自动触发 UI 重渲染
 
 **代码位置**:
-- [src/stores/canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts)
+- [src/stores/canvasStore.ts](/src/stores/canvasStore.ts)
 
 ### 3.3 元素对象缓存
 
 **实现方式**:
-- 使用 Map 缓存 PixiJS 对象 ([spriteMap](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts#L5-L5))
+- 使用 Map 缓存 PixiJS 对象 ([spriteMap](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts#L5-L5))
 - 永久缓存元素对象，避免频繁创建和销毁
 - 根据元素 ID 精确管理对象生命周期
 
@@ -122,14 +122,14 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 保持元素状态一致性
 
 **代码位置**:
-- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
 
 ### 3.4 历史栈
 
 **实现方式**:
 - 使用命令模式实现撤销/重做功能
-- 通过 [UndoRedoManager.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UndoRedoManager.ts) 管理命令栈
-- 使用 [SnapshotCommand](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UndoRedoManager.ts#L147-L171) 和 [UpdateElementCommand](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UpdateElementCommand.ts#L12-L77) 两种命令类型
+- 通过 [UndoRedoManager.ts](/src/lib/UndoRedoManager.ts) 管理命令栈
+- 使用 [SnapshotCommand](/src/lib/UndoRedoManager.ts#L147-L171) 和 [UpdateElementCommand](/src/lib/UpdateElementCommand.ts#L12-L77) 两种命令类型
 
 **优势**:
 - 支持精确的撤销/重做操作
@@ -137,13 +137,13 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 状态隔离，避免副作用
 
 **代码位置**:
-- [src/lib/UndoRedoManager.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UndoRedoManager.ts)
-- [src/lib/UpdateElementCommand.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UpdateElementCommand.ts)
+- [src/lib/UndoRedoManager.ts](/src/lib/UndoRedoManager.ts)
+- [src/lib/UpdateElementCommand.ts](/src/lib/UpdateElementCommand.ts)
 
 ### 3.5 选中/变换系统
 
 **实现方式**:
-- 使用独立的变换控制器渲染 ([TransformerRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts))
+- 使用独立的变换控制器渲染 ([TransformerRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts))
 - 通过手柄实现元素的缩放操作
 - 支持多元素同时选中和操作
 
@@ -153,7 +153,7 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 与主渲染层解耦
 
 **代码位置**:
-- [src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts)
 
 ### 3.6 辅助对齐线
 
@@ -191,7 +191,7 @@ BDdraw_DEV 项目采用分层架构设计，将应用分为数据层、渲染层
 - 可扩展性强
 
 **代码位置**:
-- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
+- [src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts)
 
 ## 4. 数据流设计
 

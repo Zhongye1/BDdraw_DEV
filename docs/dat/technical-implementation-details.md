@@ -53,8 +53,8 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 8. 铅笔 (`pencil`): 通过记录鼠标轨迹点绘制自由线条
 
 **核心代码位置**:
-- [ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 图形渲染实现
-- [canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts) - 图形数据结构定义
+- [ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 图形渲染实现
+- [canvasStore.ts](/src/stores/canvasStore.ts) - 图形数据结构定义
 
 #### 3.1.2 图片渲染
 
@@ -74,7 +74,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 3. 灰度滤镜: 使用 `PIXI.ColorMatrixFilter` 的 grayscale 方法
 
 **核心代码位置**:
-- [ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 图片渲染实现
+- [ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 图片渲染实现
 
 #### 3.1.3 富文本渲染
 
@@ -84,14 +84,14 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 通过解析 HTML 字符串实现富文本显示
 
 **支持的文本属性**:
-- 字体 (font-family): 通过 [fontFamily](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L45-L45) 属性设置
-- 字号 (font-size): 通过 [fontSize](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L44-L44) 属性设置
+- 字体 (font-family): 通过 [fontFamily](/src/stores/canvasStore.ts#L45-L45) 属性设置
+- 字号 (font-size): 通过 [fontSize](/src/stores/canvasStore.ts#L44-L44) 属性设置
 - 颜色 (color): 通过 HTML 内联样式设置
 - 背景色 (background): 通过 HTML 内联样式设置
 - BIUS (加粗、斜体、下划线、删除线): 通过 HTML 标签实现
 
 **核心代码位置**:
-- [ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 富文本渲染实现
+- [ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts) - 富文本渲染实现
 
 ### 3.2 画布交互
 
@@ -103,7 +103,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 视口状态管理，包括缩放级别和位置
 
 **核心代码位置**:
-- [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 视口设置和管理
+- [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 视口设置和管理
 
 #### 3.2.2 选区功能
 
@@ -113,7 +113,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 多选: 支持按住 Shift 键进行多选
 
 **核心代码位置**:
-- [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 选区逻辑实现
+- [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 选区逻辑实现
 
 #### 3.2.3 数据持久化
 
@@ -123,7 +123,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 可通过 localStorage 或其他持久化方案保存数据
 
 **核心代码位置**:
-- [canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts) - 状态管理实现
+- [canvasStore.ts](/src/stores/canvasStore.ts) - 状态管理实现
 
 #### 3.2.4 快捷键操作
 
@@ -133,7 +133,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 支持工具切换快捷键
 
 **核心代码位置**:
-- [use_React_hotkeys_management.ts.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/hooks/use_React_hotkeys_management.ts.ts) - 快捷键处理实现
+- [use_React_hotkeys_management.ts.ts](/src/hooks/use_React_hotkeys_management.ts.ts) - 快捷键处理实现
 
 ### 3.3 调参工具栏
 
@@ -145,7 +145,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 支持快捷键提示和工具切换
 
 **核心代码位置**:
-- [TopToolbar.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/canvas_toolbar/TopToolbar.tsx) - 工具栏实现
+- [TopToolbar.tsx](/src/components/canvas_toolbar/TopToolbar.tsx) - 工具栏实现
 
 #### 3.3.2 属性面板
 
@@ -155,7 +155,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 实时更新元素属性
 
 **核心代码位置**:
-- [property-panel/index.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/property-panel/index.tsx) - 属性面板实现
+- [property-panel/index.tsx](/src/components/property-panel/index.tsx) - 属性面板实现
 
 ### 3.4 元素编辑
 
@@ -167,7 +167,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 支持 HTML 格式文本
 
 **核心代码位置**:
-- [BottomTextEditor.tsx](file:///e:/ADF-workbase/BDdraw_DEV/src/components/Richtext_editor/BottomTextEditor.tsx) - 文本编辑器实现
+- [BottomTextEditor.tsx](/src/components/Richtext_editor/BottomTextEditor.tsx) - 文本编辑器实现
 
 #### 3.4.2 元素操作
 
@@ -178,7 +178,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 旋转: 数据结构支持但 UI 实现尚未完成
 
 **核心代码位置**:
-- [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 元素操作实现
+- [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 元素操作实现
 
 ### 3.5 性能优化
 
@@ -196,7 +196,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 防抖机制避免频繁状态更新
 
 **核心代码位置**:
-- [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 防抖实现
+- [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts) - 防抖实现
 
 ### 3.6 协同功能
 
@@ -208,8 +208,8 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 更新命令记录具体元素变化
 
 **核心代码位置**:
-- [UndoRedoManager.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UndoRedoManager.ts) - 撤销重做管理器
-- [UpdateElementCommand.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UpdateElementCommand.ts) - 元素更新命令
+- [UndoRedoManager.ts](/src/lib/UndoRedoManager.ts) - 撤销重做管理器
+- [UpdateElementCommand.ts](/src/lib/UpdateElementCommand.ts) - 元素更新命令
 
 #### 3.6.2 协同编辑
 
@@ -230,10 +230,10 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 协调渲染和状态更新
 
 **子模块**:
-- [StageManagerCore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts): 核心类和初始化逻辑
-- [ElementRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts): 元素渲染逻辑
-- [TransformerRenderer.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts): 变换控制器渲染逻辑
-- [InteractionHandler.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts): 交互事件处理
+- [StageManagerCore.ts](/src/pages/canvas/Pixi_STM_modules/core/StageManagerCore.ts): 核心类和初始化逻辑
+- [ElementRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/ElementRenderer.ts): 元素渲染逻辑
+- [TransformerRenderer.ts](/src/pages/canvas/Pixi_STM_modules/rendering/TransformerRenderer.ts): 变换控制器渲染逻辑
+- [InteractionHandler.ts](/src/pages/canvas/Pixi_STM_modules/interaction/InteractionHandler.ts): 交互事件处理
 
 #### 4.1.2 状态管理模块
 
@@ -243,7 +243,7 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 提供状态更新方法
 
 **核心代码位置**:
-- [canvasStore.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts): Zustand 状态存储
+- [canvasStore.ts](/src/stores/canvasStore.ts): Zustand 状态存储
 
 #### 4.1.3 命令模式模块
 
@@ -252,8 +252,8 @@ BDdraw_DEV 是一个基于 Web 的图形绘制和编辑工具，使用现代前�
 - 管理命令执行历史
 
 **核心代码位置**:
-- [UndoRedoManager.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UndoRedoManager.ts): 撤销重做管理器
-- [UpdateElementCommand.ts](file:///e:/ADF-workbase/BDdraw_DEV/src/lib/UpdateElementCommand.ts): 元素更新命令
+- [UndoRedoManager.ts](/src/lib/UndoRedoManager.ts): 撤销重做管理器
+- [UpdateElementCommand.ts](/src/lib/UpdateElementCommand.ts): 元素更新命令
 
 ### 4.2 数据流
 
@@ -310,7 +310,7 @@ UI 组件采用 React 组件化设计：
 
 ### 7.1 旋转功能
 
-虽然数据结构中定义了 [rotation](file:///e:/ADF-workbase/BDdraw_DEV/src/stores/canvasStore.ts#L36-L36) 属性，但 UI 实现尚未完成。
+虽然数据结构中定义了 [rotation](/src/stores/canvasStore.ts#L36-L36) 属性，但 UI 实现尚未完成。
 
 ### 7.2 组合与打组功能
 
