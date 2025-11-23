@@ -429,17 +429,58 @@ Zustand 状态变化同时触发数据持久化：
 
 ## 项目预览图
 
+部署地址：https://zhongye1.github.io/BDdraw_DEV/
+
 ![image-20251122221056789](./assets/image-20251122221056789.png)
 
 ![image-20251122221138270](./assets/image-20251122221138270.png)
 
-### 具体模块设计文档
+### 具体模块设计文档（见博客或项目/doc）
 
-【待补充】
+[前端项目构建 Vite + React + TypeScript + Tailwind CSS ](https://zhongye1.github.io/Arknight-notes/posts/39845.html)
 
-### 具体模块设计文档
+[项目基本社交与技术选型说明](https://zhongye1.github.io/Arknight-notes/posts/17360.html)
 
-【待补充】
+[2025-11-23-canvas 项目相关-逻辑层 ](https://zhongye1.github.io/Arknight-notes/posts/62456.html)
+
+[2025-11-23-canvas 项目相关-状态管理层 ](https://zhongye1.github.io/Arknight-notes/posts/61172.html)
+
+[2025-11-23-canvas 项目相关-渲染层 ](https://zhongye1.github.io/Arknight-notes/posts/8350.html)
+
+[2025-11-23-canvas 项目相关-图像编辑机制 ](https://zhongye1.github.io/Arknight-notes/posts/55740.html)
+
+[2025-11-23-Undo/Redo 机制具体实现 ](https://zhongye1.github.io/Arknight-notes/posts/52694.html)
+
+[2025-11-23-canvas 项目相关-工具栏选择机制 ](https://zhongye1.github.io/Arknight-notes/posts/36977.html)
+
+[2025-11-23-canvas 项目相关-快捷键管理 ](https://zhongye1.github.io/Arknight-notes/posts/25119.html)
+
+[2025-11-23-canvas 项目相关-画布元素控制调整机制 ](https://zhongye1.github.io/Arknight-notes/posts/38567.html)
+
+[2025-11-23-canvas 项目相关-富文本文本元素处理机制 ](https://zhongye1.github.io/Arknight-notes/posts/61907.html)
+
+[2025-11-23-canvas 项目相关-视口管理机制 ](https://zhongye1.github.io/Arknight-notes/posts/12486.html)
+
+[2025-11-22-使用 GitHub Actions 自动部署基于 vite 的项目到 GitHub Pages ](https://zhongye1.github.io/Arknight-notes/posts/33040.html)
+
+### TODO 待补充的文档
+
+~~图像编辑机制~~
+~~Undo/Redo 机制具体实现~~
+~~画布元素控制调整机制~~
+~~富文本文本元素处理机制~~
+~~性能优化~~
+~~视口管理机制~~
+~~快捷键管理~~
+~~工具栏选择机制~~
+
+元素打组机制
+性能优化方案
+
+数据持久化设计
+协同编辑设计
+
+【待补充 2025.11.23】
 
 ---
 
