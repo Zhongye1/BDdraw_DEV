@@ -177,32 +177,31 @@ export const useStore = create<CanvasState>()(
         // ========== 撤销/重做机制核心部分 ==========
         // 创建快照命令并执行
         // 判断操作类型
+        // 兼容函数式更新
+        const partialObj = typeof partial === 'function' ? partial(get()) : partial
+
         let operationType = '未知操作'
-        if (typeof partial === 'object' && partial !== null) {
-          if ('elements' in partial) {
-            // 检查是否是添加元素操作
-            const newElements = partial.elements as Record<string, CanvasElement>
-            const oldElements = currentState.elements
+        if (partialObj && typeof partialObj === 'object') {
+          if ('elements' in partialObj) {
+            // 比较元素数量变化
+            const prevCount = Object.keys(currentState.elements).length
+            const nextCount = Object.keys(newState.elements).length
 
-            // 检查是否有新增元素
-            const newElementIds = Object.keys(newElements)
-            const oldElementIds = Object.keys(oldElements)
-
-            if (newElementIds.length > oldElementIds.length) {
+            if (nextCount > prevCount) {
               operationType = '添加元素'
-            } else if (newElementIds.length < oldElementIds.length) {
+            } else if (nextCount < prevCount) {
               operationType = '删除元素'
             } else {
               operationType = '修改元素'
             }
-          } else if ('tool' in partial) {
+          } else if ('tool' in partialObj) {
             operationType = '切换工具'
-          } else if ('selectedIds' in partial) {
+          } else if ('selectedIds' in partialObj && !('elements' in partialObj)) {
             operationType = '选择元素'
           }
         }
 
-        const command = new SnapshotCommand(currentState, newState, operationType)
+        const command = new SnapshotCommand(currentState, newState, operationType || '状态变更')
         //console.log('[CanvasStore] 创建并执行快照命令')
         undoRedoManager.executeCommand(command)
         // ======================================

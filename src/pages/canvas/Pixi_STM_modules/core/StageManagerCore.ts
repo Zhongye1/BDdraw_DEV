@@ -26,7 +26,7 @@ export class StageManagerCore {
 
   // 防抖相关变量
   private debounceTimer: number | null = null
-  private readonly DEBOUNCE_DELAY = 1000 // 0.1秒
+  private readonly DEBOUNCE_DELAY = 100 // 0.1秒
 
   private state: StageManagerState = {
     mode: 'idle',
@@ -108,7 +108,7 @@ export class StageManagerCore {
     this.debounceTimer = window.setTimeout(() => {
       // 这里可以执行保存快照的逻辑
       // 例如，可以调用一个保存状态的方法
-      console.log('保存画布状态快照')
+      //console.log('保存画布状态快照')
 
       // 重置定时器
       this.debounceTimer = null
@@ -563,7 +563,24 @@ export class StageManagerCore {
           height: maxY - minY,
           points: newPoints,
         })
+      } else if (
+        el.width === 0 &&
+        el.height === 0 &&
+        (el.type === 'rect' || el.type === 'circle' || el.type === 'triangle' || el.type === 'diamond')
+      ) {
+        // 删除零大小的元素
+        state.removeElements([this.state.currentId])
+        this.state.currentId = null
+        this.state.mode = 'idle'
+        // 解锁撤销/重做管理器
+        undoRedoManager.unlock()
+        return
       }
+
+      // [新增] 修复 Undo/Redo Bug
+      // 在解锁前或解锁后均可，关键是获取当前的最新 State（包含了最终宽高的 State）
+      // 并更新掉 onPointerDown 时记录的那个"0宽高"的快照
+      undoRedoManager.updateLatestSnapshot(useStore.getState())
 
       // 解锁撤销/重做管理器
       undoRedoManager.unlock()

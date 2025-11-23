@@ -1,5 +1,4 @@
 import { logger } from '@/components/console/consolements'
-import { useStore } from '@/stores/canvasStore'
 import { consoleCommandStack } from '@/components/console/canvas_commandstack'
 
 export interface Command {
@@ -28,6 +27,18 @@ export class UndoRedoManager {
 
   isLocked() {
     return this.locked
+  }
+
+  // [新增] 用于在操作结束时更新栈顶命令的最终状态
+  updateLatestSnapshot(nextState: any) {
+    if (this.undoStack.length === 0) return
+    const lastCommand = this.undoStack[this.undoStack.length - 1]
+
+    // 确保只更新 SnapshotCommand 类型的命令
+    if (lastCommand instanceof SnapshotCommand) {
+      lastCommand.updateNextState(nextState)
+      logger.debug('[UndoRedoManager] 已更新最近一次快照的最终状态')
+    }
   }
 
   executeCommand(command: Command) {
@@ -140,16 +151,27 @@ export class SnapshotCommand implements Command {
   private prevState: any
   private nextState: any
   private commandId: number
-  private type: string
+  private description: string // 改名为 description，语义更清晰
 
-  constructor(prevState: any, nextState: any, type: any) {
-    this.prevState = structuredClone(prevState)
-    this.nextState = structuredClone(nextState)
-    this.type = type
+  constructor(prevState: any, nextState: any, description: string) {
+    // 不使用 structuredClone，而是直接引用对象
+    this.prevState = prevState
+    this.nextState = nextState
+    this.description = description || '状态变更' // 确保始终有描述
     // 生成唯一的命令ID用于调试
     this.commandId = Date.now() % 1000000
-    logger.warn(`[SnapshotCommand] 创建命令 ID: ${this.commandId}`)
-    consoleCommandStack.logSnapshotCommandCreate(this.commandId, this.type)
+    logger.warn(`[SnapshotCommand] 创建命令 ID: ${this.commandId}`, {
+      description: this.description,
+      prevState,
+      nextState,
+    })
+    consoleCommandStack.logSnapshotCommandCreate(this.commandId, this.description)
+  }
+
+  // [新增] 更新 nextState 的方法
+  updateNextState(nextState: any) {
+    this.nextState = nextState
+    logger.debug(`[SnapshotCommand] 命令 ID: ${this.commandId} 的最终状态已更新`)
   }
 
   execute(): void {
@@ -159,14 +181,22 @@ export class SnapshotCommand implements Command {
   }
 
   undo(): void {
-    logger.warn(`[SnapshotCommand] 撤销命令 ID: ${this.commandId}`)
+    logger.warn(`[SnapshotCommand] 撤销命令 ID: ${this.commandId}`, this.prevState)
     consoleCommandStack.logUndo('SnapshotCommand', this.commandId)
-    useStore.setState(this.prevState)
+    // 在使用时动态导入并获取原始的 setState 方法绕过中间件
+    import('@/stores/canvasStore').then((module) => {
+      const { setState: originalSetState } = module.useStore
+      originalSetState(this.prevState)
+    })
   }
 
   redo(): void {
-    logger.warn(`[SnapshotCommand] 重做命令 ID: ${this.commandId}`)
+    logger.warn(`[SnapshotCommand] 重做命令 ID: ${this.commandId}`, this.nextState)
     consoleCommandStack.logRedo('SnapshotCommand', this.commandId)
-    useStore.setState(this.nextState)
+    // 在使用时动态导入并获取原始的 setState 方法绕过中间件
+    import('@/stores/canvasStore').then((module) => {
+      const { setState: originalSetState } = module.useStore
+      originalSetState(this.nextState)
+    })
   }
 }
