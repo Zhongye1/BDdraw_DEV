@@ -1,35 +1,59 @@
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useStore } from '@/stores/canvasStore'
-import { StageManager } from '@/pages/canvas/Pixi_stageManager'
+import { Notification } from '@arco-design/web-react'
 
-interface UseCanvasShortcutsProps {
-  stageManagerRef: React.RefObject<StageManager | null>
-}
+export const useCanvasShortcuts = () => {
+  const { setTool, undo, redo, copyElements, pasteElements, selectedIds, elements, groupElements, ungroupElements } =
+    useStore()
 
-export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps) => {
-  const { selectedIds, removeElements, setTool, copyElements, pasteElements } = useStore()
-
-  // 删除选中元素
+  // Ctrl+Z 撤销
   useHotkeys(
-    'delete, backspace',
-    () => {
-      if (selectedIds.length > 0) {
-        removeElements(selectedIds)
-      }
+    'ctrl+z',
+    (event) => {
+      event.preventDefault()
+      undo()
     },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [selectedIds, removeElements],
+    {},
+    [undo],
   )
 
-  // 复制元素
+  // Ctrl+Shift+Z 或 Ctrl+Y 重做
   useHotkeys(
-    'ctrl+c, cmd+c',
-    () => {
+    'ctrl+y, ctrl+shift+z',
+    (event) => {
+      event.preventDefault()
+      redo()
+    },
+    {},
+    [redo],
+  )
+
+  // Delete 删除元素
+  useHotkeys(
+    'delete, backspace',
+    (event) => {
+      event.preventDefault()
+      const state = useStore.getState()
+      if (state.selectedIds.length > 0) {
+        state.removeElements(state.selectedIds)
+      }
+    },
+    {},
+    [],
+  )
+
+  // Ctrl+C 复制
+  useHotkeys(
+    'ctrl+c',
+    (event) => {
+      event.preventDefault()
       if (selectedIds.length > 0) {
         copyElements(selectedIds)
+        Notification.success({
+          closable: false,
+          title: '复制成功',
+          content: `已复制 ${selectedIds.length} 个元素`,
+        })
       }
     },
     {
@@ -39,10 +63,11 @@ export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps)
     [selectedIds, copyElements],
   )
 
-  // 粘贴元素
+  // Ctrl+V 粘贴
   useHotkeys(
-    'ctrl+v, cmd+v',
-    () => {
+    'ctrl+v',
+    (event) => {
+      event.preventDefault()
       pasteElements()
     },
     {
@@ -114,6 +139,7 @@ export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps)
     },
     [setTool],
   )
+
   // 切换到直线工具
   useHotkeys(
     'shift+6',
@@ -177,5 +203,61 @@ export const useCanvasShortcuts = ({ stageManagerRef }: UseCanvasShortcutsProps)
       ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
     },
     [setTool],
+  )
+
+  // Ctrl+G 分组
+  useHotkeys(
+    'ctrl+g',
+    (event) => {
+      event.preventDefault()
+      if (selectedIds.length > 1) {
+        groupElements(selectedIds)
+        Notification.success({
+          closable: false,
+          title: '分组成功',
+          content: `已将 ${selectedIds.length} 个元素分组`,
+        })
+      } else {
+        Notification.warning({
+          closable: false,
+          title: '无法分组',
+          content: '请选择至少两个元素进行分组',
+        })
+      }
+    },
+    {
+      enableOnFormTags: false,
+      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+    },
+    [selectedIds, elements, groupElements],
+  )
+
+  // Ctrl+Shift+G 取消分组
+  useHotkeys(
+    'ctrl+shift+g',
+    (event) => {
+      event.preventDefault()
+      const selectedGroups = selectedIds.filter((id) => elements[id] && elements[id].type === 'group')
+
+      if (selectedGroups.length > 0) {
+        ungroupElements(selectedGroups)
+        Notification.success({
+          closable: false,
+          title: '取消分组成功',
+          content: `已取消 ${selectedGroups.length} 个组的分组`,
+        })
+      } else {
+        Notification.warning({
+          closable: false,
+          title: '无法取消分组',
+          content: '请选择一个分组元素',
+        })
+      }
+    },
+    {
+      enableOnFormTags: false,
+      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+    },
+    [selectedIds, elements, ungroupElements],
   )
 }

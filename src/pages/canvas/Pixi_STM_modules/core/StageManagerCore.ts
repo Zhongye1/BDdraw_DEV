@@ -3,7 +3,7 @@ import { Viewport } from 'pixi-viewport'
 import { ElementRenderer } from '../rendering/ElementRenderer'
 import { TransformerRenderer } from '../rendering/TransformerRenderer'
 import { InteractionHandler } from '../interaction/InteractionHandler'
-import { useStore, type ToolType, type CanvasElement } from '@/stores/canvasStore'
+import { useStore, type ToolType, type CanvasElement, type GroupElement } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import type { HandleType, StageManagerState } from './types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
@@ -47,7 +47,14 @@ export class StageManagerCore {
     rotationInitialStates: null,
     rotationCenter: null,
     startRotationAngle: null,
+
+    // [修复] 添加缺失的属性
+    initialSelectionBounds: null,
+    currentRotationAngle: null,
   }
+
+  // 添加 Ctrl 键状态跟踪
+  private isCtrlPressed = false
 
   constructor(container: HTMLElement) {
     this.app = new PIXI.Application()
@@ -66,6 +73,9 @@ export class StageManagerCore {
         this.onPointerUp,
       )
       this.interactionHandler.setupInteraction()
+
+      // 添加键盘事件监听
+      this.setupKeyboardEvents()
 
       useStore.subscribe(
         (state) => ({ elements: state.elements, selectedIds: state.selectedIds, tool: state.tool }),
@@ -100,6 +110,32 @@ export class StageManagerCore {
       )
       this.updateViewportState(tool)
     })
+  }
+
+  // 添加键盘事件处理
+  private setupKeyboardEvents() {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') {
+        this.isCtrlPressed = true
+      }
+    }
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Control' || e.key === 'Meta') {
+        this.isCtrlPressed = false
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+
+    // 在组件销毁时移除事件监听器
+    const originalDestroy = this.destroy.bind(this)
+    this.destroy = () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      originalDestroy()
+    }
   }
 
   // 添加防抖快照方法
@@ -161,10 +197,20 @@ export class StageManagerCore {
       hasValid = true
       // 使用数据模型中的宽高计算
       // 如果想要更精确的 Text 包围盒，可以结合 ElementRenderer 的 spriteMap
-      minX = Math.min(minX, el.x)
-      minY = Math.min(minY, el.y)
-      maxX = Math.max(maxX, el.x + el.width)
-      maxY = Math.max(maxY, el.y + el.height)
+
+      // 如果是组元素，需要特殊处理
+      if ((el.type as any) === 'group') {
+        minX = Math.min(minX, el.x)
+        minY = Math.min(minY, el.y)
+        maxX = Math.max(maxX, el.x + el.width)
+        maxY = Math.max(maxY, el.y + el.height)
+      } else {
+        // 普通元素
+        minX = Math.min(minX, el.x)
+        minY = Math.min(minY, el.y)
+        maxX = Math.max(maxX, el.x + el.width)
+        maxY = Math.max(maxY, el.y + el.height)
+      }
     })
 
     if (!hasValid) return null
@@ -185,6 +231,114 @@ export class StageManagerCore {
     const nx = cos * (x - cx) - sin * (y - cy) + cx
     const ny = sin * (x - cx) + cos * (y - cy) + cy
     return { x: nx, y: ny }
+  }
+
+  // 添加辅助方法：获取组内所有子元素
+  private getGroupChildrenElements(groupId: string, elements: Record<string, CanvasElement>): CanvasElement[] {
+    const group = elements[groupId]
+    if (!group || group.type !== 'group') return []
+
+    const groupElement = group as GroupElement
+    return groupElement.children.map((childId) => elements[childId]).filter(Boolean) as CanvasElement[]
+  }
+
+  // 添加辅助方法：递归获取所有后代元素的 ID（包括子元素的子元素）
+  private getAllDescendantIds(groupId: string, elements: Record<string, CanvasElement>): string[] {
+    const group = elements[groupId]
+    if (!group || group.type !== 'group') return []
+
+    const groupEl = group as GroupElement
+    let descendants: string[] = [...groupEl.children]
+
+    groupEl.children.forEach((childId) => {
+      // 递归查找：如果子元素也是组，把它的后代也加进来
+      descendants = descendants.concat(this.getAllDescendantIds(childId, elements))
+    })
+
+    return descendants
+  }
+
+  // 添加辅助方法：递归获取所有需要更新的子节点状态
+  private getGroupResizeUpdates(
+    groupId: string,
+    scaleX: number,
+    scaleY: number,
+    // 组的新位置
+    groupX: number,
+    groupY: number,
+    // 组的原始尺寸（用于计算相对位置）
+    groupInitX: number,
+    groupInitY: number,
+    groupInitW: number,
+    groupInitH: number,
+    elementsSnapshot: Record<string, any>, // 传入 initialElementsMap
+  ): Record<string, Partial<CanvasElement>> {
+    const updates: Record<string, Partial<CanvasElement>> = {}
+    const groupEl = elementsSnapshot[groupId] as GroupElement
+
+    if (!groupEl || !groupEl.children) return updates
+
+    groupEl.children.forEach((childId) => {
+      const childInit = elementsSnapshot[childId]
+      if (!childInit) return
+
+      // 1. 计算相对比例
+      const relX = (childInit.x - groupInitX) / groupInitW
+      const relY = (childInit.y - groupInitY) / groupInitH
+      const relW = childInit.width / groupInitW
+      const relH = childInit.height / groupInitH
+
+      // 2. 计算新属性
+      const newX = groupX + relX * (groupInitW * scaleX)
+      const newY = groupY + relY * (groupInitH * scaleY)
+      const newW = childInit.width * scaleX
+      const newH = childInit.height * scaleY
+
+      // 字体和描边缩放 (取平均值)
+      const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2
+
+      const childUpdate: any = {
+        x: newX,
+        y: newY,
+        width: newW,
+        height: newH,
+      }
+
+      // 缩放字体大小
+      if (childInit.fontSize) {
+        childUpdate.fontSize = childInit.fontSize * avgScale
+      }
+
+      // 缩放描边宽度
+      if (childInit.strokeWidth) {
+        childUpdate.strokeWidth = childInit.strokeWidth * avgScale
+      }
+
+      if (childInit.points) {
+        childUpdate.points = childInit.points.map((p: number[]) => [p[0] * scaleX, p[1] * scaleY])
+      }
+
+      updates[childId] = childUpdate
+
+      // 3. 递归：如果子元素也是组，基于子元素的新状态继续计算孙子元素
+      if (childInit.type === 'group') {
+        const nestedUpdates = this.getGroupResizeUpdates(
+          childId,
+          scaleX, // 传递累积缩放或保持当前缩放，视逻辑而定。这里简化为直接传递，因为我们是基于最外层组计算的
+          scaleY,
+          newX,
+          newY,
+          childInit.x,
+          childInit.y,
+          childInit.width,
+          childInit.height,
+          elementsSnapshot,
+        )
+        Object.assign(updates, nestedUpdates)
+      }
+    })
+
+    return updates
   }
 
   // --- 交互逻辑 ---
@@ -243,12 +397,27 @@ export class StageManagerCore {
       if (tool !== 'select') {
         state.setTool('select')
       }
+
+      // 处理 Ctrl+点击多选
+      if (this.isCtrlPressed) {
+        // 如果元素已被选中，则取消选中
+        if (state.selectedIds.includes(hitId)) {
+          const newSelectedIds = state.selectedIds.filter((id) => id !== hitId)
+          state.setSelected(newSelectedIds)
+        } else {
+          // 如果元素未被选中，则添加到选中列表
+          state.setSelected([...state.selectedIds, hitId])
+        }
+      } else {
+        // 普通点击，只选中当前元素
+        if (!state.selectedIds.includes(hitId)) {
+          state.setSelected([hitId])
+        }
+      }
+
       // Select the element and start dragging
       this.state.mode = 'dragging'
       this.state.currentId = hitId
-      if (!state.selectedIds.includes(hitId)) {
-        state.setSelected([hitId])
-      }
 
       // [新增] 捕获所有选中元素在拖拽前的初始状态
       const initialDragMap: Record<string, Partial<CanvasElement>> = {}
@@ -273,7 +442,10 @@ export class StageManagerCore {
     // Select Mode
     if (tool === 'select') {
       this.state.mode = 'selecting'
-      state.setSelected([])
+      // 只有在没有按住 Ctrl 键时才清空选中项
+      if (!this.isCtrlPressed) {
+        state.setSelected([])
+      }
       return
     }
 
@@ -353,9 +525,30 @@ export class StageManagerCore {
             width: el.width,
             height: el.height,
             rotation: el.rotation || 0, // 确保你的 CanvasElement 类型里有 rotation
+            type: el.type, // 添加 type 属性以支持组元素判断
             // 记录元素自身的中心点，方便后续计算
             cx: el.x + el.width / 2,
             cy: el.y + el.height / 2,
+          }
+
+          // 如果是组元素，还需要记录子元素的信息
+          if (el.type === 'group') {
+            const groupElement = el as GroupElement
+            groupElement.children.forEach((childId) => {
+              const childEl = elements[childId]
+              if (childEl) {
+                initialMap[childId] = {
+                  x: childEl.x,
+                  y: childEl.y,
+                  width: childEl.width,
+                  height: childEl.height,
+                  rotation: childEl.rotation || 0,
+                  type: childEl.type,
+                  cx: childEl.x + childEl.width / 2,
+                  cy: childEl.y + childEl.height / 2,
+                }
+              }
+            })
           }
         }
       })
@@ -366,6 +559,7 @@ export class StageManagerCore {
       return
     }
 
+    // === Resizing 逻辑 ===
     this.state.mode = 'resizing'
     this.state.activeHandle = handle as HandleType | null
     this.state.currentId = elementId
@@ -374,11 +568,17 @@ export class StageManagerCore {
     const state = useStore.getState()
     const { elements, selectedIds } = state
 
-    console.log('[StageManager] 开始调整大小操作')
-
-    // 1. 捕捉所有选中元素的初始状态 (深拷贝 points)
-    const initialMap: Record<string, Partial<CanvasElement>> = {}
+    // 1. 收集所有需要跟踪状态的元素 ID (包括选中项 + 它们的所有后代)
+    const idsToTrack = new Set<string>(selectedIds)
     selectedIds.forEach((id) => {
+      const descendants = this.getAllDescendantIds(id, elements)
+      descendants.forEach((dId) => idsToTrack.add(dId))
+    })
+
+    // 2. 捕捉所有这些元素的初始状态
+    const initialMap: Record<string, Partial<CanvasElement>> = {}
+
+    idsToTrack.forEach((id) => {
       const el = elements[id]
       if (el) {
         initialMap[id] = {
@@ -387,24 +587,22 @@ export class StageManagerCore {
           width: el.width,
           height: el.height,
           type: el.type,
-          // 如果有 points (如铅笔、多边形)，必须解构复制
+          rotation: el.rotation || 0,
+          fontSize: (el as any).fontSize, // 记录字体大小
+          strokeWidth: (el as any).strokeWidth, // 记录描边宽度
           points: el.points ? el.points.map((p) => [...p]) : undefined,
         }
       }
     })
-    this.state.resizeInitialStates = initialMap
 
-    // 2. 计算初始的群组包围盒
+    this.state.resizeInitialStates = initialMap
+    this.state.initialElementsMap = initialMap // 确保这两个状态一致
+
+    // 3. 计算初始的群组包围盒 (只基于选中的元素，不包含子元素，因为子元素在组内部)
+    // 注意：TransformerRenderer 画出的框通常只包含选中的顶层元素
     this.state.initialGroupBounds = this.getSelectionBounds(selectedIds, elements)
 
-    // 3. 保存初始元素映射用于调整大小计算
-    this.state.initialElementsMap = initialMap
-
-    console.log('[StageManager] 保存调整大小初始状态:', initialMap)
-
-    // 开始调整大小时锁定撤销/重做管理器
     undoRedoManager.lock()
-    console.log('[StageManager] 锁定撤销/重做管理器')
   }
 
   private onPointerMove = (e: PIXI.FederatedPointerEvent) => {
@@ -443,10 +641,24 @@ export class StageManagerCore {
       if (state.selectedIds.length > 0) {
         state.selectedIds.forEach((id) => {
           const el = state.elements[id]
-          // 注意：这里假设 onPointerMove 频率较高，dx/dy 是相对上一次的增量
-          // 但我们现在的 dx 是 current - start，所以需要基于 snapshot 移动，或者每次重置 startPos
-          // 原代码使用的是 "每次移动 state 后重置 startPos" 的策略 (见下方)
-          state.updateElement(id, { x: el.x + dx, y: el.y + dy })
+
+          // 检查是否为组元素
+          if (el && el.type === 'group') {
+            // 对于组元素，使用与多选元素相同的逻辑
+            state.updateElement(id, { x: el.x + dx, y: el.y + dy })
+
+            // 同时移动组内所有子元素
+            const groupElement = el as GroupElement
+            groupElement.children.forEach((childId) => {
+              const childEl = state.elements[childId]
+              if (childEl) {
+                state.updateElement(childId, { x: childEl.x + dx, y: childEl.y + dy })
+              }
+            })
+          } else {
+            // 普通元素移动
+            state.updateElement(id, { x: el.x + dx, y: el.y + dy })
+          }
         })
         // 重置起点，使 dx/dy 成为增量
         this.state.startPos = { x: currentPos.x, y: currentPos.y }
@@ -494,62 +706,90 @@ export class StageManagerCore {
         return
       }
 
-      // 2. 通用群组缩放逻辑
-      // 计算鼠标相对于点击时的位移
+      // === 通用缩放逻辑 (扁平化计算) ===
+
+      // 1. 计算当前鼠标造成的位移
       const totalDx = currentPos.x - this.state.startPos.x
       const totalDy = currentPos.y - this.state.startPos.y
 
-      // 基于初始包围盒计算新的包围盒
+      // 2. 计算新的包围盒边界
       let finalL = initBounds.x
       let finalR = initBounds.x + initBounds.width
       let finalT = initBounds.y
       let finalB = initBounds.y + initBounds.height
 
-      // 根据手柄方向应用位移
       if (handle?.includes('l')) finalL += totalDx
       if (handle?.includes('r')) finalR += totalDx
       if (handle?.includes('t')) finalT += totalDy
       if (handle?.includes('b')) finalB += totalDy
 
-      // 处理翻转（如果拉过了头）
-      if (finalR < finalL) {
-        ;[finalL, finalR] = [finalR, finalL]
+      // 处理翻转 (Flip)
+      // 关键：不要交换 L/R 来计算 Scale，这会导致翻转时子元素不镜像
+      // 我们允许 width/height 为负数用于计算 Scale，但在写入 Element 时转为正数并调整 x/y
+
+      // 为了简化模型，这里使用简单的翻转修正：
+      let newBoundsX = finalL
+      let newBoundsY = finalT
+      let newBoundsW = finalR - finalL
+      let newBoundsH = finalB - finalT
+
+      // 3. 计算缩放比例 (允许为负，如果做了翻转处理)
+      // 如果 newBoundsW 为负，说明翻转了。
+      // 注意：Pixi 或 Canvas 通常需要正的 width/height。
+      // 简单的做法是：如果翻转了，我们要相应调整计算逻辑。
+      // 这里采用更稳妥的策略：交换边界值，但 Scale 取绝对值，
+      // 复杂的镜像翻转通常需要 scaleX = -1，这里先只做非镜像的调整大小。
+
+      if (newBoundsW < 0) {
+        ;[newBoundsX, newBoundsW] = [newBoundsX + newBoundsW, -newBoundsW]
       }
-      if (finalB < finalT) {
-        ;[finalT, finalB] = [finalB, finalT]
+      if (newBoundsH < 0) {
+        ;[newBoundsY, newBoundsH] = [newBoundsY + newBoundsH, -newBoundsH]
       }
 
-      const newBoundsW = finalR - finalL
-      const newBoundsH = finalB - finalT
-
-      // 3. 计算缩放比例
       const scaleX = initBounds.width === 0 ? 1 : newBoundsW / initBounds.width
       const scaleY = initBounds.height === 0 ? 1 : newBoundsH / initBounds.height
+      const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2
 
-      // 4. 应用到所有选中的元素
-      selectedIds.forEach((id) => {
+      // 4. 遍历快照中的 **每一个** 元素 (无论是组还是组内的子元素)
+      // 因为我们在 onHandleDown 里已经把所有层级的子元素都加进来了
+      Object.keys(this.state.initialElementsMap).forEach((id) => {
         const initEl = this.state.initialElementsMap![id]
         if (!initEl) return
 
-        // 计算新位置：新原点 + (相对位移 * 缩放)
+        // A. 计算新位置
+        // 公式：新位置 = 新原点 + (旧位置 - 旧原点) * 缩放比例
         const relX = initEl.x! - initBounds.x
         const relY = initEl.y! - initBounds.y
 
-        const finalElX = finalL + relX * scaleX
-        const finalElY = finalT + relY * scaleY
-        const finalElW = initEl.width! * scaleX
-        const finalElH = initEl.height! * scaleY
+        const newX = newBoundsX + relX * scaleX
+        const newY = newBoundsY + relY * scaleY
+
+        // B. 计算新尺寸
+        const newW = initEl.width! * Math.abs(scaleX)
+        const newH = initEl.height! * Math.abs(scaleY)
 
         const updatePayload: any = {
-          x: finalElX,
-          y: finalElY,
-          width: finalElW,
-          height: finalElH,
+          x: newX,
+          y: newY,
+          width: newW,
+          height: newH,
         }
 
-        // 如果有内部点集，也需要缩放
+        // C. 处理点集 (Line, Arrow, Pencil)
         if (initEl.points) {
-          updatePayload.points = initEl.points.map((p) => [p[0] * scaleX, p[1] * scaleY])
+          updatePayload.points = initEl.points.map((p) => [
+            p[0] * scaleX, // 使用带符号的 scale，如果支持翻转
+            p[1] * scaleY,
+          ])
+        }
+
+        // D. 处理文字大小和描边粗细
+        if (initEl.fontSize) {
+          updatePayload.fontSize = initEl.fontSize * avgScale
+        }
+        if (initEl.strokeWidth) {
+          updatePayload.strokeWidth = initEl.strokeWidth * avgScale
         }
 
         state.updateElement(id, updatePayload)
@@ -574,23 +814,62 @@ export class StageManagerCore {
         const initEl = this.state.rotationInitialStates![id]
         if (!initEl) return
 
-        // A. 计算新的自转角度
-        const newRotation = initEl.rotation + deltaAngle
+        // 检查是否为组元素
+        if (initEl.type === 'group') {
+          // 对于组元素，使用与多选元素相同的逻辑
+          // 计算新的自转角度
+          const newRotation = initEl.rotation + deltaAngle
 
-        // B. 计算新的位置 (公转)
-        // 将元素的中心点 (initEl.cx, initEl.cy) 绕着 组中心 (cx, cy) 旋转 deltaAngle
-        const newCenter = this.rotatePoint(initEl.cx, initEl.cy, cx, cy, deltaAngle)
+          // 计算新的位置 (公转)
+          const newCenter = this.rotatePoint(initEl.cx, initEl.cy, cx, cy, deltaAngle)
+          const newX = newCenter.x - initEl.width / 2
+          const newY = newCenter.y - initEl.height / 2
 
-        // C. 根据新的中心点反推 x, y (x = center.x - width/2)
-        const newX = newCenter.x - initEl.width / 2
-        const newY = newCenter.y - initEl.height / 2
+          state.updateElement(id, {
+            x: newX,
+            y: newY,
+            rotation: newRotation,
+          })
 
-        // D. 更新 Store
-        state.updateElement(id, {
-          x: newX,
-          y: newY,
-          rotation: newRotation,
-        })
+          // 组内子元素也使用相同逻辑处理
+          const actualGroupElement = state.elements[id] as GroupElement
+          if (actualGroupElement && actualGroupElement.children) {
+            actualGroupElement.children.forEach((childId) => {
+              const childInitEl = this.state.rotationInitialStates![childId]
+              if (!childInitEl) return
+
+              // 计算子元素新的位置
+              const childNewCenter = this.rotatePoint(childInitEl.cx, childInitEl.cy, cx, cy, deltaAngle)
+              const childNewX = childNewCenter.x - childInitEl.width / 2
+              const childNewY = childNewCenter.y - childInitEl.height / 2
+
+              state.updateElement(childId, {
+                x: childNewX,
+                y: childNewY,
+                rotation: childInitEl.rotation + deltaAngle,
+              })
+            })
+          }
+        } else {
+          // 普通元素的处理逻辑
+          // A. 计算新的自转角度
+          const newRotation = initEl.rotation + deltaAngle
+
+          // B. 计算新的位置 (公转)
+          // 将元素的中心点 (initEl.cx, initEl.cy) 绕着 组中心 (cx, cy) 旋转 deltaAngle
+          const newCenter = this.rotatePoint(initEl.cx, initEl.cy, cx, cy, deltaAngle)
+
+          // C. 根据新的中心点反推 x, y (x = center.x - width/2)
+          const newX = newCenter.x - initEl.width / 2
+          const newY = newCenter.y - initEl.height / 2
+
+          // D. 更新 Store
+          state.updateElement(id, {
+            x: newX,
+            y: newY,
+            rotation: newRotation,
+          })
+        }
       })
       return
     } else if (this.state.mode === 'drawing' && this.state.currentId) {
@@ -654,36 +933,39 @@ export class StageManagerCore {
     }
     if (this.state.mode === 'drawing' && this.state.currentId) {
       const el = state.elements[this.state.currentId]
-      if ((el.type === 'pencil' || el.type === 'line' || el.type === 'arrow') && el.points) {
-        const absPoints = el.points.map((p) => ({ x: el.x + p[0], y: el.y + p[1] }))
-        const xs = absPoints.map((p) => p.x)
-        const ys = absPoints.map((p) => p.y)
-        const minX = Math.min(...xs)
-        const minY = Math.min(...ys)
-        const maxX = Math.max(...xs)
-        const maxY = Math.max(...ys)
-        const newX = minX
-        const newY = minY
-        const newPoints = absPoints.map((p) => [p.x - newX, p.y - newY])
-        state.updateElement(this.state.currentId, {
-          x: newX,
-          y: newY,
-          width: maxX - minX,
-          height: maxY - minY,
-          points: newPoints,
-        })
-      } else if (
-        el.width === 0 &&
-        el.height === 0 &&
-        (el.type === 'rect' || el.type === 'circle' || el.type === 'triangle' || el.type === 'diamond')
-      ) {
-        // 删除零大小的元素
-        state.removeElements([this.state.currentId])
-        this.state.currentId = null
-        this.state.mode = 'idle'
-        // 解锁撤销/重做管理器
-        undoRedoManager.unlock()
-        return
+      // 添加安全检查，确保元素存在再访问其属性
+      if (el) {
+        if ((el.type === 'pencil' || el.type === 'line' || el.type === 'arrow') && el.points) {
+          const absPoints = el.points.map((p) => ({ x: el.x + p[0], y: el.y + p[1] }))
+          const xs = absPoints.map((p) => p.x)
+          const ys = absPoints.map((p) => p.y)
+          const minX = Math.min(...xs)
+          const minY = Math.min(...ys)
+          const maxX = Math.max(...xs)
+          const maxY = Math.max(...ys)
+          const newX = minX
+          const newY = minY
+          const newPoints = absPoints.map((p) => [p.x - newX, p.y - newY])
+          state.updateElement(this.state.currentId, {
+            x: newX,
+            y: newY,
+            width: maxX - minX,
+            height: maxY - minY,
+            points: newPoints,
+          })
+        } else if (
+          el.width === 0 &&
+          el.height === 0 &&
+          (el.type === 'rect' || el.type === 'circle' || el.type === 'triangle' || el.type === 'diamond')
+        ) {
+          // 删除零大小的元素
+          state.removeElements([this.state.currentId])
+          this.state.currentId = null
+          this.state.mode = 'idle'
+          // 解锁撤销/重做管理器
+          undoRedoManager.unlock()
+          return
+        }
       }
 
       // [新增] 修复 Undo/Redo Bug
@@ -725,6 +1007,31 @@ export class StageManagerCore {
               points: finalElement.points ? [...finalElement.points] : undefined,
             },
           })
+
+          // 如果是组元素，还需要添加组内元素的记录
+          if (finalElement.type === 'group') {
+            const groupElement = finalElement as GroupElement
+            groupElement.children.forEach((childId) => {
+              const childElement = state.elements[childId]
+              const childInitialAttrs = this.state.dragInitialStates![childId]
+              if (childElement && childInitialAttrs) {
+                const childIsMoved = childElement.x !== childInitialAttrs.x || childElement.y !== childInitialAttrs.y
+                if (childIsMoved) {
+                  operations.push({
+                    id: childId,
+                    initialAttrs: {
+                      x: childInitialAttrs.x,
+                      y: childInitialAttrs.y,
+                    },
+                    finalAttrs: {
+                      x: childElement.x,
+                      y: childElement.y,
+                    },
+                  })
+                }
+              }
+            })
+          }
         }
       })
 
@@ -746,41 +1053,35 @@ export class StageManagerCore {
 
       const operations: any[] = []
 
-      // 遍历记录的初始状态
+      // 遍历所有被记录的初始状态 (包含了深层子元素)
       Object.entries(this.state.resizeInitialStates).forEach(([id, initialAttrs]) => {
         const finalElement = state.elements[id]
         if (!finalElement) return
 
-        // 构造"修改后"的属性
+        // 构造最终状态 (包含所有可能变化的属性)
         const finalAttrs = {
           x: finalElement.x,
           y: finalElement.y,
           width: finalElement.width,
           height: finalElement.height,
-          points: finalElement.points ? [...finalElement.points] : undefined, // 同样深拷贝
+          points: finalElement.points ? [...finalElement.points] : undefined,
+          fontSize: (finalElement as any).fontSize,
+          strokeWidth: (finalElement as any).strokeWidth,
+          rotation: finalElement.rotation,
         }
 
-        // 只有当属性真的发生变化时才记录（防止原地点击一下也记录）
-        const hasChanged =
-          initialAttrs.x !== finalAttrs.x ||
-          initialAttrs.y !== finalAttrs.y ||
-          initialAttrs.width !== finalAttrs.width ||
-          initialAttrs.height !== finalAttrs.height ||
-          (initialAttrs.points &&
-            finalAttrs.points &&
-            JSON.stringify(initialAttrs.points) !== JSON.stringify(finalAttrs.points))
+        // 简单对比是否变化
+        const hasChanged = JSON.stringify(initialAttrs) !== JSON.stringify(finalAttrs)
 
         if (hasChanged) {
           operations.push({ id, initialAttrs, finalAttrs })
         }
       })
 
-      // 如果有有效操作，生成命令并执行
       if (operations.length > 0) {
+        // 这里不需要递归了，因为 operations 列表里已经包含了所有层级的元素
         const resizeCommand = new UpdateElementCommand(operations, '调整元素大小')
-        // executeCommand 会把命令推入 UndoStack，并清空 RedoStack
         undoRedoManager.executeCommand(resizeCommand)
-        console.log('[StageManager] Resize 操作已入栈')
       }
     }
 
@@ -825,6 +1126,45 @@ export class StageManagerCore {
             },
             finalAttrs,
           })
+
+          // 如果是组元素，还需要添加组内元素的记录
+          if (finalElement.type === 'group') {
+            const groupElement = finalElement as GroupElement
+            groupElement.children.forEach((childId) => {
+              const childElement = state.elements[childId]
+              const childInitialAttrs = this.state.rotationInitialStates![childId]
+              if (childElement && childInitialAttrs) {
+                const childFinalAttrs = {
+                  x: childElement.x,
+                  y: childElement.y,
+                  width: childElement.width,
+                  height: childElement.height,
+                  rotation: childElement.rotation || 0,
+                }
+
+                const childHasChanged =
+                  Math.abs(childInitialAttrs.x - childFinalAttrs.x) > 0.01 ||
+                  Math.abs(childInitialAttrs.y - childFinalAttrs.y) > 0.01 ||
+                  Math.abs(childInitialAttrs.width - childFinalAttrs.width) > 0.01 ||
+                  Math.abs(childInitialAttrs.height - childFinalAttrs.height) > 0.01 ||
+                  Math.abs(childInitialAttrs.rotation - childFinalAttrs.rotation) > 0.001
+
+                if (childHasChanged) {
+                  operations.push({
+                    id: childId,
+                    initialAttrs: {
+                      x: childInitialAttrs.x,
+                      y: childInitialAttrs.y,
+                      width: childInitialAttrs.width,
+                      height: childInitialAttrs.height,
+                      rotation: childInitialAttrs.rotation,
+                    },
+                    finalAttrs: childFinalAttrs,
+                  })
+                }
+              }
+            })
+          }
         }
       })
 

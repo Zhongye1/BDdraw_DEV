@@ -43,6 +43,7 @@ export interface StageManagerState {
       width: number
       height: number
       rotation: number
+      type: string // 元素类型，用于区分组元素
       cx: number // 元素中心点 x
       cy: number // 元素中心点 y
     }
@@ -53,6 +54,10 @@ export interface StageManagerState {
   activeHandle: HandleType | null
   isSpacePressed: boolean
   destroyed: boolean
+
+  // [新增] 用于解决旋转时框大小抖动问题
+  initialSelectionBounds: { x: number; y: number; width: number; height: number } | null
+  currentRotationAngle: number | null
 }
 
 export type { CanvasElement, ToolType }

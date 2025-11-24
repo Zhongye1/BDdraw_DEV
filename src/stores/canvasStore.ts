@@ -17,6 +17,7 @@ export type ToolType =
   | 'text'
   | 'image' // 添加 image 类型
   | 'eraser'
+  | 'group'
 
 export interface CanvasElement {
   id: string
@@ -44,6 +45,15 @@ export interface CanvasElement {
 
   // 矩形圆角属性
   radius?: number
+
+  // 分组相关属性
+  groupId?: string // 元素所属的组ID
+}
+
+// 添加组接口定义
+export interface GroupElement extends CanvasElement {
+  type: 'group'
+  children: string[] // 子元素ID列表
 }
 
 interface CanvasState {
@@ -82,6 +92,10 @@ interface CanvasState {
   redo: () => void
   canUndo: () => boolean
   canRedo: () => boolean
+
+  // 添加分组方法
+  groupElements: (elementIds: string[]) => void
+  ungroupElements: (groupIds: string[]) => void
 }
 
 export const useStore = create<CanvasState>()(
@@ -146,7 +160,9 @@ export const useStore = create<CanvasState>()(
             canRedo,
             ...dataOnlyState
           } = state
-          return structuredClone(dataOnlyState)
+
+          // 使用 JSON 方法替代 structuredClone 以避免克隆函数的问题
+          return JSON.parse(JSON.stringify(dataOnlyState))
         })()
 
         // 设置新状态
@@ -171,7 +187,9 @@ export const useStore = create<CanvasState>()(
             canRedo,
             ...dataOnlyState
           } = state
-          return structuredClone(dataOnlyState)
+
+          // 使用 JSON 方法替代 structuredClone 以避免克隆函数的问题
+          return JSON.parse(JSON.stringify(dataOnlyState))
         })()
 
         // ========== 撤销/重做机制核心部分 ==========
@@ -277,6 +295,89 @@ export const useStore = create<CanvasState>()(
               elements: { ...state.elements, ...newElements },
               selectedIds: newIds,
               pasteOffset: newOffset,
+            }
+          }),
+
+        // 实现分组方法
+        groupElements: (elementIds) =>
+          originalSet((state) => {
+            if (elementIds.length < 2) return state // 至少需要两个元素才能分组
+
+            // 创建新的组元素
+            const groupId = nanoid()
+
+            // 计算包围盒
+            let minX = Infinity,
+              minY = Infinity,
+              maxX = -Infinity,
+              maxY = -Infinity
+            elementIds.forEach((id) => {
+              const el = state.elements[id]
+              if (el) {
+                minX = Math.min(minX, el.x)
+                minY = Math.min(minY, el.y)
+                maxX = Math.max(maxX, el.x + el.width)
+                maxY = Math.max(maxY, el.y + el.height)
+              }
+            })
+
+            // 创建组元素
+            const groupElement: GroupElement = {
+              id: groupId,
+              type: 'group',
+              x: minX,
+              y: minY,
+              width: maxX - minX,
+              height: maxY - minY,
+              fill: 'transparent',
+              stroke: '#000000',
+              strokeWidth: 0,
+              children: elementIds,
+            }
+
+            // 更新子元素的groupId属性
+            const updatedElements = { ...state.elements }
+            elementIds.forEach((id) => {
+              if (updatedElements[id]) {
+                updatedElements[id] = { ...updatedElements[id], groupId }
+              }
+            })
+
+            // 添加组元素到画布
+            updatedElements[groupId] = groupElement
+
+            return {
+              elements: updatedElements,
+              selectedIds: [groupId],
+            }
+          }),
+
+        // 实现取消分组方法
+        ungroupElements: (groupIds) =>
+          originalSet((state) => {
+            const updatedElements = { ...state.elements }
+            const newSelectedIds: string[] = []
+
+            groupIds.forEach((groupId) => {
+              const group = updatedElements[groupId]
+              if (group && group.type === 'group') {
+                // 将组内元素的groupId属性移除
+                ;(group as GroupElement).children.forEach((childId) => {
+                  if (updatedElements[childId]) {
+                    const { groupId: removedGroupId, ...rest } = updatedElements[childId]
+                    updatedElements[childId] = rest
+                    newSelectedIds.push(childId)
+                  }
+                })
+
+                // 删除组元素本身
+                delete updatedElements[groupId]
+              }
+            })
+
+            return {
+              elements: updatedElements,
+              selectedIds: newSelectedIds,
             }
           }),
 

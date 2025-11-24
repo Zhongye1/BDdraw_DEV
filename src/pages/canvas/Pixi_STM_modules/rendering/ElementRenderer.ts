@@ -310,6 +310,11 @@ export class ElementRenderer {
             g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
           }
           g.fill({ color: fillColor, alpha })
+        } else if (data.type === 'group') {
+          // 组元素只需绘制一个边界框表示组的存在
+          g.rect(0, 0, data.width, data.height)
+          g.stroke({ width: 1, color: 0x0099ff, alpha: 0.7 })
+          g.fill({ color: 0x0099ff, alpha: 0.1 })
         } else if (
           (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
           data.points &&

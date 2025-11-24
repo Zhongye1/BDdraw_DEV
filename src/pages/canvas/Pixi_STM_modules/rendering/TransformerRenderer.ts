@@ -15,6 +15,8 @@ export class TransformerRenderer {
     spriteMap: Map<string, PIXI.Graphics | PIXI.HTMLText | PIXI.Sprite>,
     onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
     viewportScale: number,
+    overrideBounds: { x: number; y: number; width: number; height: number } | null = null,
+    overrideRotation: number | null = null,
   ) {
     this.transformerGraphic.clear()
     this.transformerGraphic.removeChildren()
@@ -55,6 +57,16 @@ export class TransformerRenderer {
     }
 
     // --- B. 普通包围盒模式 (Text, Rect, etc) ---
+
+    // [修改逻辑核心]
+    // 1. 如果有强制覆盖的 Bounds (说明正在旋转中)，直接使用它
+    if (overrideBounds && overrideRotation !== null) {
+      // 直接调用绘制旋转框的方法
+      this.drawRotatedBounds(overrideBounds, overrideRotation, viewportScale, selectedIds, onHandleDown, elements)
+      return // 结束，不再进行后续计算
+    }
+
+    // 2. 否则，执行原有的 AABB 计算逻辑 (非旋转交互状态)
     let minX = Infinity,
       minY = Infinity,
       maxX = -Infinity,
@@ -66,7 +78,7 @@ export class TransformerRenderer {
 
     selectedIds.forEach((id) => {
       const el = elements[id]
-      if (el && el.rotation) {
+      if (el && el.rotation && el.type !== 'group') {
         hasRotation = true
         rotation = el.rotation
       }
@@ -86,6 +98,16 @@ export class TransformerRenderer {
         minY = Math.min(minY, el.y)
         maxX = Math.max(maxX, el.x + sprite.width)
         maxY = Math.max(maxY, el.y + sprite.height)
+      } else if (el.type === 'group') {
+        // 对于组元素，检查是否有旋转
+        if (el.rotation) {
+          hasRotation = true
+          rotation = el.rotation
+        }
+        minX = Math.min(minX, el.x)
+        minY = Math.min(minY, el.y)
+        maxX = Math.max(maxX, el.x + el.width)
+        maxY = Math.max(maxY, el.y + el.height)
       } else {
         minX = Math.min(minX, el.x)
         minY = Math.min(minY, el.y)
@@ -97,20 +119,23 @@ export class TransformerRenderer {
     const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 
     // 如果有旋转，则绘制旋转后的选择框（支持单个和多个元素）
+    // 组元素也可以使用旋转边界框
+    const isGroupSelected = selectedIds.length === 1 && elements[selectedIds[0]]?.type === 'group'
+
     if (hasRotation && selectedIds.length > 0) {
       // 对于多个元素，我们使用第一个有旋转的元素的角度
-      this.drawRotatedBounds(bounds, rotation, viewportScale, selectedIds, onHandleDown)
+      this.drawRotatedBounds(bounds, rotation, viewportScale, selectedIds, onHandleDown, elements)
     } else {
       // 绘制普通包围盒边框
       this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+      this.transformerGraphic.stroke({ width: 1, color: isGroupSelected ? 0x0099ff : 0x8b5cf6 })
 
       // 如果只有一个元素被选中，显示各个控制手柄
       if (selectedIds.length === 1) {
-        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown)
+        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown, elements)
       } else if (selectedIds.length > 1) {
         // 多元素选择模式 - 显示包围盒控制手柄
-        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown)
+        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown, elements)
       }
     }
   }
@@ -121,6 +146,7 @@ export class TransformerRenderer {
     viewportScale: number,
     selectedIds: string[],
     onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
+    elements: Record<string, CanvasElement>,
   ) {
     const centerX = bounds.x + bounds.width / 2
     const centerY = bounds.y + bounds.height / 2
@@ -224,6 +250,7 @@ export class TransformerRenderer {
     viewportScale: number,
     selectedIds: string[],
     onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
+    elements: Record<string, CanvasElement>,
   ) {
     const handleSize = 8 / viewportScale
     const handles: Record<string, { x: number; y: number }> = {
@@ -239,9 +266,13 @@ export class TransformerRenderer {
 
     // 绘制控制手柄
     Object.entries(handles).forEach(([type, pos]) => {
+      // 对于组元素，使用不同的颜色
+      const isSelectedGroup =
+        selectedIds.length === 1 && elements[selectedIds[0]] && elements[selectedIds[0]].type === 'group'
+
       this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
       this.transformerGraphic.fill({ color: 0xffffff })
-      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+      this.transformerGraphic.stroke({ width: 1, color: isSelectedGroup ? 0x0099ff : 0x8b5cf6 })
 
       const hitZone = new PIXI.Graphics()
       hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
@@ -262,15 +293,16 @@ export class TransformerRenderer {
     const rotationHandleY = bounds.y - 20 / viewportScale
     const rotationHandleX = bounds.x + bounds.width / 2
 
-    // 连接线
-    this.transformerGraphic.moveTo(rotationHandleX, bounds.y)
-    this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+    // 对于组元素，使用不同的颜色
+    const isSelectedGroup =
+      selectedIds.length === 1 && elements[selectedIds[0]] && elements[selectedIds[0]].type === 'group'
 
-    // 旋转手柄圆圈
-    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
+    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, 5 / viewportScale)
     this.transformerGraphic.fill({ color: 0xffffff })
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+    this.transformerGraphic.stroke({ width: 1 / viewportScale, color: isSelectedGroup ? 0x0099ff : 0x8b5cf6 })
+    this.transformerGraphic.lineStyle(1 / viewportScale, isSelectedGroup ? 0x0099ff : 0x8b5cf6)
+    this.transformerGraphic.moveTo(bounds.x + bounds.width / 2, bounds.y)
+    this.transformerGraphic.lineTo(bounds.x + bounds.width / 2, rotationHandleY + 5 / viewportScale)
 
     // 旋转手柄点击区域
     const rotationHitZone = new PIXI.Graphics()

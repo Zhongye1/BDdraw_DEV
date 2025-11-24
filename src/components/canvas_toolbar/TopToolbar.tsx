@@ -19,6 +19,8 @@ import {
   LayoutGrid, // 用作最后的那个库图标
   RotateCcw,
   RotateCw,
+  FolderPlus,
+  FolderOpen,
 } from 'lucide-react'
 import ImageInsertModal from '@/components/image-insert-modal'
 
@@ -45,6 +47,28 @@ interface ToolItemConfig {
   isSeparator?: boolean // 是否是分隔符
 }*/
 
+// 添加分组功能函数
+const groupElements = (elementIds: string[]) => {
+  const { groupElements } = useStore.getState()
+  groupElements(elementIds)
+  Notification.success({
+    closable: false,
+    title: '分组成功',
+    content: `已将 ${elementIds.length} 个元素分组`,
+  })
+}
+
+// 添加取消分组功能函数
+const ungroupElements = (groupIds: string[]) => {
+  const { ungroupElements } = useStore.getState()
+  ungroupElements(groupIds)
+  Notification.success({
+    closable: false,
+    title: '取消分组成功',
+    content: '已取消选中组的分组',
+  })
+}
+
 export default function TopToolbar() {
   const { tool, setTool, undo, redo, canUndo, canRedo } = useStore()
   //const [locked, setLocked] = useState(false)
@@ -54,7 +78,7 @@ export default function TopToolbar() {
   const cls = (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' ')
 
   // 工具栏配置
-  // 顺序: 锁 | 手 | 选择 | 矩形 | 菱形 | 圆 | 箭头 | 线 | 笔 | 文字 | 图片 | 橡皮 | 库
+  // 顺序: 锁 | 手 | 选择 | 矩形 | 菱形 | 圆 | 箭头 | 线 | 笔 | 文字 | 图片 | 橡皮 | 分组 | 取消分组 | 库
   const tools = [
     /*{ // 锁功能还没写完
       id: 'lock',
@@ -83,6 +107,46 @@ export default function TopToolbar() {
     },
     { id: 'eraser', value: 'eraser', icon: Eraser, label: 'Eraser (E)', shortcut: '0' },
     { isSeparator: true },
+    {
+      id: 'group',
+      type: 'action',
+      icon: FolderPlus,
+      label: 'Group Elements (Ctrl+G)',
+      onClick: () => {
+        const state = useStore.getState()
+        if (state.selectedIds.length > 1) {
+          groupElements(state.selectedIds)
+        } else {
+          Notification.warning({
+            closable: false,
+            title: '无法分组',
+            content: '请选择至少两个元素进行分组',
+          })
+        }
+      },
+    },
+    {
+      id: 'ungroup',
+      type: 'action',
+      icon: FolderOpen,
+      label: 'Ungroup Elements (Ctrl+Shift+G)',
+      onClick: () => {
+        const state = useStore.getState()
+        const selectedGroups = state.selectedIds.filter(
+          (id) => state.elements[id] && (state.elements[id] as any).type === 'group',
+        )
+
+        if (selectedGroups.length > 0) {
+          ungroupElements(selectedGroups)
+        } else {
+          Notification.warning({
+            closable: false,
+            title: '无法取消分组',
+            content: '请选择一个分组元素',
+          })
+        }
+      },
+    },
     {
       id: 'library',
       type: 'action',

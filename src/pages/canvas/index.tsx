@@ -13,7 +13,7 @@ export default function PixiCanvas() {
   const { elements } = useStore()
 
   // 使用自定义hook管理快捷键
-  useCanvasShortcuts({ stageManagerRef })
+  useCanvasShortcuts()
 
   // 初始化 StageManager
   useEffect(() => {
