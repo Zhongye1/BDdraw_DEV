@@ -5,4 +5,4 @@ type InteractionMode = 'idle' | 'panning' | 'selecting' | 'dragging' | 'resizing
 type HandleType = 'tl' | 't' | 'tr' | 'r' | 'br' | 'b' | 'bl' | 'l' | 'p0' | 'p1'
 
 // 导出 StageManagerCore 作为新的 StageManager
-export { StageManagerCore as StageManager } from './Pixi_STM_modules/core/StageManagerCore'
+export { StageManagerCore as StageManager } from './Pixi_STM_modules/core/Core_StageManager'

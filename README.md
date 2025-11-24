@@ -77,18 +77,13 @@ BDdraw_DEV/
 │   ├── pages/                  # 页面组件
 │   │   ├── about/              # 关于页面
 │   │   ├── canvas/             # 画布页面
-│   │   │   ├── Pixi_STM_modules/ # Pixi Stage Manager 模块
-│   │   │   │   ├── core/       # 核心类和类型定义
-│   │   │   │   │   ├── StageManagerCore.ts # 舞台管理核心类
-│   │   │   │   │   └── types.ts # 核心类型定义
+│   │   │   ├── Pixi_STM_modules
+│   │   │   │   ├── core/        # 核心类和初始化逻辑
+│   │   │   │   ├── element-rendering/  # 元素渲染模块
+│   │   │   │   ├── transformer-rendering/  # 变换控制器渲染模块
 │   │   │   │   ├── interaction/ # 交互处理模块
-│   │   │   │   │   └── InteractionHandler.ts # 交互处理器
-│   │   │   │   ├── rendering/  # 渲染模块
-│   │   │   │   │   ├── ElementRenderer.ts # 元素渲染器
-│   │   │   │   │   └── TransformerRenderer.ts # 变换控制器渲染器
-│   │   │   │   ├── utils/      # 工具函数
-│   │   │   │   │   └── cursorUtils.ts # 光标工具函数
-│   │   │   │   └── STM_modules.md # 模块说明文档
+│   │   │   │   ├── utils/       # 工具函数
+│   │   │   │   └── STM_modules.md  # 模块说明文档
 │   │   │   ├── Pixi_stageManager.ts # Pixi舞台管理器入口
 │   │   │   └── index.tsx       # 画布页面入口
 │   │   └── home/               # 主页

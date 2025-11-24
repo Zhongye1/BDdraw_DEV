@@ -76,8 +76,9 @@ src/pages/canvas/Pixi_STM_modules/
 ├── core/
 │ ├── StageManagerCore.ts # StageManager 核心类和初始化逻辑
 │ └── types.ts # 自定义类型定义
-├── rendering/
-│ ├── ElementRenderer.ts # 元素渲染逻辑 (renderElements)
+├── element-rendering/
+│ └── ElementRenderer.ts # 元素渲染逻辑 (renderElements)
+├── transformer-rendering/
 │ └── TransformerRenderer.ts # 变换控制器渲染逻辑 (renderTransformer)
 ├── interaction/
 │ ├── InteractionHandler.ts # 交互事件处理 (setupInteraction)
@@ -90,9 +91,11 @@ core/
 
 StageManagerCore.ts: 包含 StageManager 类的主要结构、属性定义、构造函数以及初始化相关方法
 types.ts: 包含自定义类型如 InteractionMode 和 HandleType
-rendering/
+element-rendering/
 
 ElementRenderer.ts: 负责渲染画布元素的方法 renderElements()
+transformer-rendering/
+
 TransformerRenderer.ts: 负责渲染变换控制器的方法 renderTransformer()
 interaction/
 

@@ -1,6 +1,6 @@
 import * as PIXI from 'pixi.js'
 import type { CanvasElement } from '@/stores/canvasStore'
-import type { HandleType } from '../core/types'
+import type { HandleType } from '../shared/types'
 
 export class TransformerRenderer {
   private transformerGraphic = new PIXI.Graphics()
