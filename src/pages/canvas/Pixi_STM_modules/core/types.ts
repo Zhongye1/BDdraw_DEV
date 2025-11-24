@@ -9,6 +9,7 @@ export type InteractionMode =
   | 'drawing'
   | 'texting'
   | 'erasing'
+  | 'rotating'
 
 export type HandleType = 'tl' | 't' | 'tr' | 'r' | 'br' | 'b' | 'bl' | 'l' | 'p0' | 'p1' | 'rotate'
 
@@ -33,9 +34,21 @@ export interface StageManagerState {
   // 用于存储拖拽操作的初始状态
   dragInitialStates: Record<string, Partial<CanvasElement>> | null
 
-  // 旋转状态(待写)
-  //rotationCenter: { x: number; y: number } | null // 旋转中心
-  //initialRotationAngle: number | null // 鼠标初始角度
+  // 旋转状态
+  rotationInitialStates: Record<
+    string,
+    {
+      x: number
+      y: number
+      width: number
+      height: number
+      rotation: number
+      cx: number // 元素中心点 x
+      cy: number // 元素中心点 y
+    }
+  > | null
+  rotationCenter: { x: number; y: number } | null // 旋转中心（群组中心或单元素中心）
+  startRotationAngle: number | null // 鼠标按下时的初始角度
 
   activeHandle: HandleType | null
   isSpacePressed: boolean

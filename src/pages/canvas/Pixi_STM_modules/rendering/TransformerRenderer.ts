@@ -60,6 +60,18 @@ export class TransformerRenderer {
       maxX = -Infinity,
       maxY = -Infinity
 
+    // 检查是否有旋转的元素
+    let hasRotation = false
+    let rotation = 0
+
+    selectedIds.forEach((id) => {
+      const el = elements[id]
+      if (el && el.rotation) {
+        hasRotation = true
+        rotation = el.rotation
+      }
+    })
+
     selectedIds.forEach((id) => {
       const el = elements[id]
       const sprite = spriteMap.get(id)
@@ -84,109 +96,196 @@ export class TransformerRenderer {
 
     const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
 
-    // 绘制包围盒边框
-    this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-
-    // 如果只有一个元素被选中，显示各个控制手柄
-    if (selectedIds.length === 1) {
-      const handleSize = 8 / viewportScale
-      const handles: Record<string, { x: number; y: number }> = {
-        tl: { x: bounds.x, y: bounds.y },
-        t: { x: bounds.x + bounds.width / 2, y: bounds.y },
-        tr: { x: bounds.x + bounds.width, y: bounds.y },
-        r: { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 },
-        br: { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
-        b: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height },
-        bl: { x: bounds.x, y: bounds.y + bounds.height },
-        l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
-      }
-
-      // 绘制控制手柄
-      Object.entries(handles).forEach(([type, pos]) => {
-        this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
-        this.transformerGraphic.fill({ color: 0xffffff })
-        this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-
-        const hitZone = new PIXI.Graphics()
-        hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
-        hitZone.fill({ color: 0x000000, alpha: 0.0001 })
-        hitZone.eventMode = 'static'
-        hitZone.cursor = this.getCursorForHandle(type as HandleType)
-        hitZone.label = `handle:${type}`
-
-        hitZone.on('pointerdown', (e) => {
-          e.stopPropagation()
-          onHandleDown(e, type as HandleType, selectedIds[0])
-        })
-
-        this.transformerGraphic.addChild(hitZone)
-      })
-    } else if (selectedIds.length > 1) {
-      // 多元素选择模式 - 显示包围盒控制手柄
-      const handleSize = 8 / viewportScale
-      const handles: Record<string, { x: number; y: number }> = {
-        tl: { x: bounds.x, y: bounds.y },
-        t: { x: bounds.x + bounds.width / 2, y: bounds.y },
-        tr: { x: bounds.x + bounds.width, y: bounds.y },
-        r: { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 },
-        br: { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
-        b: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height },
-        bl: { x: bounds.x, y: bounds.y + bounds.height },
-        l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
-      }
-
-      // 绘制控制手柄
-      Object.entries(handles).forEach(([type, pos]) => {
-        this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
-        this.transformerGraphic.fill({ color: 0xffffff })
-        this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-
-        const hitZone = new PIXI.Graphics()
-        hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
-        hitZone.fill({ color: 0x000000, alpha: 0.0001 })
-        hitZone.eventMode = 'static'
-        hitZone.cursor = this.getCursorForHandle(type as HandleType)
-        hitZone.label = `handle:${type}`
-
-        hitZone.on('pointerdown', (e) => {
-          e.stopPropagation()
-          // 对于多选，我们只需要传递第一个元素的ID作为参考，实际操作会在其他地方处理
-          onHandleDown(e, type as HandleType, selectedIds[0])
-        })
-
-        this.transformerGraphic.addChild(hitZone)
-      })
-
-      // 绘制旋转手柄
-      const rotationHandleY = bounds.y - 20 / viewportScale
-      const rotationHandleX = bounds.x + bounds.width / 2
-
-      // 连接线
-      this.transformerGraphic.moveTo(rotationHandleX, bounds.y)
-      this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
+    // 如果有旋转，则绘制旋转后的选择框（支持单个和多个元素）
+    if (hasRotation && selectedIds.length > 0) {
+      // 对于多个元素，我们使用第一个有旋转的元素的角度
+      this.drawRotatedBounds(bounds, rotation, viewportScale, selectedIds, onHandleDown)
+    } else {
+      // 绘制普通包围盒边框
+      this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
       this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
-      // 旋转手柄圆圈
-      this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
+      // 如果只有一个元素被选中，显示各个控制手柄
+      if (selectedIds.length === 1) {
+        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown)
+      } else if (selectedIds.length > 1) {
+        // 多元素选择模式 - 显示包围盒控制手柄
+        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown)
+      }
+    }
+  }
+
+  private drawRotatedBounds(
+    bounds: { x: number; y: number; width: number; height: number },
+    rotation: number,
+    viewportScale: number,
+    selectedIds: string[],
+    onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
+  ) {
+    const centerX = bounds.x + bounds.width / 2
+    const centerY = bounds.y + bounds.height / 2
+
+    // 计算旋转后的四个角点
+    const halfWidth = bounds.width / 2
+    const halfHeight = bounds.height / 2
+
+    // 四个角点（相对于中心点）
+    const corners = [
+      { x: -halfWidth, y: -halfHeight }, // 左上
+      { x: halfWidth, y: -halfHeight }, // 右上
+      { x: halfWidth, y: halfHeight }, // 右下
+      { x: -halfWidth, y: halfHeight }, // 左下
+    ]
+
+    // 旋转后的角点
+    const rotatedCorners = corners.map((corner) => {
+      const cos = Math.cos(rotation)
+      const sin = Math.sin(rotation)
+      return {
+        x: centerX + corner.x * cos - corner.y * sin,
+        y: centerY + corner.x * sin + corner.y * cos,
+      }
+    })
+
+    // 绘制旋转后的边框
+    this.transformerGraphic.poly(rotatedCorners)
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+    this.transformerGraphic.closePath()
+
+    // 绘制控制手柄
+    const handleSize = 8 / viewportScale
+    rotatedCorners.forEach((corner, index) => {
+      const handleTypes = ['tl', 'tr', 'br', 'bl']
+      const type = handleTypes[index]
+
+      this.transformerGraphic.rect(corner.x - handleSize / 2, corner.y - handleSize / 2, handleSize, handleSize)
       this.transformerGraphic.fill({ color: 0xffffff })
       this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
 
-      // 旋转手柄点击区域
-      const rotationHitZone = new PIXI.Graphics()
-      rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
-      rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
-      rotationHitZone.eventMode = 'static'
-      rotationHitZone.cursor = 'grab'
-      rotationHitZone.label = 'handle:rotate'
+      const hitZone = new PIXI.Graphics()
+      hitZone.rect(corner.x - handleSize, corner.y - handleSize, handleSize * 2, handleSize * 2)
+      hitZone.fill({ color: 0x000000, alpha: 0.0001 })
+      hitZone.eventMode = 'static'
+      hitZone.cursor = this.getCursorForHandle(type as HandleType)
+      hitZone.label = `handle:${type}`
 
-      rotationHitZone.on('pointerdown', (e) => {
+      hitZone.on('pointerdown', (e) => {
         e.stopPropagation()
-        onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
+        onHandleDown(e, type as HandleType, selectedIds[0])
       })
 
-      this.transformerGraphic.addChild(rotationHitZone)
+      this.transformerGraphic.addChild(hitZone)
+    })
+
+    // 绘制旋转手柄
+    // 计算未旋转时顶部中心点
+    const topCenterX = centerX
+    const topCenterY = bounds.y
+
+    // 将顶部中心点也进行旋转
+    const rotatedTopCenterX =
+      centerX + (topCenterX - centerX) * Math.cos(rotation) - (topCenterY - centerY) * Math.sin(rotation)
+    const rotatedTopCenterY =
+      centerY + (topCenterX - centerX) * Math.sin(rotation) + (topCenterY - centerY) * Math.cos(rotation)
+
+    const rotationHandleDist = 20 / viewportScale
+    const rotationHandleAngle = rotation - Math.PI / 2
+    const rotationHandleX = rotatedTopCenterX + Math.cos(rotationHandleAngle) * rotationHandleDist
+    const rotationHandleY = rotatedTopCenterY + Math.sin(rotationHandleAngle) * rotationHandleDist
+
+    // 连接线，从旋转后的顶部中心点到旋转手柄
+    this.transformerGraphic.moveTo(rotatedTopCenterX, rotatedTopCenterY)
+    this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+    // 旋转手柄圆圈
+    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
+    this.transformerGraphic.fill({ color: 0xffffff })
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+    // 旋转手柄点击区域
+    const rotationHitZone = new PIXI.Graphics()
+    rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
+    rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
+    rotationHitZone.eventMode = 'static'
+    rotationHitZone.cursor = 'grab'
+    rotationHitZone.label = 'handle:rotate'
+
+    rotationHitZone.on('pointerdown', (e) => {
+      e.stopPropagation()
+      onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
+    })
+
+    this.transformerGraphic.addChild(rotationHitZone)
+  }
+
+  private drawHandles(
+    bounds: { x: number; y: number; width: number; height: number },
+    viewportScale: number,
+    selectedIds: string[],
+    onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
+  ) {
+    const handleSize = 8 / viewportScale
+    const handles: Record<string, { x: number; y: number }> = {
+      tl: { x: bounds.x, y: bounds.y },
+      t: { x: bounds.x + bounds.width / 2, y: bounds.y },
+      tr: { x: bounds.x + bounds.width, y: bounds.y },
+      r: { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 },
+      br: { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+      b: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height },
+      bl: { x: bounds.x, y: bounds.y + bounds.height },
+      l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
     }
+
+    // 绘制控制手柄
+    Object.entries(handles).forEach(([type, pos]) => {
+      this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
+      this.transformerGraphic.fill({ color: 0xffffff })
+      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+      const hitZone = new PIXI.Graphics()
+      hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
+      hitZone.fill({ color: 0x000000, alpha: 0.0001 })
+      hitZone.eventMode = 'static'
+      hitZone.cursor = this.getCursorForHandle(type as HandleType)
+      hitZone.label = `handle:${type}`
+
+      hitZone.on('pointerdown', (e) => {
+        e.stopPropagation()
+        onHandleDown(e, type as HandleType, selectedIds[0])
+      })
+
+      this.transformerGraphic.addChild(hitZone)
+    })
+
+    // 绘制旋转手柄
+    const rotationHandleY = bounds.y - 20 / viewportScale
+    const rotationHandleX = bounds.x + bounds.width / 2
+
+    // 连接线
+    this.transformerGraphic.moveTo(rotationHandleX, bounds.y)
+    this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+    // 旋转手柄圆圈
+    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
+    this.transformerGraphic.fill({ color: 0xffffff })
+    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+
+    // 旋转手柄点击区域
+    const rotationHitZone = new PIXI.Graphics()
+    rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
+    rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
+    rotationHitZone.eventMode = 'static'
+    rotationHitZone.cursor = 'grab'
+    rotationHitZone.label = 'handle:rotate'
+
+    rotationHitZone.on('pointerdown', (e) => {
+      e.stopPropagation()
+      onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
+    })
+
+    this.transformerGraphic.addChild(rotationHitZone)
   }
 
   private getCursorForHandle(handle: HandleType): string {

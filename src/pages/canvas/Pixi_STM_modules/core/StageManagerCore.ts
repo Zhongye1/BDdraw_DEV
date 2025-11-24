@@ -42,6 +42,11 @@ export class StageManagerCore {
 
     // [新增] 用于 Move 操作的初始状态记录
     dragInitialStates: null as Record<string, Partial<CanvasElement>> | null,
+
+    // [新增] 用于旋转操作的初始状态记录
+    rotationInitialStates: null,
+    rotationCenter: null,
+    startRotationAngle: null,
   }
 
   constructor(container: HTMLElement) {
@@ -164,6 +169,22 @@ export class StageManagerCore {
 
     if (!hasValid) return null
     return { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
+  }
+
+  /**
+   * 计算点绕中心旋转后的新坐标
+   * @param x 点的 x
+   * @param y 点的 y
+   * @param cx 中心点 x
+   * @param cy 中心点 y
+   * @param angle 旋转角度 (弧度)
+   */
+  private rotatePoint(x: number, y: number, cx: number, cy: number, angle: number) {
+    const cos = Math.cos(angle)
+    const sin = Math.sin(angle)
+    const nx = cos * (x - cx) - sin * (y - cy) + cx
+    const ny = sin * (x - cx) + cos * (y - cy) + cy
+    return { x: nx, y: ny }
   }
 
   // --- 交互逻辑 ---
@@ -291,11 +312,60 @@ export class StageManagerCore {
     undoRedoManager.lock()
   }
 
-  private onHandleDown = (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => {
+  private onHandleDown = (
+    e: PIXI.FederatedPointerEvent,
+    handle: HandleType | 'p0' | 'p1' | 'rotate',
+    elementId: string,
+  ) => {
     // 触发防抖检查
     this.triggerDebounceSnapshot()
 
     e.stopPropagation()
+
+    // === [新增] 旋转逻辑分支 ===
+    if (handle === 'rotate') {
+      this.state.mode = 'rotating'
+      this.state.currentId = elementId
+
+      const state = useStore.getState()
+      const { elements, selectedIds } = state
+      const mousePos = e.getLocalPosition(this.viewport)
+
+      // 1. 计算旋转中心（选中元素的包围盒中心）
+      const bounds = this.getSelectionBounds(selectedIds, elements)
+      if (!bounds) return
+
+      const centerX = bounds.x + bounds.width / 2
+      const centerY = bounds.y + bounds.height / 2
+      this.state.rotationCenter = { x: centerX, y: centerY }
+
+      // 2. 计算鼠标起始角度（相对于中心点）
+      this.state.startRotationAngle = Math.atan2(mousePos.y - centerY, mousePos.x - centerX)
+
+      // 3. 记录所有选中元素的初始状态
+      const initialMap: Record<string, any> = {}
+      selectedIds.forEach((id) => {
+        const el = elements[id]
+        if (el) {
+          initialMap[id] = {
+            x: el.x,
+            y: el.y,
+            width: el.width,
+            height: el.height,
+            rotation: el.rotation || 0, // 确保你的 CanvasElement 类型里有 rotation
+            // 记录元素自身的中心点，方便后续计算
+            cx: el.x + el.width / 2,
+            cy: el.y + el.height / 2,
+          }
+        }
+      })
+      this.state.rotationInitialStates = initialMap
+
+      undoRedoManager.lock()
+      console.log('[StageManager] 开始旋转操作')
+      return
+    }
+
     this.state.mode = 'resizing'
     this.state.activeHandle = handle as HandleType | null
     this.state.currentId = elementId
@@ -484,6 +554,45 @@ export class StageManagerCore {
 
         state.updateElement(id, updatePayload)
       })
+    } else if (
+      this.state.mode === 'rotating' &&
+      this.state.rotationInitialStates &&
+      this.state.rotationCenter &&
+      this.state.startRotationAngle !== null
+    ) {
+      // === [新增] 旋转逻辑 ===
+      const { x: cx, y: cy } = this.state.rotationCenter
+
+      // 1. 计算当前鼠标角度
+      const currentAngle = Math.atan2(currentPos.y - cy, currentPos.x - cx)
+
+      // 2. 计算旋转增量（当前角度 - 起始角度）
+      const deltaAngle = currentAngle - this.state.startRotationAngle
+
+      // 3. 更新每一个选中元素
+      state.selectedIds.forEach((id) => {
+        const initEl = this.state.rotationInitialStates![id]
+        if (!initEl) return
+
+        // A. 计算新的自转角度
+        const newRotation = initEl.rotation + deltaAngle
+
+        // B. 计算新的位置 (公转)
+        // 将元素的中心点 (initEl.cx, initEl.cy) 绕着 组中心 (cx, cy) 旋转 deltaAngle
+        const newCenter = this.rotatePoint(initEl.cx, initEl.cy, cx, cy, deltaAngle)
+
+        // C. 根据新的中心点反推 x, y (x = center.x - width/2)
+        const newX = newCenter.x - initEl.width / 2
+        const newY = newCenter.y - initEl.height / 2
+
+        // D. 更新 Store
+        state.updateElement(id, {
+          x: newX,
+          y: newY,
+          rotation: newRotation,
+        })
+      })
+      return
     } else if (this.state.mode === 'drawing' && this.state.currentId) {
       const el = state.elements[this.state.currentId]
       if (!el) return
@@ -675,6 +784,56 @@ export class StageManagerCore {
       }
     }
 
+    // === [新增] 旋转结束逻辑 ===
+    if (this.state.mode === 'rotating' && this.state.rotationInitialStates) {
+      console.log('[StageManager] 结束旋转操作')
+      undoRedoManager.unlock()
+
+      const operations: any[] = []
+
+      Object.entries(this.state.rotationInitialStates).forEach(([id, initialAttrs]) => {
+        const finalElement = state.elements[id]
+        if (!finalElement) return
+
+        // 获取最终状态
+        const finalAttrs = {
+          x: finalElement.x,
+          y: finalElement.y,
+          width: finalElement.width,
+          height: finalElement.height,
+          rotation: finalElement.rotation || 0,
+        }
+
+        // 检查是否有变化 (对比 x, y, rotation)
+        // 注意：即使只是自转，x/y 也可能因为精度问题微变，或者如果是多选旋转，x/y 必然变
+        const hasChanged =
+          Math.abs(initialAttrs.x - finalAttrs.x) > 0.01 ||
+          Math.abs(initialAttrs.y - finalAttrs.y) > 0.01 ||
+          Math.abs(initialAttrs.width - finalAttrs.width) > 0.01 ||
+          Math.abs(initialAttrs.height - finalAttrs.height) > 0.01 ||
+          Math.abs(initialAttrs.rotation - finalAttrs.rotation) > 0.001
+
+        if (hasChanged) {
+          operations.push({
+            id,
+            initialAttrs: {
+              x: initialAttrs.x,
+              y: initialAttrs.y,
+              width: initialAttrs.width,
+              height: initialAttrs.height,
+              rotation: initialAttrs.rotation,
+            },
+            finalAttrs,
+          })
+        }
+      })
+
+      if (operations.length > 0) {
+        const rotateCommand = new UpdateElementCommand(operations, '旋转元素')
+        undoRedoManager.executeCommand(rotateCommand)
+      }
+    }
+
     this.state.mode = 'idle'
     this.state.currentId = null
     this.state.activeHandle = null
@@ -684,6 +843,10 @@ export class StageManagerCore {
     this.state.initialGroupBounds = null
     this.state.resizeInitialStates = null
     this.state.dragInitialStates = null // 清理
+    // [新增] 清理旋转状态
+    this.state.rotationInitialStates = null
+    this.state.rotationCenter = null
+    this.state.startRotationAngle = null
 
     // 移除了原来在此处的解锁操作
   }

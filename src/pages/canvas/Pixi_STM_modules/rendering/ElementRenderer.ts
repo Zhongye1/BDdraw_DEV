@@ -239,6 +239,13 @@ export class ElementRenderer {
         }
 
         textObj.position.set(data.x, data.y)
+        // 应用旋转
+        if (data.rotation !== undefined) {
+          // 设置旋转中心为元素中心
+          textObj.pivot.set(data.width / 2, data.height / 2)
+          textObj.position.set(data.x + data.width / 2, data.y + data.height / 2)
+          textObj.rotation = data.rotation
+        }
       }
 
       // === 处理其他几何图形 ===
@@ -336,6 +343,13 @@ export class ElementRenderer {
           }
         }
         g.position.set(data.x, data.y)
+        // 应用旋转
+        if (data.rotation !== undefined) {
+          // 设置旋转中心为元素中心
+          g.pivot.set(data.width / 2, data.height / 2)
+          g.position.set(data.x + data.width / 2, data.y + data.height / 2)
+          g.rotation = data.rotation
+        }
       }
     })
 
