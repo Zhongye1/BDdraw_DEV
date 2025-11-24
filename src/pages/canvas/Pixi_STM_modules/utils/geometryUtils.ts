@@ -1,4 +1,4 @@
-import type { CanvasElement } from '@/stores/canvasStore'
+import type { CanvasElement, GroupElement } from '@/stores/canvasStore'
 
 /**
  * 计算点绕中心旋转后的新坐标
@@ -36,7 +36,7 @@ export function getSelectionBounds(selectedIds: string[], elements: Record<strin
     // 如果想要更精确的 Text 包围盒，可以结合 ElementRenderer 的 spriteMap
 
     // 如果是组元素，需要特殊处理
-    if ((el.type as any) === 'group') {
+    if (el.type === 'group') {
       minX = Math.min(minX, el.x)
       minY = Math.min(minY, el.y)
       maxX = Math.max(maxX, el.x + el.width)
@@ -63,10 +63,10 @@ export function getAllDescendantIds(groupId: string, elements: Record<string, Ca
   const group = elements[groupId]
   if (!group || group.type !== 'group') return []
 
-  const groupEl = group as any
+  const groupEl = group as GroupElement
   let descendants: string[] = [...groupEl.children]
 
-  groupEl.children.forEach((childId: string) => {
+  groupEl.children.forEach((childId) => {
     // 递归查找：如果子元素也是组，把它的后代也加进来
     descendants = descendants.concat(getAllDescendantIds(childId, elements))
   })

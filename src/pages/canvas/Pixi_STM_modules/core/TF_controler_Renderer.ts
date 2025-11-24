@@ -134,6 +134,25 @@ export class TransformerRenderer {
       this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
       this.transformerGraphic.stroke({ width: 1, color: isGroupSelected ? 0x0099ff : 0x8b5cf6 })
 
+      // 如果是组元素，添加蓝色小字标签
+      if (isGroupSelected) {
+        const groupName = `Group ${validSelectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
+
+        // 创建文本样式
+        const textStyle = new PIXI.TextStyle({
+          fontSize: 22 / viewportScale,
+          fill: 0x0099ff,
+          fontWeight: 'bold',
+        })
+
+        // 创建文本对象
+        const text = new PIXI.Text(groupName, textStyle)
+        text.x = bounds.x + 5 / viewportScale // 离左边5像素
+        text.y = bounds.y - 15 / viewportScale // 在框上方15像素
+
+        this.transformerGraphic.addChild(text)
+      }
+
       // 如果只有一个元素被选中，显示各个控制手柄
       if (validSelectedIds.length === 1) {
         this.drawHandles(bounds, viewportScale, validSelectedIds, onHandleDown, elements)
@@ -250,6 +269,26 @@ export class TransformerRenderer {
     })
 
     this.transformerGraphic.addChild(rotationHitZone)
+
+    // 如果是组元素，添加蓝色小字标签
+    const isGroupSelected = selectedIds.length === 1 && elements[selectedIds[0]]?.type === 'group'
+    if (isGroupSelected) {
+      const groupName = `Group ${selectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
+
+      // 创建文本样式
+      const textStyle = new PIXI.TextStyle({
+        fontSize: 22 / viewportScale,
+        fill: 0x0099ff,
+        fontWeight: 'bold',
+      })
+
+      // 创建文本对象
+      const text = new PIXI.Text(groupName, textStyle)
+      text.x = rotatedTopCenterX + 5 / viewportScale // 离左边5像素
+      text.y = rotatedTopCenterY - 20 / viewportScale // 在框上方20像素
+
+      this.transformerGraphic.addChild(text)
+    }
   }
 
   private drawHandles(
@@ -325,6 +364,25 @@ export class TransformerRenderer {
     })
 
     this.transformerGraphic.addChild(rotationHitZone)
+
+    // 如果是组元素，添加蓝色小字标签
+    if (isSelectedGroup) {
+      const groupName = `Group ${selectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
+
+      // 创建文本样式
+      const textStyle = new PIXI.TextStyle({
+        fontSize: 22 / viewportScale,
+        fill: 0x0099ff,
+        fontWeight: 'bold',
+      })
+
+      // 创建文本对象
+      const text = new PIXI.Text(groupName, textStyle)
+      text.x = bounds.x + 5 / viewportScale // 离左边5像素
+      text.y = bounds.y - 15 / viewportScale // 在框上方15像素
+
+      this.transformerGraphic.addChild(text)
+    }
   }
 
   private getCursorForHandle(handle: HandleType): string {

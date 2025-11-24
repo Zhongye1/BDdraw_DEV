@@ -239,6 +239,7 @@ export class ElementRenderer {
         }
 
         textObj.position.set(data.x, data.y)
+
         // 应用旋转
         if (data.rotation !== undefined) {
           // 设置旋转中心为元素中心
@@ -248,10 +249,10 @@ export class ElementRenderer {
         }
       }
 
-      // === 处理其他几何图形 ===
+      // === 处理其他类型 (Rect/Circle/Triangle/Diamond/Line/Arrow/Pencil/Group) ===
       else {
-        // 如果之前的 sprite 是 HTMLText 或 Sprite，销毁重建
-        if (graphic && (graphic instanceof HTMLText || graphic instanceof PIXI.Sprite)) {
+        // 如果之前的 sprite 不是 Graphics，销毁重建
+        if (graphic && !(graphic instanceof PIXI.Graphics)) {
           elementLayer.removeChild(graphic)
           ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
           graphic = undefined
@@ -268,6 +269,8 @@ export class ElementRenderer {
 
         const g = graphic as PIXI.Graphics
         g.clear()
+
+        // 样式属性
         const strokeWidth = data.strokeWidth ?? 2
         const strokeColor = new PIXI.Color(data.stroke)
         const fillColor = new PIXI.Color(data.fill)

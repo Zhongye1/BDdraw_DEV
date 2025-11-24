@@ -16,7 +16,7 @@ export class StageInteractionHandler {
   private state: StageManagerState
   private app: PIXI.Application
   private viewport: Viewport
-  private isCtrlPressed: boolean
+  private isCtrlPressed: () => boolean // 修改为函数形式
   private selectionRectGraphic: PIXI.Graphics
   private eraserGraphic: PIXI.Graphics
   private elementRendererSpriteMap: () => Map<string, PIXI.Graphics | HTMLText | PIXI.Sprite>
@@ -41,7 +41,7 @@ export class StageInteractionHandler {
     state: StageManagerState,
     app: PIXI.Application,
     viewport: Viewport,
-    isCtrlPressed: boolean,
+    isCtrlPressed: () => boolean, // 修改为函数形式
     selectionRectGraphic: PIXI.Graphics,
     eraserGraphic: PIXI.Graphics,
     elementRendererSpriteMap: () => Map<string, PIXI.Graphics | HTMLText | PIXI.Sprite>,
@@ -63,7 +63,7 @@ export class StageInteractionHandler {
     this.state = state
     this.app = app
     this.viewport = viewport
-    this.isCtrlPressed = isCtrlPressed
+    this.isCtrlPressed = isCtrlPressed // 保存函数引用
     this.selectionRectGraphic = selectionRectGraphic
     this.eraserGraphic = eraserGraphic
     this.elementRendererSpriteMap = elementRendererSpriteMap
@@ -80,7 +80,7 @@ export class StageInteractionHandler {
     handlePointerDown(
       e,
       state,
-      this.isCtrlPressed,
+      this.isCtrlPressed(), // 调用函数获取当前值
       this.updateState.setMode,
       this.updateState.setStartPos,
       this.updateState.setCurrentId,
@@ -199,42 +199,26 @@ export class StageInteractionHandler {
       if (handle?.includes('t')) finalT += totalDy
       if (handle?.includes('b')) finalB += totalDy
 
-      // 处理翻转 (Flip)
-      // 关键：不要交换 L/R 来计算 Scale，这会导致翻转时子元素不镜像
-      // 我们允许 width/height 为负数用于计算 Scale，但在写入 Element 时转为正数并调整 x/y
+      // 3. 确保宽度和高度不为负数
+      if (finalL > finalR) [finalL, finalR] = [finalR, finalL]
+      if (finalT > finalB) [finalT, finalB] = [finalB, finalT]
 
-      // 为了简化模型，这里使用简单的翻转修正：
-      let newBoundsX = finalL
-      let newBoundsY = finalT
-      let newBoundsW = finalR - finalL
-      let newBoundsH = finalB - finalT
+      const newBoundsX = finalL
+      const newBoundsY = finalT
+      const newBoundsW = finalR - finalL
+      const newBoundsH = finalB - finalT
 
-      // 3. 计算缩放比例 (允许为负，如果做了翻转处理)
-      // 如果 newBoundsW 为负，说明翻转了。
-      // 注意：Pixi 或 Canvas 通常需要正的 width/height。
-      // 简单的做法是：如果翻转了，我们要相应调整计算逻辑。
-      // 这里采用更稳妥的策略：交换边界值，但 Scale 取绝对值，
-      // 复杂的镜像翻转通常需要 scaleX = -1，这里先只做非镜像的调整大小。
-
-      if (newBoundsW < 0) {
-        ;[newBoundsX, newBoundsW] = [newBoundsX + newBoundsW, -newBoundsW]
-      }
-      if (newBoundsH < 0) {
-        ;[newBoundsY, newBoundsH] = [newBoundsY + newBoundsH, -newBoundsH]
-      }
-
+      // 4. 计算缩放比例
       const scaleX = initBounds.width === 0 ? 1 : newBoundsW / initBounds.width
       const scaleY = initBounds.height === 0 ? 1 : newBoundsH / initBounds.height
       const avgScale = (Math.abs(scaleX) + Math.abs(scaleY)) / 2
 
-      // 4. 遍历快照中的 **每一个** 元素 (无论是组还是组内的子元素)
-      // 因为我们在 onHandleDown 里已经把所有层级的子元素都加进来了
+      // 5. 遍历快照中的所有元素并更新它们
       Object.keys(this.state.initialElementsMap).forEach((id) => {
         const initEl = this.state.initialElementsMap![id]
         if (!initEl) return
 
         // A. 计算新位置
-        // 公式：新位置 = 新原点 + (旧位置 - 旧原点) * 缩放比例
         const relX = initEl.x! - initBounds.x
         const relY = initEl.y! - initBounds.y
 
@@ -285,10 +269,10 @@ export class StageInteractionHandler {
       // 2. 计算旋转增量（当前角度 - 起始角度）
       const deltaAngle = currentAngle - this.state.startRotationAngle
 
-      // 3. 更新每一个选中元素
-      state.selectedIds.forEach((id) => {
-        const initEl = this.state.rotationInitialStates![id]
-        if (!initEl) return
+      // 3. 遍历所有选中元素并更新它们的旋转角度和位置
+      Object.entries(this.state.rotationInitialStates).forEach(([id, initEl]) => {
+        const element = state.elements[id]
+        if (!element) return
 
         // 检查是否为组元素
         if (initEl.type === 'group') {

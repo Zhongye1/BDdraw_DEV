@@ -82,7 +82,7 @@ export class StageManagerCore {
         this.state,
         this.app,
         this.viewport,
-        this.isCtrlPressed,
+        () => this.isCtrlPressed, // 返回当前 isCtrlPressed 值
         this.selectionRectGraphic,
         this.eraserGraphic,
         () => this.elementRenderer.getSpriteMap(),

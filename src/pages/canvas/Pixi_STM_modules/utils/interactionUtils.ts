@@ -1,9 +1,25 @@
 import * as PIXI from 'pixi.js'
-import { useStore, type ToolType } from '@/stores/canvasStore'
+import { useStore, type ToolType, type GroupElement } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
 import type { HandleType, CanvasElement } from '../shared/types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { AddElementCommand } from '@/lib/AddElementCommand'
+
+// 递归获取所有后代元素的 ID（包括子元素的子元素）
+function getAllDescendantIds(groupId: string, elements: Record<string, CanvasElement>): string[] {
+  const group = elements[groupId]
+  if (!group || group.type !== 'group') return []
+
+  const groupEl = group as GroupElement
+  let descendants: string[] = [...groupEl.children]
+
+  groupEl.children.forEach((childId) => {
+    // 递归查找：如果子元素也是组，把它的后代也加进来
+    descendants = descendants.concat(getAllDescendantIds(childId, elements))
+  })
+
+  return descendants
+}
 
 /**
  * 处理指针按下事件
@@ -105,7 +121,19 @@ export function handlePointerDown(
 
     // [新增] 捕获所有选中元素在拖拽前的初始状态
     const initialDragMap: Record<string, any> = {}
+    // 添加当前选中元素的所有后代元素（支持嵌套组）
+    const allSelectedIds = [...state.selectedIds]
     state.selectedIds.forEach((id) => {
+      const el = state.elements[id]
+      if (el && el.type === 'group') {
+        allSelectedIds.push(...getAllDescendantIds(id, state.elements))
+      }
+    })
+
+    // 去重
+    const uniqueIds = [...new Set(allSelectedIds)]
+
+    uniqueIds.forEach((id) => {
       const el = state.elements[id]
       if (el) {
         // 记录 x, y (如果是直线/箭头，可能也需要记录 points)
@@ -237,7 +265,19 @@ export function handleHandleDown(
 
     // 3. 记录所有选中元素的初始状态
     const initialMap: Record<string, any> = {}
+    // 收集所有选中元素及其后代元素（支持嵌套组）
+    const allSelectedIds = [...selectedIds]
     selectedIds.forEach((id) => {
+      const el = elements[id]
+      if (el && el.type === 'group') {
+        allSelectedIds.push(...getAllDescendantIds(id, elements))
+      }
+    })
+
+    // 去重
+    const uniqueIds = [...new Set(allSelectedIds)]
+
+    uniqueIds.forEach((id) => {
       const el = elements[id]
       if (el) {
         initialMap[id] = {
@@ -254,7 +294,7 @@ export function handleHandleDown(
 
         // 如果是组元素，还需要记录子元素的信息
         if (el.type === 'group') {
-          const groupElement = el as any
+          const groupElement = el as GroupElement
           groupElement.children.forEach((childId: string) => {
             const childEl = elements[childId]
             if (childEl) {

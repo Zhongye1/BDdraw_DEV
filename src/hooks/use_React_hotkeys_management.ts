@@ -3,20 +3,57 @@ import { useStore } from '@/stores/canvasStore'
 import { Notification } from '@arco-design/web-react'
 import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { useRef, useEffect } from 'react'
 
 export const useCanvasShortcuts = () => {
   const { setTool, undo, redo, copyElements, pasteElements, selectedIds, elements, groupElements, ungroupElements } =
     useStore()
+
+  // 防抖定时器
+  const undoDebounceTimer = useRef<NodeJS.Timeout | null>(null)
+  const redoDebounceTimer = useRef<NodeJS.Timeout | null>(null)
+
+  // 清理定时器
+  useEffect(() => {
+    return () => {
+      if (undoDebounceTimer.current) {
+        clearTimeout(undoDebounceTimer.current)
+      }
+      if (redoDebounceTimer.current) {
+        clearTimeout(redoDebounceTimer.current)
+      }
+    }
+  }, [])
+
+  // 防抖的undo函数
+  const debouncedUndo = () => {
+    if (undoDebounceTimer.current) {
+      clearTimeout(undoDebounceTimer.current)
+    }
+    undoDebounceTimer.current = setTimeout(() => {
+      undo()
+    }, 100) // 100ms防抖
+  }
+
+  // 防抖的redo函数
+  const debouncedRedo = () => {
+    if (redoDebounceTimer.current) {
+      clearTimeout(redoDebounceTimer.current)
+    }
+    redoDebounceTimer.current = setTimeout(() => {
+      redo()
+    }, 100) // 100ms防抖
+  }
 
   // Ctrl+Z 撤销
   useHotkeys(
     'ctrl+z',
     (event) => {
       event.preventDefault()
-      undo()
+      debouncedUndo()
     },
     {},
-    [undo],
+    [debouncedUndo],
   )
 
   // Ctrl+Shift+Z 或 Ctrl+Y 重做
@@ -24,10 +61,10 @@ export const useCanvasShortcuts = () => {
     'ctrl+y, ctrl+shift+z',
     (event) => {
       event.preventDefault()
-      redo()
+      debouncedRedo()
     },
     {},
-    [redo],
+    [debouncedRedo],
   )
 
   // Delete 删除元素
@@ -205,7 +242,7 @@ export const useCanvasShortcuts = () => {
     [setTool],
   )
 
-  // 切换到图像工具
+  // 切换到橡皮擦工具
   useHotkeys(
     'shift+0',
     () => {

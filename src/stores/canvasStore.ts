@@ -99,6 +99,31 @@ interface CanvasState {
   ungroupElements: (groupIds: string[]) => void
 }
 
+// 递归获取所有后代元素的 ID（包括子元素的子元素）
+function getAllDescendantIds(groupId: string, elements: Record<string, CanvasElement>): string[] {
+  const group = elements[groupId]
+  if (!group || group.type !== 'group') return []
+
+  const groupEl = group as GroupElement
+  let descendants: string[] = [...groupEl.children]
+
+  groupEl.children.forEach((childId) => {
+    // 递归查找：如果子元素也是组，把它的后代也加进来
+    descendants = descendants.concat(getAllDescendantIds(childId, elements))
+  })
+
+  return descendants
+}
+
+// 递归获取所有祖先组的 ID
+function getAllAncestorGroupIds(elementId: string, elements: Record<string, CanvasElement>): string[] {
+  const element = elements[elementId]
+  if (!element || !element.groupId) return []
+
+  const ancestors = [element.groupId]
+  return ancestors.concat(getAllAncestorGroupIds(element.groupId, elements))
+}
+
 export const useStore = create<CanvasState>()(
   devtools(
     subscribeWithSelector((set, get) => {
@@ -215,7 +240,7 @@ export const useStore = create<CanvasState>()(
             }
           } else if ('tool' in partialObj) {
             operationType = '切换工具'
-          } else if ('selectedIds' in partialObj && !('elements' in partialObj)) {
+          } else if ('selectedIds' in partialObj) {
             operationType = '选择元素'
           }
         }
@@ -246,28 +271,27 @@ export const useStore = create<CanvasState>()(
           eraserSize: 20, // 默认橡皮擦大小
         },
 
-        setTool: (tool) => originalSet({ tool, selectedIds: [], editingId: null }),
-        setEditingId: (id) => originalSet({ editingId: id }),
-        setSelected: (ids) => originalSet({ selectedIds: ids }),
+        setTool: (tool) => originalSet({ tool }),
         addElement: (el) => originalSet((state) => ({ elements: { ...state.elements, [el.id]: el } })),
         updateElement: (id, attrs) =>
-          originalSet((state) => {
-            if (!state.elements[id]) return state
-            return { elements: { ...state.elements, [id]: { ...state.elements[id], ...attrs } } }
-          }),
+          originalSet((state) => ({
+            elements: { ...state.elements, [id]: { ...state.elements[id], ...attrs } },
+          })),
         removeElements: (ids) =>
           originalSet((state) => {
             const newElements = { ...state.elements }
             ids.forEach((id) => delete newElements[id])
-            return { elements: newElements, selectedIds: [] }
+            return { elements: newElements }
           }),
-        // 实现复制方法
+        setSelected: (ids) => originalSet({ selectedIds: ids }),
+        setEditingId: (id) => originalSet({ editingId: id }),
         copyElements: (ids) =>
           originalSet((state) => {
-            const elementsToCopy = ids.map((id) => state.elements[id]).filter(Boolean)
-            return { clipboard: elementsToCopy }
+            const elementsToCopy = ids
+              .map((id) => state.elements[id])
+              .filter((el) => el !== undefined) as CanvasElement[]
+            return { clipboard: elementsToCopy, pasteOffset: 0 }
           }),
-        // 实现粘贴方法
         pasteElements: () =>
           originalSet((state) => {
             if (!state.clipboard || state.clipboard.length === 0) return state
@@ -299,7 +323,7 @@ export const useStore = create<CanvasState>()(
             }
           }),
 
-        // 实现分组方法
+        // 实现分组方法，支持嵌套组
         groupElements: (elementIds) =>
           originalSet((state) => {
             if (elementIds.length < 2) return state // 至少需要两个元素才能分组
@@ -312,9 +336,18 @@ export const useStore = create<CanvasState>()(
               minY = Infinity,
               maxX = -Infinity,
               maxY = -Infinity
+
+            // 收集所有要分组的元素（包括嵌套组中的元素）
+            const allElementIds: string[] = []
             elementIds.forEach((id) => {
               const el = state.elements[id]
               if (el) {
+                allElementIds.push(id)
+                // 如果是组元素，也添加它的所有后代元素
+                if (el.type === 'group') {
+                  allElementIds.push(...getAllDescendantIds(id, state.elements))
+                }
+
                 minX = Math.min(minX, el.x)
                 minY = Math.min(minY, el.y)
                 maxX = Math.max(maxX, el.x + el.width)
@@ -333,11 +366,13 @@ export const useStore = create<CanvasState>()(
               fill: 'transparent',
               stroke: '#000000',
               strokeWidth: 0,
-              children: elementIds,
+              children: elementIds, // 只保存直接子元素
             }
 
             // 更新子元素的groupId属性
             const updatedElements = { ...state.elements }
+
+            // 更新所有直接子元素的groupId
             elementIds.forEach((id) => {
               if (updatedElements[id]) {
                 updatedElements[id] = { ...updatedElements[id], groupId }
@@ -353,7 +388,7 @@ export const useStore = create<CanvasState>()(
             }
           }),
 
-        // 实现取消分组方法
+        // 实现取消分组方法，支持嵌套组
         ungroupElements: (groupIds) =>
           originalSet((state) => {
             const updatedElements = { ...state.elements }
@@ -362,7 +397,7 @@ export const useStore = create<CanvasState>()(
             groupIds.forEach((groupId) => {
               const group = updatedElements[groupId]
               if (group && group.type === 'group') {
-                // 将组内元素的groupId属性移除
+                // 将组内直接子元素的groupId属性移除
                 ;(group as GroupElement).children.forEach((childId) => {
                   if (updatedElements[childId]) {
                     const { groupId: removedGroupId, ...rest } = updatedElements[childId]
