@@ -23,9 +23,13 @@ export class TransformerRenderer {
 
     if (selectedIds.length === 0) return
 
-    const el = elements[selectedIds[0]]
+    // 添加安全检查，确保所有选中的元素都存在
+    const validSelectedIds = selectedIds.filter((id) => elements[id])
+    if (validSelectedIds.length === 0) return
+
+    const el = elements[validSelectedIds[0]]
     const isLinearElement =
-      selectedIds.length === 1 && (el.type === 'line' || el.type === 'arrow') && el.points?.length === 2
+      validSelectedIds.length === 1 && el && (el.type === 'line' || el.type === 'arrow') && el.points?.length === 2
 
     // --- A. 直线/箭头模式 ---
     if (isLinearElement) {
@@ -47,7 +51,7 @@ export class TransformerRenderer {
         hitZone.label = `handle:${type}`
         hitZone.on('pointerdown', (e) => {
           e.stopPropagation()
-          onHandleDown(e, type, selectedIds[0])
+          onHandleDown(e, type, validSelectedIds[0])
         })
         this.transformerGraphic.addChild(hitZone)
       }
@@ -62,7 +66,7 @@ export class TransformerRenderer {
     // 1. 如果有强制覆盖的 Bounds (说明正在旋转中)，直接使用它
     if (overrideBounds && overrideRotation !== null) {
       // 直接调用绘制旋转框的方法
-      this.drawRotatedBounds(overrideBounds, overrideRotation, viewportScale, selectedIds, onHandleDown, elements)
+      this.drawRotatedBounds(overrideBounds, overrideRotation, viewportScale, validSelectedIds, onHandleDown, elements)
       return // 结束，不再进行后续计算
     }
 
@@ -76,7 +80,7 @@ export class TransformerRenderer {
     let hasRotation = false
     let rotation = 0
 
-    selectedIds.forEach((id) => {
+    validSelectedIds.forEach((id) => {
       const el = elements[id]
       if (el && el.rotation && el.type !== 'group') {
         hasRotation = true
@@ -84,7 +88,7 @@ export class TransformerRenderer {
       }
     })
 
-    selectedIds.forEach((id) => {
+    validSelectedIds.forEach((id) => {
       const el = elements[id]
       const sprite = spriteMap.get(id)
 
@@ -120,22 +124,22 @@ export class TransformerRenderer {
 
     // 如果有旋转，则绘制旋转后的选择框（支持单个和多个元素）
     // 组元素也可以使用旋转边界框
-    const isGroupSelected = selectedIds.length === 1 && elements[selectedIds[0]]?.type === 'group'
+    const isGroupSelected = validSelectedIds.length === 1 && elements[validSelectedIds[0]]?.type === 'group'
 
-    if (hasRotation && selectedIds.length > 0) {
+    if (hasRotation && validSelectedIds.length > 0) {
       // 对于多个元素，我们使用第一个有旋转的元素的角度
-      this.drawRotatedBounds(bounds, rotation, viewportScale, selectedIds, onHandleDown, elements)
+      this.drawRotatedBounds(bounds, rotation, viewportScale, validSelectedIds, onHandleDown, elements)
     } else {
       // 绘制普通包围盒边框
       this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
       this.transformerGraphic.stroke({ width: 1, color: isGroupSelected ? 0x0099ff : 0x8b5cf6 })
 
       // 如果只有一个元素被选中，显示各个控制手柄
-      if (selectedIds.length === 1) {
-        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown, elements)
-      } else if (selectedIds.length > 1) {
+      if (validSelectedIds.length === 1) {
+        this.drawHandles(bounds, viewportScale, validSelectedIds, onHandleDown, elements)
+      } else if (validSelectedIds.length > 1) {
         // 多元素选择模式 - 显示包围盒控制手柄
-        this.drawHandles(bounds, viewportScale, selectedIds, onHandleDown, elements)
+        this.drawHandles(bounds, viewportScale, validSelectedIds, onHandleDown, elements)
       }
     }
   }
@@ -227,7 +231,10 @@ export class TransformerRenderer {
     // 旋转手柄圆圈
     this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
     this.transformerGraphic.fill({ color: 0xffffff })
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
+    this.transformerGraphic.stroke({ width: 1 / viewportScale, color: 0x8b5cf6 })
+    this.transformerGraphic.lineStyle(1 / viewportScale, 0x8b5cf6)
+    this.transformerGraphic.moveTo(bounds.x + bounds.width / 2, bounds.y)
+    this.transformerGraphic.lineTo(bounds.x + bounds.width / 2, rotationHandleY + 5 / viewportScale)
 
     // 旋转手柄点击区域
     const rotationHitZone = new PIXI.Graphics()
@@ -253,7 +260,7 @@ export class TransformerRenderer {
     elements: Record<string, CanvasElement>,
   ) {
     const handleSize = 8 / viewportScale
-    const handles: Record<string, { x: number; y: number }> = {
+    const handles = {
       tl: { x: bounds.x, y: bounds.y },
       t: { x: bounds.x + bounds.width / 2, y: bounds.y },
       tr: { x: bounds.x + bounds.width, y: bounds.y },

@@ -1,6 +1,8 @@
 import { useHotkeys } from 'react-hotkeys-hook'
 import { useStore } from '@/stores/canvasStore'
 import { Notification } from '@arco-design/web-react'
+import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
 
 export const useCanvasShortcuts = () => {
   const { setTool, undo, redo, copyElements, pasteElements, selectedIds, elements, groupElements, ungroupElements } =
@@ -35,7 +37,17 @@ export const useCanvasShortcuts = () => {
       event.preventDefault()
       const state = useStore.getState()
       if (state.selectedIds.length > 0) {
-        state.removeElements(state.selectedIds)
+        // 收集要删除的元素
+        const elementsToRemove = state.selectedIds.map((id) => state.elements[id]).filter((el) => el !== undefined)
+
+        // 创建并执行删除命令
+        elementsToRemove.forEach((element) => {
+          const removeCommand = new RemoveElementCommand({ element })
+          undoRedoManager.executeCommand(removeCommand)
+        })
+
+        // 更新选中状态
+        state.setSelected([])
       }
     },
     {},
@@ -127,6 +139,7 @@ export const useCanvasShortcuts = () => {
     },
     [setTool],
   )
+
   // 切换到箭头工具
   useHotkeys(
     'shift+5',
@@ -166,7 +179,7 @@ export const useCanvasShortcuts = () => {
     [setTool],
   )
 
-  // 切换到文字工具
+  // 切换到文本工具
   useHotkeys(
     'shift+8',
     () => {

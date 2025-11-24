@@ -1,4 +1,5 @@
 import { useStore } from '@/stores/canvasStore'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
 
 /**
  * 处理绘图模式下的指针移动事件
@@ -78,26 +79,30 @@ export function handleDrawingUp(
       const minY = Math.min(...ys)
       const maxX = Math.max(...xs)
       const maxY = Math.max(...ys)
-      const newX = minX
-      const newY = minY
-      const newPoints = absPoints.map((p) => [p.x - newX, p.y - newY])
+
+      // 更新元素位置和尺寸
       updateElement(currentId, {
-        x: newX,
-        y: newY,
+        x: minX,
+        y: minY,
         width: maxX - minX,
         height: maxY - minY,
-        points: newPoints,
+        points: absPoints.map((p) => [p.x - minX, p.y - minY]),
       })
-    } else if (
-      el.width === 0 &&
-      el.height === 0 &&
-      (el.type === 'rect' || el.type === 'circle' || el.type === 'triangle' || el.type === 'diamond')
-    ) {
-      // 删除零大小的元素
-      removeElements([currentId])
-      return true
+    } else {
+      // 对于其他元素类型，确保有合理的尺寸
+      if (el.width === 0 && el.height === 0) {
+        // 如果没有实际绘制（点击后立即释放），删除元素
+        removeElements([currentId])
+        undoRedoManager.unlock()
+        return true
+      }
     }
+
+    // 解锁撤销/重做管理器
+    undoRedoManager.unlock()
+    console.log('[StageManager] 解锁撤销/重做管理器')
+    return false
   }
 
-  return false
+  return true
 }

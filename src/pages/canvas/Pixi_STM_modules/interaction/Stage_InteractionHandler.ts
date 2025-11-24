@@ -34,7 +34,7 @@ export class StageInteractionHandler {
     setRotationCenter: (center: { x: number; y: number } | null) => void
     setStartRotationAngle: (angle: number | null) => void
     setActiveHandle: (handle: HandleType | null) => void
-    triggerDebounceSnapshot: () => void
+    //triggerDebounceSnapshot: () => void
   }
 
   constructor(
@@ -57,7 +57,7 @@ export class StageInteractionHandler {
       setRotationCenter: (center: { x: number; y: number } | null) => void
       setStartRotationAngle: (angle: number | null) => void
       setActiveHandle: (handle: HandleType | null) => void
-      triggerDebounceSnapshot: () => void
+      //triggerDebounceSnapshot: () => void
     },
   ) {
     this.state = state
@@ -72,7 +72,7 @@ export class StageInteractionHandler {
 
   public onPointerDown = (e: PIXI.FederatedPointerEvent) => {
     // 触发防抖检查
-    this.updateState.triggerDebounceSnapshot()
+    //this.updateState.triggerDebounceSnapshot()
 
     const state = useStore.getState()
     const tool = state.tool
@@ -97,7 +97,7 @@ export class StageInteractionHandler {
     elementId: string,
   ) => {
     // 触发防抖检查
-    this.updateState.triggerDebounceSnapshot()
+    //this.updateState.triggerDebounceSnapshot()
 
     const state = useStore.getState()
 
@@ -123,7 +123,7 @@ export class StageInteractionHandler {
 
   public onPointerMove = (e: PIXI.FederatedPointerEvent) => {
     // 触发防抖检查
-    this.updateState.triggerDebounceSnapshot()
+    //this.updateState.triggerDebounceSnapshot()
 
     if (this.state.mode === 'idle') return
     const state = useStore.getState()
@@ -132,7 +132,7 @@ export class StageInteractionHandler {
     if (this.state.mode === 'selecting') {
       handleSelectingMove(this.state.startPos, currentPos, this.selectionRectGraphic)
     } else if (this.state.mode === 'erasing') {
-      handleErasingMove(e, this.eraserGraphic, (ids) => state.removeElements(ids))
+      handleErasingMove(e, this.eraserGraphic)
     } else if (this.state.mode === 'dragging') {
       this.updateState.setStartPos(
         handleDraggingMove(state, state.selectedIds, this.state.startPos, currentPos, (id, attrs) =>
@@ -357,7 +357,7 @@ export class StageInteractionHandler {
 
   public onPointerUp = () => {
     // 触发防抖检查
-    this.updateState.triggerDebounceSnapshot()
+    //this.updateState.triggerDebounceSnapshot()
 
     const state = useStore.getState()
     if (this.state.mode === 'erasing') {

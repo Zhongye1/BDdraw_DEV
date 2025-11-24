@@ -1,8 +1,9 @@
+//快照机制大本营
 import { create } from 'zustand'
 import { subscribeWithSelector, devtools } from 'zustand/middleware'
 
 import { nanoid } from 'nanoid'
-import { SnapshotCommand, undoRedoManager } from '@/lib/UndoRedoManager'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
 
 export type ToolType =
   | 'select'
@@ -219,9 +220,9 @@ export const useStore = create<CanvasState>()(
           }
         }
 
-        const command = new SnapshotCommand(currentState, newState, operationType || '状态变更')
+        //const command = new SnapshotCommand(currentState, newState, operationType || '状态变更')
         //console.log('[CanvasStore] 创建并执行快照命令')
-        undoRedoManager.executeCommand(command)
+        //undoRedoManager.executeCommand(command)
         // ======================================
 
         return result

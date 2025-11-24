@@ -1,8 +1,9 @@
 import * as PIXI from 'pixi.js'
 import { useStore, type ToolType } from '@/stores/canvasStore'
 import { nanoid } from 'nanoid'
-import type { HandleType } from '../shared/types'
+import type { HandleType, CanvasElement } from '../shared/types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { AddElementCommand } from '@/lib/AddElementCommand'
 
 /**
  * 处理指针按下事件
@@ -49,7 +50,7 @@ export function handlePointerDown(
   // Text Mode
   if (tool === 'text') {
     const newId = nanoid()
-    state.addElement({
+    const newElement = {
       id: newId,
       type: 'text',
       x: worldPos.x,
@@ -62,7 +63,12 @@ export function handlePointerDown(
       text: '<p>请输入文本</p>',
       fontSize: state.currentStyle.fontSize || 20,
       fontFamily: state.currentStyle.fontFamily || 'Arial',
-    })
+    } as CanvasElement
+
+    // 创建并执行添加元素命令
+    const addCommand = new AddElementCommand({ element: newElement })
+    undoRedoManager.executeCommand(addCommand)
+
     state.setSelected([newId])
     state.setTool('select')
     return
@@ -144,19 +150,24 @@ export function handlePointerDown(
     alpha: state.currentStyle.alpha,
   }
 
+  let newElement: CanvasElement
   if (tool === 'pencil') {
-    state.addElement({ ...commonProps, points: [[0, 0]] })
+    newElement = { ...commonProps, points: [[0, 0]] } as CanvasElement
   } else if (tool === 'line' || tool === 'arrow') {
-    state.addElement({
+    newElement = {
       ...commonProps,
       points: [
         [0, 0],
         [0, 0],
       ],
-    })
+    } as CanvasElement
   } else {
-    state.addElement(commonProps)
+    newElement = commonProps as CanvasElement
   }
+
+  // 创建并执行添加元素命令
+  const addCommand = new AddElementCommand({ element: newElement })
+  undoRedoManager.executeCommand(addCommand)
 
   // 开始绘制时锁定撤销/重做管理器
   undoRedoManager.lock()

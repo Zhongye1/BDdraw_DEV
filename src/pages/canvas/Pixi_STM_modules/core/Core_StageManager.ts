@@ -8,7 +8,7 @@ import { useStore, type ToolType, type CanvasElement } from '@/stores/canvasStor
 import type { HandleType, StageManagerState } from '../shared/types'
 import { rotatePoint, getSelectionBounds, getAllDescendantIds } from '../utils/geometryUtils'
 import { updateViewportState, updateCursor } from '../utils/renderUtils'
-import { debounce, stateEqualityFn } from '../utils/stateUtils'
+import { stateEqualityFn } from '../utils/stateUtils'
 import { removeKeyboardEventListeners } from '../utils/destroyUtils'
 
 export class StageManagerCore {
@@ -29,7 +29,7 @@ export class StageManagerCore {
 
   // 防抖相关变量
   private debounceTimer: number | null = null
-  private readonly DEBOUNCE_DELAY = 100 // 0.1秒
+  //private readonly DEBOUNCE_DELAY = 100 // 0.1秒
 
   private state: StageManagerState = {
     mode: 'idle',
@@ -120,7 +120,7 @@ export class StageManagerCore {
           setActiveHandle: (handle) => {
             this.state.activeHandle = handle
           },
-          triggerDebounceSnapshot: () => this.triggerDebounceSnapshot(),
+          //triggerDebounceSnapshot: () => this.triggerDebounceSnapshot(),
         },
       )
 
@@ -143,7 +143,7 @@ export class StageManagerCore {
             this.updateCursor(state.tool)
 
             // 触发防抖检查
-            this.triggerDebounceSnapshot()
+            //this.triggerDebounceSnapshot()
           }
         },
         { equalityFn: stateEqualityFn },
@@ -188,20 +188,20 @@ export class StageManagerCore {
   }
 
   // 添加防抖快照方法
-  private triggerDebounceSnapshot() {
-    this.debounceTimer = debounce(
-      () => {
-        // 这里可以执行保存快照的逻辑
-        // 例如，可以调用一个保存状态的方法
-        //console.log('保存画布状态快照')
-
-        // 重置定时器
-        this.debounceTimer = null
-      },
-      this.DEBOUNCE_DELAY,
-      this.debounceTimer,
-    ) as number | null
-  }
+  //private triggerDebounceSnapshot() {
+  // 移除防抖逻辑，直接执行快照操作
+  // this.debounceTimer = debounce(
+  //   () => {
+  // 这里可以执行保存快照的逻辑
+  // 例如，可以调用一个保存状态的方法
+  //console.log('保存画布状态快照')
+  // 重置定时器
+  //    this.debounceTimer = null
+  //  },
+  //  this.DEBOUNCE_DELAY,
+  //  this.debounceTimer,
+  // ) as number | null
+  //}
 
   private async initApp(container: HTMLElement) {
     await this.app.init({
@@ -278,8 +278,8 @@ export class StageManagerCore {
   }
 
   public setSpacePressed(pressed: boolean) {
-    // 触发防抖检查
-    this.triggerDebounceSnapshot()
+    // 移除防抖检查
+    // this.triggerDebounceSnapshot()
 
     this.state.isSpacePressed = pressed
     const tool = useStore.getState().tool

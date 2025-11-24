@@ -38,31 +38,31 @@ export function executeMoveCommand(
           points: finalElement.points ? [...finalElement.points] : undefined,
         },
       })
+    }
 
-      // 如果是组元素，还需要添加组内元素的记录
-      if (finalElement.type === 'group') {
-        const groupElement = finalElement as GroupElement
-        groupElement.children.forEach((childId) => {
-          const childElement = state.elements[childId]
-          const childInitialAttrs = dragInitialStates![childId]
-          if (childElement && childInitialAttrs) {
-            const childIsMoved = childElement.x !== childInitialAttrs.x || childElement.y !== childInitialAttrs.y
-            if (childIsMoved) {
-              operations.push({
-                id: childId,
-                initialAttrs: {
-                  x: childInitialAttrs.x,
-                  y: childInitialAttrs.y,
-                },
-                finalAttrs: {
-                  x: childElement.x,
-                  y: childElement.y,
-                },
-              })
-            }
+    // 如果是组元素，还需要添加组内元素的记录
+    if (finalElement.type === 'group') {
+      const groupElement = finalElement as GroupElement
+      groupElement.children.forEach((childId) => {
+        const childElement = state.elements[childId]
+        const childInitialAttrs = dragInitialStates![childId]
+        if (childElement && childInitialAttrs) {
+          const childIsMoved = childElement.x !== childInitialAttrs.x || childElement.y !== childInitialAttrs.y
+          if (childIsMoved) {
+            operations.push({
+              id: childId,
+              initialAttrs: {
+                x: childInitialAttrs.x,
+                y: childInitialAttrs.y,
+              },
+              finalAttrs: {
+                x: childElement.x,
+                y: childElement.y,
+              },
+            })
           }
-        })
-      }
+        }
+      })
     }
   })
 

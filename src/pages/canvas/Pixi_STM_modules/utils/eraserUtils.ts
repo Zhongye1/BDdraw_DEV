@@ -1,4 +1,7 @@
 import * as PIXI from 'pixi.js'
+import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { useStore } from '@/stores/canvasStore'
 
 /**
  * 处理橡皮擦模式下的指针移动事件
@@ -9,11 +12,18 @@ import * as PIXI from 'pixi.js'
 export function handleErasingMove(
   e: PIXI.FederatedPointerEvent,
   eraserGraphic: PIXI.Graphics,
-  removeElements: (ids: string[]) => void,
+  //removeElements: (ids: string[]) => void,
 ) {
   if (e.target && e.target.label) {
     const hitId = e.target.label
-    removeElements([hitId])
+    const state = useStore.getState()
+    const element = state.elements[hitId]
+
+    // 创建并执行删除元素命令
+    if (element) {
+      const removeCommand = new RemoveElementCommand({ element })
+      undoRedoManager.executeCommand(removeCommand)
+    }
   } else {
     const eraserSize = 20
     const parent = e.target?.parent
