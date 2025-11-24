@@ -1,6 +1,6 @@
 import { useStore, type CanvasElement } from '@/stores/canvasStore'
 import type { Command } from './UndoRedoManager'
-import { consoleCommandStack } from '@/components/console/canvas_commandstack'
+//import { consoleCommandStack } from '@/components/debug/canvas_commandstack'
 
 interface UpdateOperation {
   id: string
@@ -18,7 +18,7 @@ export class UpdateElementCommand implements Command {
 
     // 记录操作日志
     operations.forEach((op) => {
-      consoleCommandStack.logUpdateCommandCreate(op.id, operationType)
+      // consoleCommandStack.logUpdateCommandCreate(op.id, operationType)
     })
   }
 
@@ -37,7 +37,7 @@ export class UpdateElementCommand implements Command {
       return { elements: newElements }
     })
 
-    consoleCommandStack.logCommandExecution('UpdateElementCommand', this.commandId)
+    //consoleCommandStack.logCommandExecution('UpdateElementCommand', this.commandId)
   }
 
   undo(): void {
@@ -55,7 +55,7 @@ export class UpdateElementCommand implements Command {
       return { elements: newElements }
     })
 
-    consoleCommandStack.logUndo('UpdateElementCommand', this.commandId)
+    //consoleCommandStack.logUndo('UpdateElementCommand', this.commandId)
   }
 
   redo(): void {
@@ -73,6 +73,6 @@ export class UpdateElementCommand implements Command {
       return { elements: newElements }
     })
 
-    consoleCommandStack.logRedo('UpdateElementCommand', this.commandId)
+    //consoleCommandStack.logRedo('UpdateElementCommand', this.commandId)
   }
 }
