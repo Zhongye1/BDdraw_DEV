@@ -14,8 +14,8 @@ import {
   Type,
   Image as ImageIcon,
   Eraser,
-  Lock,
-  Unlock,
+  //Lock,
+  //Unlock,
   LayoutGrid, // 用作最后的那个库图标
   RotateCcw,
   RotateCw,
@@ -23,7 +23,7 @@ import {
 import ImageInsertModal from '@/components/image-insert-modal'
 
 // --- 类型定义 ---
-type ToolType =
+/*type ToolType =
   | 'select'
   | 'hand'
   | 'rect'
@@ -43,26 +43,26 @@ interface ToolItemConfig {
   value?: string // store 中的 tool 值
   shortcut?: string // 右下角快捷键提示
   isSeparator?: boolean // 是否是分隔符
-}
+}*/
 
 export default function TopToolbar() {
   const { tool, setTool, undo, redo, canUndo, canRedo } = useStore()
-  const [locked, setLocked] = useState(false)
+  //const [locked, setLocked] = useState(false)
   const [imageModalVisible, setImageModalVisible] = useState(false)
 
   // 简单的 className 拼接函数（如果你没有引入 clsx/tailwind-merge）
   const cls = (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' ')
 
-  // 工具栏配置，严格按照截图顺序
+  // 工具栏配置
   // 顺序: 锁 | 手 | 选择 | 矩形 | 菱形 | 圆 | 箭头 | 线 | 笔 | 文字 | 图片 | 橡皮 | 库
   const tools = [
-    {
+    /*{ // 锁功能还没写完
       id: 'lock',
       type: 'action',
       icon: locked ? Lock : Unlock,
       label: locked ? 'Unlock (Ctrl+Shift+L)' : 'Lock (Ctrl+Shift+L)',
       onClick: () => setLocked(!locked),
-    },
+    },*/
     { isSeparator: true },
     { id: 'hand', value: 'hand', icon: Hand, label: 'Hand tool (H)', shortcut: '' },
     { id: 'select', value: 'select', icon: MousePointer2, label: 'Selection (V)', shortcut: '1' },
@@ -124,8 +124,8 @@ export default function TopToolbar() {
                   'relative flex h-9 w-9 items-center justify-center transition-colors duration-100',
                   // 选中状态：淡紫色背景，深紫色图标
                   isActive ? 'bg-violet-100 text-violet-700' : 'bg-transparent text-gray-600 hover:bg-gray-100',
-                  // 锁的特殊样式
-                  item.id === 'lock' && locked ? 'text-gray-900' : '',
+                  // 锁的样式
+                  //item.id === 'lock' && locked ? 'text-gray-900' : '',
                 )}
               >
                 {Icon && (
