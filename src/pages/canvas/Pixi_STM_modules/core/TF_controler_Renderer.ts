@@ -29,7 +29,14 @@ export class TransformerRenderer {
     overrideRotation: number | null = null,
   ) {
     this.transformerGraphic.clear()
-    this.transformerGraphic.removeChildren()
+
+    // 2. 彻底销毁旧的子元素 (HitZones 和 Text)
+    // 仅仅 removeChildren 是不够的，必须调用 destroy 释放内存和纹理引用
+    // 特别是 Text 对象，每一帧创建新的 Text 而不销毁旧的会导致严重的性能问题和渲染残留
+    const children = this.transformerGraphic.removeChildren()
+    children.forEach((child) => {
+      child.destroy({ children: true, texture: true })
+    })
 
     if (selectedIds.length === 0) return
 

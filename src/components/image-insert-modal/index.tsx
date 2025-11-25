@@ -13,6 +13,7 @@ interface ImageInsertModalProps {
 const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose }) => {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [selectedImage, setSelectedImage] = useState<string | null>(null)
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null)
   const [filter, setFilter] = useState<'none' | 'blur' | 'brightness' | 'grayscale'>('none')
   const { addElement, setSelected, setTool } = useStore()
 
@@ -63,7 +64,18 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
       const reader = new FileReader()
       reader.onload = (event) => {
         if (event.target?.result) {
-          setSelectedImage(event.target.result as string)
+          const imageDataUrl = event.target.result as string
+          setSelectedImage(imageDataUrl)
+
+          // 获取图像的实际尺寸
+          const img = new Image()
+          img.onload = () => {
+            setImageDimensions({
+              width: img.width,
+              height: img.height,
+            })
+          }
+          img.src = imageDataUrl
         }
       }
       reader.readAsDataURL(file)
@@ -75,13 +87,37 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
   const handleInsert = () => {
     if (selectedImage) {
       const newId = `img_${Date.now()}`
+
+      // 根据原始图像尺寸计算合适的初始尺寸
+      let elementWidth = 200
+      let elementHeight = 150
+
+      if (imageDimensions) {
+        const maxWidth = 400
+        const maxHeight = 300
+        const aspectRatio = imageDimensions.width / imageDimensions.height
+
+        if (imageDimensions.width > maxWidth || imageDimensions.height > maxHeight) {
+          if (imageDimensions.width / maxWidth > imageDimensions.height / maxHeight) {
+            elementWidth = maxWidth
+            elementHeight = Math.round(maxWidth / aspectRatio)
+          } else {
+            elementHeight = maxHeight
+            elementWidth = Math.round(maxHeight * aspectRatio)
+          }
+        } else {
+          elementWidth = imageDimensions.width
+          elementHeight = imageDimensions.height
+        }
+      }
+
       const newElement = {
         id: newId,
         type: 'image' as ToolType,
         x: 100,
         y: 100,
-        width: 200,
-        height: 150,
+        width: elementWidth,
+        height: elementHeight,
         fill: '',
         stroke: '',
         strokeWidth: 0,
@@ -101,6 +137,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
 
       // 重置状态
       setSelectedImage(null)
+      setImageDimensions(null)
       setFilter('none')
       if (fileInputRef.current) {
         fileInputRef.current.value = ''
@@ -111,6 +148,7 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
   const handleClose = () => {
     onClose()
     setSelectedImage(null)
+    setImageDimensions(null)
     setFilter('none')
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
@@ -197,12 +235,12 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
           </div>
           */}
 
-          {selectedImage && (
+          {/*selectedImage && (
             <div className="mt-4">
               <div className="mb-2 text-sm">预览:</div>
               <img src={selectedImage} alt="Preview" style={{ maxWidth: '100%', maxHeight: '200px' }} />
             </div>
-          )}
+          )*/}
         </div>
 
         {selectedImage && (

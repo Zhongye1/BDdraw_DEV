@@ -3,46 +3,34 @@ import { useStore } from '@/stores/canvasStore'
 import { Notification } from '@arco-design/web-react'
 import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
-import { useRef, useEffect } from 'react'
+import { useRef } from 'react'
 
 export const useCanvasShortcuts = () => {
   const { setTool, undo, redo, copyElements, pasteElements, selectedIds, elements, groupElements, ungroupElements } =
     useStore()
 
-  // 防抖定时器
-  const undoDebounceTimer = useRef<NodeJS.Timeout | null>(null)
-  const redoDebounceTimer = useRef<NodeJS.Timeout | null>(null)
+  // 使用 Ref 创建一个操作锁，防止短时间内重复触发（解决开发环境双重触发 + 防止按键过快）
+  const lockRef = useRef(false)
 
-  // 清理定时器
-  useEffect(() => {
-    return () => {
-      if (undoDebounceTimer.current) {
-        clearTimeout(undoDebounceTimer.current)
-      }
-      if (redoDebounceTimer.current) {
-        clearTimeout(redoDebounceTimer.current)
-      }
+  /**
+   * 通用的节流执行器
+   * @param callback 要执行的函数
+   * @param delay 冷却时间 (ms)
+   */
+  const throttleExecute = (callback: () => void, delay = 200) => {
+    if (lockRef.current) {
+      console.log('[Hotkey] 操作被节流拦截')
+      return
     }
-  }, [])
 
-  // 防抖的undo函数
-  const debouncedUndo = () => {
-    if (undoDebounceTimer.current) {
-      clearTimeout(undoDebounceTimer.current)
-    }
-    undoDebounceTimer.current = setTimeout(() => {
-      undo()
-    }, 100) // 100ms防抖
-  }
+    // 立即执行
+    callback()
 
-  // 防抖的redo函数
-  const debouncedRedo = () => {
-    if (redoDebounceTimer.current) {
-      clearTimeout(redoDebounceTimer.current)
-    }
-    redoDebounceTimer.current = setTimeout(() => {
-      redo()
-    }, 100) // 100ms防抖
+    // 开启锁
+    lockRef.current = true
+    setTimeout(() => {
+      lockRef.current = false
+    }, delay)
   }
 
   // Ctrl+Z 撤销
@@ -50,10 +38,16 @@ export const useCanvasShortcuts = () => {
     'ctrl+z',
     (event) => {
       event.preventDefault()
-      debouncedUndo()
+      // 如果是长按产生的重复事件，直接忽略
+      if (event.repeat) return
+
+      // 使用节流执行撤销，避免连续快速撤销导致的状态混乱
+      throttleExecute(() => {
+        undo()
+      }, 100)
     },
     {},
-    [debouncedUndo],
+    [undo],
   )
 
   // Ctrl+Shift+Z 或 Ctrl+Y 重做
@@ -61,33 +55,48 @@ export const useCanvasShortcuts = () => {
     'ctrl+y, ctrl+shift+z',
     (event) => {
       event.preventDefault()
-      debouncedRedo()
+      if (event.repeat) return
+
+      throttleExecute(() => {
+        redo()
+      }, 100)
     },
     {},
-    [debouncedRedo],
+    [redo],
   )
 
   // Delete 删除元素
   useHotkeys(
     'delete, backspace',
     (event) => {
-      event.preventDefault()
+      // 只有在没有锁定的情况下才阻止默认行为（防止在输入框中无法删除）
+      if (!lockRef.current) {
+        // 注意：这里通常不需要阻止默认行为，除非确定不是在输入框。
+        // useHotkeys 配置了 enableOnFormTags: false，通常会自动处理输入框问题。
+        // 但为了保险，可以在 options 里配置 ignoreEventWhen
+      }
+
+      if (event.repeat) return
+
       const state = useStore.getState()
       if (state.selectedIds.length > 0) {
-        // 收集要删除的元素
+        // 执行删除逻辑...
         const elementsToRemove = state.selectedIds.map((id) => state.elements[id]).filter((el) => el !== undefined)
-
-        // 创建并执行删除命令
         elementsToRemove.forEach((element) => {
           const removeCommand = new RemoveElementCommand({ element })
           undoRedoManager.executeCommand(removeCommand)
         })
-
-        // 更新选中状态
         state.setSelected([])
       }
     },
-    {},
+    {
+      enableOnFormTags: false, // 默认就是 false，不如果不写也可以
+      ignoreEventWhen: (event) => {
+        // 显式忽略输入框中的按键
+        const target = event.target as HTMLElement
+        return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      },
+    },
     [],
   )
 
@@ -96,18 +105,27 @@ export const useCanvasShortcuts = () => {
     'ctrl+c',
     (event) => {
       event.preventDefault()
-      if (selectedIds.length > 0) {
-        copyElements(selectedIds)
-        Notification.success({
-          closable: false,
-          title: '复制成功',
-          content: `已复制 ${selectedIds.length} 个元素`,
-        })
-      }
+      if (event.repeat) return // 忽略长按
+
+      // 使用节流锁，解决 React StrictMode 下的两次触发问题
+      throttleExecute(() => {
+        if (selectedIds.length > 0) {
+          copyElements(selectedIds)
+          Notification.success({
+            closable: false,
+            title: '复制成功',
+            content: `已复制 ${selectedIds.length} 个元素`,
+            duration: 2000, // 自动关闭
+          })
+        }
+      }, 300) // 给稍微长一点的冷却时间，防止用户手抖复制多次
     },
     {
       enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+      ignoreEventWhen: (event) => {
+        const target = event.target as HTMLElement
+        return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      },
     },
     [selectedIds, copyElements],
   )
@@ -117,168 +135,68 @@ export const useCanvasShortcuts = () => {
     'ctrl+v',
     (event) => {
       event.preventDefault()
-      pasteElements()
+      if (event.repeat) {
+        console.log('[Hotkey] 忽略重复的粘贴事件')
+        return
+      }
+
+      // [关键修复] 加锁，防止 React StrictMode 下 hook 执行两次导致粘贴两份
+      throttleExecute(() => {
+        console.log('[Hotkey] Ctrl+V 粘贴事件触发', {
+          timestamp: Date.now(),
+          selectedIdsLength: selectedIds.length,
+          clipboard: useStore.getState().clipboard?.length,
+        })
+        pasteElements()
+      }, 300)
     },
     {
       enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+      ignoreEventWhen: (event) => {
+        const target = event.target as HTMLElement
+        return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      },
     },
     [pasteElements],
   )
 
-  // 切换到选择工具
-  useHotkeys(
-    'shift+1',
-    () => {
-      setTool('select')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到矩形工具
-  useHotkeys(
-    'shift+2',
-    () => {
-      setTool('rect')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换棱形工具
-  useHotkeys(
-    'shift+3',
-    () => {
-      setTool('diamond')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-  // 切换到圆形工具
-  useHotkeys(
-    'shift+4',
-    () => {
-      setTool('circle')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到箭头工具
-  useHotkeys(
-    'shift+5',
-    () => {
-      setTool('arrow')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到直线工具
-  useHotkeys(
-    'shift+6',
-    () => {
-      setTool('line')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到铅笔工具
-  useHotkeys(
-    'shift+7',
-    () => {
-      setTool('pencil')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到文本工具
-  useHotkeys(
-    'shift+8',
-    () => {
-      setTool('text')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到图像工具
-  useHotkeys(
-    'shift+9',
-    () => {
-      setTool('image')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
-
-  // 切换到橡皮擦工具
-  useHotkeys(
-    'shift+0',
-    () => {
-      setTool('eraser')
-    },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
-    [setTool],
-  )
+  // 切换工具 (不需要加锁，因为切换多次状态也是一样的)
+  useHotkeys('shift+1', () => setTool('select'), {}, [setTool])
+  useHotkeys('shift+2', () => setTool('rect'), {}, [setTool])
+  useHotkeys('shift+3', () => setTool('diamond'), {}, [setTool])
+  useHotkeys('shift+4', () => setTool('circle'), {}, [setTool])
+  useHotkeys('shift+5', () => setTool('arrow'), {}, [setTool])
+  useHotkeys('shift+6', () => setTool('line'), {}, [setTool])
+  useHotkeys('shift+7', () => setTool('pencil'), {}, [setTool])
+  useHotkeys('shift+8', () => setTool('text'), {}, [setTool])
+  useHotkeys('shift+9', () => setTool('image'), {}, [setTool])
+  useHotkeys('shift+0', () => setTool('eraser'), {}, [setTool])
 
   // Ctrl+G 分组
   useHotkeys(
     'ctrl+g',
     (event) => {
       event.preventDefault()
-      if (selectedIds.length > 1) {
-        groupElements(selectedIds)
-        Notification.success({
-          closable: false,
-          title: '分组成功',
-          content: `已将 ${selectedIds.length} 个元素分组`,
-        })
-      } else {
-        Notification.warning({
-          closable: false,
-          title: '无法分组',
-          content: '请选择至少两个元素进行分组',
-        })
-      }
+      if (event.repeat) return
+
+      throttleExecute(() => {
+        if (selectedIds.length > 1) {
+          groupElements(selectedIds)
+          Notification.success({
+            closable: false,
+            title: '分组成功',
+            content: `已将 ${selectedIds.length} 个元素分组`,
+          })
+        } else {
+          Notification.warning({
+            closable: false,
+            title: '无法分组',
+            content: '请选择至少两个元素进行分组',
+          })
+        }
+      })
     },
-    {
-      enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
-    },
+    {},
     [selectedIds, elements, groupElements],
   )
 
@@ -287,6 +205,8 @@ export const useCanvasShortcuts = () => {
     'ctrl+shift+g',
     (event) => {
       event.preventDefault()
+      if (event.repeat) return
+
       const selectedGroups = selectedIds.filter((id) => elements[id] && elements[id].type === 'group')
 
       if (selectedGroups.length > 0) {
@@ -306,7 +226,10 @@ export const useCanvasShortcuts = () => {
     },
     {
       enableOnFormTags: false,
-      ignoreEventWhen: (event) => event.target instanceof HTMLInputElement,
+      ignoreEventWhen: (event) => {
+        const target = event.target as HTMLElement
+        return target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable
+      },
     },
     [selectedIds, elements, ungroupElements],
   )

@@ -136,6 +136,10 @@ export const useStore = create<CanvasState>()(
         set({ elements: yElements.toJSON() })
       })
 
+      // 添加粘贴操作锁，防止短时间内重复粘贴
+      //let pasteLock = false
+      //let pasteLockTimeout: NodeJS.Timeout | null = null
+
       // 监听 IndexedDB 同步状态
       persistenceProvider.on('synced', () => {
         console.log('✅ 本地数据加载完成')
@@ -341,10 +345,35 @@ export const useStore = create<CanvasState>()(
           }),
         pasteElements: () =>
           originalSet((state) => {
-            if (!state.clipboard || state.clipboard.length === 0) return state
+            // 检查粘贴锁，防止重复粘贴
+            if ((window as any).pasteLock) {
+              console.log('[Store] 粘贴操作被锁拦截')
+              return state
+            }
+
+            console.log('[Store] pasteElements 被调用', {
+              timestamp: Date.now(),
+              clipboard: state.clipboard?.length,
+              pasteOffset: state.pasteOffset,
+            })
+
+            if (!state.clipboard || state.clipboard.length === 0) {
+              console.log('[Store] 剪贴板为空，取消粘贴')
+              return state
+            }
+
+            // 设置粘贴锁
+            ;(window as any).pasteLock = true
+            if ((window as any).pasteLockTimeout) {
+              clearTimeout((window as any).pasteLockTimeout)
+            }
+            ;(window as any).pasteLockTimeout = setTimeout(() => {
+              ;(window as any).pasteLock = false
+            }, 300) // 300ms 内不允许重复粘贴
 
             // 增加粘贴偏移量
             const newOffset = state.pasteOffset + 1
+            console.log(`[Store] 粘贴偏移量: ${state.pasteOffset} -> ${newOffset}`)
 
             const newElements: Record<string, CanvasElement> = {}
             const newIds: string[] = []
@@ -352,28 +381,37 @@ export const useStore = create<CanvasState>()(
             state.clipboard.forEach((element) => {
               const newId = nanoid()
               const randomSign = Math.random() > 0.5 ? 1 : -1 // 随机选择正负
-              const randomOffset = Math.random() * 20 // 0-20的随机偏移量
-              newIds.push(newId)
-              newElements[newId] = {
+              const randomOffset = 30 + Math.random() * 30 // 随机粘贴偏移量
+
+              const newElement = {
                 ...element,
                 id: newId,
                 // 每次粘贴都在前一次的基础上继续偏移
                 x: element.x + randomOffset * randomSign,
                 y: element.y + randomOffset * randomSign,
               }
+
+              // 添加新元素到状态中
+              newElements[newId] = newElement
+              newIds.push(newId)
+
+              console.log(`[Store] 创建新元素: ${newId}`, {
+                type: newElement.type,
+                x: newElement.x,
+                y: newElement.y,
+              })
             })
 
             // 使用 transact 保证原子性
             yDoc.transact(() => {
-              Object.entries(newElements).forEach(([id, el]) => {
-                yElements.set(id, el)
+              Object.entries(newElements).forEach(([id, element]) => {
+                yElements.set(id, element)
               })
             })
 
-            // 创建并执行添加元素命令以支持撤销/重做
-            Object.values(newElements).forEach((el) => {
-              const addCommand = new AddElementCommand({ element: el })
-              undoRedoManager.executeCommand(addCommand)
+            console.log(`[Store] 粘贴完成，新增 ${newIds.length} 个元素`, {
+              newIds,
+              finalOffset: newOffset,
             })
 
             return {
@@ -383,124 +421,110 @@ export const useStore = create<CanvasState>()(
           }),
 
         // 实现分组方法，支持嵌套组
-        groupElements: (elementIds) =>
-          originalSet((state) => {
-            if (elementIds.length < 2) return state // 至少需要两个元素才能分组
+        groupElements: (elementIds) => {
+          // 1. 获取当前状态 (使用闭包中的 get)
+          const state = get()
 
-            // 创建新的组元素
-            const groupId = nanoid()
+          if (elementIds.length < 2) return // 至少需要两个元素才能分组
 
-            // 计算包围盒
-            let minX = Infinity,
-              minY = Infinity,
-              maxX = -Infinity,
-              maxY = -Infinity
+          // 2. 执行副作用逻辑 (只执行一次)
+          const groupId = nanoid()
+          console.log(`[groupElements] 开始创建组 ID: ${groupId}`, { elementIds })
 
-            // 收集所有要分组的元素（包括嵌套组中的元素）
-            const allElementIds: string[] = []
+          let minX = Infinity,
+            minY = Infinity,
+            maxX = -Infinity,
+            maxY = -Infinity
+
+          const allElementIds: string[] = []
+          elementIds.forEach((id) => {
+            const el = state.elements[id]
+            if (el) {
+              allElementIds.push(id)
+              if (el.type === 'group') {
+                allElementIds.push(...getAllDescendantIds(id, state.elements))
+              }
+              minX = Math.min(minX, el.x)
+              minY = Math.min(minY, el.y)
+              maxX = Math.max(maxX, el.x + el.width)
+              maxY = Math.max(maxY, el.y + el.height)
+            }
+          })
+
+          const groupElement: GroupElement = {
+            id: groupId,
+            type: 'group',
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY,
+            fill: 'transparent',
+            stroke: '#000000',
+            strokeWidth: 0,
+            children: elementIds,
+          }
+
+          // Yjs 事务
+          yDoc.transact(() => {
             elementIds.forEach((id) => {
-              const el = state.elements[id]
-              if (el) {
-                allElementIds.push(id)
-                // 如果是组元素，也添加它的所有后代元素
-                if (el.type === 'group') {
-                  allElementIds.push(...getAllDescendantIds(id, state.elements))
-                }
-
-                minX = Math.min(minX, el.x)
-                minY = Math.min(minY, el.y)
-                maxX = Math.max(maxX, el.x + el.width)
-                maxY = Math.max(maxY, el.y + el.height)
+              if (yElements.has(id)) {
+                const element = yElements.get(id)!
+                yElements.set(id, { ...element, groupId })
               }
             })
+          })
 
-            // 创建组元素
-            const groupElement: GroupElement = {
-              id: groupId,
-              type: 'group',
-              x: minX,
-              y: minY,
-              width: maxX - minX,
-              height: maxY - minY,
-              fill: 'transparent',
-              stroke: '#000000',
-              strokeWidth: 0,
-              children: elementIds, // 只保存直接子元素
-            }
+          // 执行命令
+          const addCommand = new AddElementCommand({ element: groupElement })
+          undoRedoManager.executeCommand(addCommand)
 
-            // 更新子元素的groupId属性
-            const updatedElements = { ...state.elements }
+          console.log(`[groupElements] 组创建完成`, { groupId })
 
-            // 更新所有直接子元素的groupId
-            elementIds.forEach((id) => {
-              if (updatedElements[id]) {
-                updatedElements[id] = { ...updatedElements[id], groupId }
+          // 3. 最后只调用 originalSet 更新 UI 选中状态
+          // 此时传入的是对象而不是函数，不会触发重复执行逻辑
+          originalSet({
+            selectedIds: [groupId],
+          })
+        },
+
+        // 实现取消分组方法
+        ungroupElements: (groupIds) => {
+          const state = get()
+          console.log(`[ungroupElements] 开始取消分组`, { groupIds })
+
+          const newSelectedIds: string[] = []
+
+          const groupsToRemove = groupIds
+            .map((id) => state.elements[id])
+            .filter((el) => el !== undefined) as GroupElement[]
+
+          // Yjs 事务
+          yDoc.transact(() => {
+            groupIds.forEach((groupId) => {
+              const group = yElements.get(groupId)
+              if (group && group.type === 'group') {
+                ;(group as GroupElement).children.forEach((childId) => {
+                  if (yElements.has(childId)) {
+                    const { groupId: removedGroupId, ...rest } = yElements.get(childId)!
+                    yElements.set(childId, rest)
+                    newSelectedIds.push(childId)
+                  }
+                })
               }
             })
+          })
 
-            // 使用 transact 保证原子性
-            yDoc.transact(() => {
-              // 更新子元素的groupId属性
-              elementIds.forEach((id) => {
-                if (yElements.has(id)) {
-                  const element = yElements.get(id)!
-                  yElements.set(id, { ...element, groupId })
-                }
-              })
+          // 执行命令
+          groupsToRemove.forEach((group) => {
+            const removeCommand = new RemoveElementCommand({ element: group })
+            undoRedoManager.executeCommand(removeCommand)
+          })
 
-              // 添加组元素到画布
-              yElements.set(groupId, groupElement)
-            })
-
-            // 创建并执行添加元素命令以支持撤销/重做
-            const addCommand = new AddElementCommand({ element: groupElement })
-            undoRedoManager.executeCommand(addCommand)
-
-            return {
-              selectedIds: [groupId],
-            }
-          }),
-
-        // 实现取消分组方法，支持嵌套组
-        ungroupElements: (groupIds) =>
-          originalSet((state) => {
-            const newSelectedIds: string[] = []
-
-            // 收集要删除的组元素
-            const groupsToRemove = groupIds
-              .map((id) => state.elements[id])
-              .filter((el) => el !== undefined) as GroupElement[]
-
-            // 使用 transact 保证原子性
-            yDoc.transact(() => {
-              groupIds.forEach((groupId) => {
-                const group = yElements.get(groupId)
-                if (group && group.type === 'group') {
-                  // 将组内直接子元素的groupId属性移除
-                  ;(group as GroupElement).children.forEach((childId) => {
-                    if (yElements.has(childId)) {
-                      const { groupId: removedGroupId, ...rest } = yElements.get(childId)!
-                      yElements.set(childId, rest)
-                      newSelectedIds.push(childId)
-                    }
-                  })
-
-                  // 删除组元素本身
-                  yElements.delete(groupId)
-                }
-              })
-            })
-
-            // 为每个删除的组元素创建并执行删除命令以支持撤销/重做
-            groupsToRemove.forEach((group) => {
-              const removeCommand = new RemoveElementCommand({ element: group })
-              undoRedoManager.executeCommand(removeCommand)
-            })
-
-            return {
-              selectedIds: newSelectedIds,
-            }
-          }),
+          // 更新状态
+          originalSet({
+            selectedIds: newSelectedIds,
+          })
+        },
 
         // ========== 撤销/重做方法实现 ==========
         undo: () => undoRedoManager.undo(),
