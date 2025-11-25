@@ -2,6 +2,8 @@
 import React, { useEffect, useState } from 'react'
 import { useStore } from '@/stores/canvasStore'
 import { RichTextEditor } from './Richtext_editor'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { UpdateElementPropertyCommand } from '@/lib/UpdateElementPropertyCommand'
 
 export default function BottomTextEditor() {
   const { selectedIds, elements, updateElement } = useStore()
@@ -26,8 +28,23 @@ export default function BottomTextEditor() {
 
   const handleChange = (html: string) => {
     setLocalHtml(html)
+    // 记录更改前的属性值
+    const initialText = element.text || ''
+
     // 实时更新 Store，驱动 Canvas 重新渲染
     updateElement(element.id, { text: html })
+
+    // 创建并执行更新命令以支持撤销/重做
+    const updateCommand = new UpdateElementPropertyCommand(
+      {
+        id: element.id,
+        property: 'text',
+        oldValue: initialText,
+        newValue: html,
+      },
+      '修改文本内容',
+    )
+    undoRedoManager.executeCommand(updateCommand)
   }
 
   return (

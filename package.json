@@ -46,6 +46,8 @@
     "tailwindcss-animate": "^1.0.7",
     "tldraw": "^4.2.0",
     "wangeditor": "^4.7.15",
+    "y-indexeddb": "^9.0.12",
+    "yjs": "^13.6.27",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

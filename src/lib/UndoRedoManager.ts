@@ -11,6 +11,10 @@ export class UndoRedoManager {
   private redoStack: Command[] = []
   private locked = false // 防止在执行undo/redo时记录新命令
 
+  constructor() {
+    // 构造函数
+  }
+
   // 锁定机制，防止在执行命令时记录新命令
   lock() {
     this.locked = true
@@ -111,6 +115,7 @@ export class UndoRedoManager {
   }
 
   redo() {
+    console.log('[UndoRedoManager] redo 被调用')
     if (this.redoStack.length === 0) {
       console.debug('[UndoRedoManager] 重做栈为空，无法重做')
       //consoleCommandStack.logRedo('失败', '重做栈为空')
@@ -168,6 +173,14 @@ export class UndoRedoManager {
     console.log('[UndoRedoManager] 清空撤销/重做栈')
     //consoleCommandStack.clearStackLog()
     //consoleCommandStack.showStackStatus()
+  }
+
+  // [新增] 强制重置管理器状态
+  reset() {
+    this.undoStack = []
+    this.redoStack = []
+    this.locked = false
+    console.log('[UndoRedoManager] 管理器已强制重置')
   }
 
   // 用于调试的方法，获取当前栈状态

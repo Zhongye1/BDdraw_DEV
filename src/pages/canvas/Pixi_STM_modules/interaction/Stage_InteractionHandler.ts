@@ -4,7 +4,7 @@ import { useStore, type GroupElement, type CanvasElement } from '@/stores/canvas
 import type { HandleType, StageManagerState } from '../shared/types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { rotatePoint, getSelectionBounds, getAllDescendantIds } from '../utils/geometryUtils'
-import { executeMoveCommand, executeResizeCommand, executeRotateCommand } from '../utils/commandUtils'
+import { executeResizeCommand, executeRotateCommand } from '../utils/commandUtils'
 import { handlePointerDown, handleHandleDown } from '../utils/interactionUtils'
 import { handleSelectingMove, handleSelectingUp } from '../utils/selectionUtils'
 import { handleErasingMove, clearEraser } from '../utils/eraserUtils'
@@ -141,8 +141,15 @@ export class StageInteractionHandler {
       handleErasingMove(e, this.eraserGraphic)
     } else if (this.state.mode === 'dragging') {
       this.updateState.setStartPos(
-        handleDraggingMove(state, state.selectedIds, this.state.startPos, currentPos, (id, attrs) =>
-          state.updateElement(id, attrs),
+        handleDraggingMove(
+          state,
+          state.selectedIds,
+          this.state.startPos,
+          currentPos,
+          (id, attrs) => state.updateElement(id, attrs),
+          this.state.dragInitialStates,
+          this.updateState.setDragInitialStates,
+          this.updateState,
         ),
       )
     } else if (this.state.mode === 'resizing' && this.state.initialElementsMap && this.state.initialGroupBounds) {
@@ -526,12 +533,18 @@ export class StageInteractionHandler {
 
       // 解锁撤销/重做管理器
       undoRedoManager.unlock()
-      console.log('[StageManager] 解锁撤销/重做管理器')
+      //console.log('[StageManager] 解锁撤销/重做管理器')
     }
 
     // [新增] 处理 Dragging (移动) 结束的命令记录
-    if (this.state.mode === 'dragging' && this.state.dragInitialStates) {
-      executeMoveCommand(this.state.dragInitialStates, state)
+    if (this.state.mode === 'dragging') {
+      // 确保即使 dragInitialStates 是在移动过程中创建的也能正确执行命令
+      const dragInitialStates = this.state.dragInitialStates || (this.updateState as any)._tempDragInitialStates
+      if (dragInitialStates) {
+        import('../utils/commandUtils').then(({ executeMoveCommand }) => {
+          executeMoveCommand(dragInitialStates, state)
+        })
+      }
     }
 
     // [修改] 处理 Resizing (调整大小) 结束的命令记录
@@ -562,5 +575,8 @@ export class StageInteractionHandler {
     this.updateState.setRotationInitialStates(null)
     this.updateState.setRotationCenter(null)
     this.updateState.setStartRotationAngle(null)
+
+    // 清理临时状态
+    delete (this.updateState as any)._tempDragInitialStates
   }
 }

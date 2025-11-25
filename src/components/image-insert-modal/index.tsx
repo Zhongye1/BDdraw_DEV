@@ -1,7 +1,9 @@
 import React, { useState, useRef } from 'react'
 import { Modal, Radio, Space, Upload, Message } from '@arco-design/web-react'
 import { IconPlus } from '@arco-design/web-react/icon'
-import { useStore } from '@/stores/canvasStore'
+import { useStore, ToolType } from '@/stores/canvasStore'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { AddElementCommand } from '@/lib/AddElementCommand'
 
 interface ImageInsertModalProps {
   visible: boolean
@@ -73,9 +75,9 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
   const handleInsert = () => {
     if (selectedImage) {
       const newId = `img_${Date.now()}`
-      addElement({
+      const newElement = {
         id: newId,
-        type: 'image',
+        type: 'image' as ToolType,
         x: 100,
         y: 100,
         width: 200,
@@ -85,7 +87,13 @@ const ImageInsertModal: React.FC<ImageInsertModalProps> = ({ visible, onClose })
         strokeWidth: 0,
         imageUrl: selectedImage,
         filter: filter,
-      })
+      }
+
+      addElement(newElement)
+
+      // 创建并执行添加元素命令以支持撤销/重做
+      const addCommand = new AddElementCommand({ element: newElement })
+      undoRedoManager.executeCommand(addCommand)
 
       setSelected([newId])
       setTool('select')

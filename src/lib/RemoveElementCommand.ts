@@ -16,23 +16,14 @@ export class RemoveElementCommand implements Command {
 
   execute(): void {
     // 删除元素
-    useStore.setState((state) => {
-      const newElements = { ...state.elements }
-      delete newElements[this.operation.element.id]
-      return { elements: newElements }
-    })
+    const store = useStore.getState()
+    store.removeElements([this.operation.element.id])
   }
 
   undo(): void {
     // 撤销：重新添加元素
-    useStore.setState((state) => {
-      return {
-        elements: {
-          ...state.elements,
-          [this.operation.element.id]: this.operation.element,
-        },
-      }
-    })
+    const store = useStore.getState()
+    store.addElement(this.operation.element)
 
     console.log(`[RemoveElementCommand] 撤销命令 ID: ${this.commandId}`)
   }

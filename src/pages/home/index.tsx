@@ -2,6 +2,7 @@ import { Helmet } from 'react-helmet-async'
 import { Card, Typography, Divider, Tag, Grid, Badge } from '@arco-design/web-react'
 import { IconCheckCircle, IconClockCircle, IconCode, IconCommand } from '@arco-design/web-react/icon'
 import { useNavigate } from 'react-router-dom'
+import { getDefaultLayout } from '@/components/layout'
 
 const { Title, Paragraph, Text } = Typography
 const { Row, Col } = Grid
@@ -347,3 +348,5 @@ export default function Home() {
     </>
   )
 }
+
+Home.getLayout = getDefaultLayout

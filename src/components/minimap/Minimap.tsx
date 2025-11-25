@@ -20,7 +20,7 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
 
   // 1. 监听 Pixi Viewport 变化，强制重绘小地图
   useEffect(() => {
-    if (!stageManager) return
+    if (!stageManager || !stageManager.viewport) return
 
     const viewport = stageManager.viewport
 
@@ -79,18 +79,20 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
     })
 
     // --- C. 绘制视口框 (Viewport Viewfinder) ---
-    const viewport = stageManager.viewport
-    // 获取视口在世界坐标系中的可视区域
-    const viewBounds = viewport.getVisibleBounds()
+    if (stageManager && stageManager.viewport) {
+      const viewport = stageManager.viewport
+      // 获取视口在世界坐标系中的可视区域
+      const viewBounds = viewport.getVisibleBounds()
 
-    const vx = (viewBounds.x - contentBounds.x) * scale + offsetX
-    const vy = (viewBounds.y - contentBounds.y) * scale + offsetY
-    const vw = viewBounds.width * scale
-    const vh = viewBounds.height * scale
+      const vx = (viewBounds.x - contentBounds.x) * scale + offsetX
+      const vy = (viewBounds.y - contentBounds.y) * scale + offsetY
+      const vw = viewBounds.width * scale
+      const vh = viewBounds.height * scale
 
-    ctx.strokeStyle = '#ff4757'
-    ctx.lineWidth = 2
-    ctx.strokeRect(vx, vy, vw, vh)
+      ctx.strokeStyle = '#ff4757'
+      ctx.lineWidth = 2
+      ctx.strokeRect(vx, vy, vw, vh)
+    }
 
     // 绘制半透明遮罩（可选：让视口外变暗）
     // 这个稍微复杂点，需要反向剪裁，这里暂略
@@ -98,7 +100,7 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
 
   // 3. 交互逻辑：点击或拖拽小地图移动视口
   const handlePointer = (e: React.PointerEvent) => {
-    if (!stageManager || !canvasRef.current) return
+    if (!stageManager || !stageManager.viewport || !canvasRef.current) return
 
     const canvas = canvasRef.current
     const rect = canvas.getBoundingClientRect()

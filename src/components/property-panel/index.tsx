@@ -1,5 +1,7 @@
 import { Button, Space } from '@arco-design/web-react'
 import { useStore } from '@/stores/canvasStore'
+import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { UpdateElementPropertyCommand } from '@/lib/UpdateElementPropertyCommand'
 
 // 预设填充色选项
 const PRESET_FILL_COLORS = [
@@ -51,12 +53,29 @@ const PropertyPanel = () => {
   const id = selectedIds[0]
   const element = elements[id]
 
-  // 如果是图片类型，不显示属性面板
+  // 如果元素不存在或者为图片/文本类型，不显示属性面板
+  if (!element) return null
   if (element.type === 'image') return null
   if (element.type === 'text') return null
 
   const handleChange = (key: string, val: any) => {
+    // 记录更改前的属性值
+    const oldValue = element[key as keyof typeof element]
+
+    // 更新元素
     updateElement(id, { [key]: val })
+
+    // 创建并执行更新命令以支持撤销/重做
+    const updateCommand = new UpdateElementPropertyCommand(
+      {
+        id,
+        property: key,
+        oldValue,
+        newValue: val,
+      },
+      `修改元素${key}`,
+    )
+    undoRedoManager.executeCommand(updateCommand)
   }
 
   // 定义哪些类型不需要填充色

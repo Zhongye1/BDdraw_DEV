@@ -1,5 +1,23 @@
-import { useStore, type GroupElement } from '@/stores/canvasStore'
+import { useStore, type GroupElement, CanvasElement } from '@/stores/canvasStore'
 import { calculateGuidelines } from './guidelineUtils'
+
+import { undoRedoManager } from '@/lib/UndoRedoManager'
+
+// 递归获取所有后代元素的 ID（包括子元素的子元素）
+function getAllDescendantIds(groupId: string, elements: Record<string, CanvasElement>): string[] {
+  const group = elements[groupId]
+  if (!group || group.type !== 'group') return []
+
+  const groupEl = group as GroupElement
+  let descendants: string[] = [...groupEl.children]
+
+  groupEl.children.forEach((childId) => {
+    // 递归查找：如果子元素也是组，把它的后代也加进来
+    descendants = descendants.concat(getAllDescendantIds(childId, elements))
+  })
+
+  return descendants
+}
 
 /**
  * 处理拖拽模式下的指针移动事件
@@ -8,6 +26,9 @@ import { calculateGuidelines } from './guidelineUtils'
  * @param startPos 起始位置
  * @param currentPos 当前位置
  * @param updateElement 更新元素的函数
+ * @param dragInitialStates 拖拽初始状态，如果没有则在首次移动时创建
+ * @param setDragInitialStates 设置拖拽初始状态的函数
+ * @param updateState 用于更新状态的回调函数集合
  * @returns 新的起始位置
  */
 export function handleDraggingMove(
@@ -16,9 +37,53 @@ export function handleDraggingMove(
   startPos: { x: number; y: number },
   currentPos: { x: number; y: number },
   updateElement: (id: string, attrs: Record<string, any>) => void,
+  dragInitialStates: Record<string, Partial<CanvasElement>> | null,
+  setDragInitialStates: (states: Record<string, Partial<CanvasElement>> | null) => void,
+  updateState: any,
 ): { x: number; y: number } {
   const dx = currentPos.x - startPos.x
   const dy = currentPos.y - startPos.y
+
+  // 如果是第一次拖拽且尚未记录初始状态，则记录初始状态
+  let newDragInitialStates = dragInitialStates
+  if (!dragInitialStates) {
+    const initialDragMap: Record<string, any> = {}
+
+    // 添加当前选中元素的所有后代元素（支持嵌套组）
+    const allSelectedIds = [...selectedIds]
+    selectedIds.forEach((id) => {
+      const el = state.elements[id]
+      if (el && el.type === 'group') {
+        allSelectedIds.push(...getAllDescendantIds(id, state.elements))
+      }
+    })
+
+    // 去重
+    const uniqueIds = [...new Set(allSelectedIds)]
+
+    uniqueIds.forEach((id) => {
+      const el = state.elements[id]
+      if (el) {
+        // 记录 x, y (如果是直线/箭头，可能也需要记录 points)
+        initialDragMap[id] = {
+          x: el.x,
+          y: el.y,
+          points: el.points ? [...el.points.map((p) => [...p])] : undefined,
+        }
+      }
+    })
+
+    setDragInitialStates(initialDragMap)
+    newDragInitialStates = initialDragMap
+
+    // 保存到临时状态，确保在 onPointerUp 中可以访问
+    if (updateState) {
+      ;(updateState as any)._tempDragInitialStates = initialDragMap
+    }
+
+    // 开始拖拽时锁定撤销/重做管理器
+    undoRedoManager.lock()
+  }
 
   if (selectedIds.length > 0) {
     // 先计算原始新位置

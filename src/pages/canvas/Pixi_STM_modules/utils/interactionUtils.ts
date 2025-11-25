@@ -98,32 +98,36 @@ export function handlePointerDown(
       state.setTool('select')
     }
 
+    // Select the element and start dragging
+    setMode('dragging')
+    setCurrentId(hitId)
+
     // 处理 Ctrl+点击多选
+    let selectedIds = state.selectedIds
     if (isCtrlPressed) {
       // 如果元素已被选中，则取消选中
       if (state.selectedIds.includes(hitId)) {
         const newSelectedIds = state.selectedIds.filter((id) => id !== hitId)
         state.setSelected(newSelectedIds)
+        selectedIds = newSelectedIds
       } else {
         // 如果元素未被选中，则添加到选中列表
         state.setSelected([...state.selectedIds, hitId])
+        selectedIds = [...state.selectedIds, hitId]
       }
     } else {
       // 普通点击，只选中当前元素
       if (!state.selectedIds.includes(hitId)) {
         state.setSelected([hitId])
+        selectedIds = [hitId]
       }
     }
-
-    // Select the element and start dragging
-    setMode('dragging')
-    setCurrentId(hitId)
 
     // [新增] 捕获所有选中元素在拖拽前的初始状态
     const initialDragMap: Record<string, any> = {}
     // 添加当前选中元素的所有后代元素（支持嵌套组）
-    const allSelectedIds = [...state.selectedIds]
-    state.selectedIds.forEach((id) => {
+    const allSelectedIds = [...selectedIds]
+    selectedIds.forEach((id) => {
       const el = state.elements[id]
       if (el && el.type === 'group') {
         allSelectedIds.push(...getAllDescendantIds(id, state.elements))

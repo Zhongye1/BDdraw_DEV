@@ -17,7 +17,11 @@ export class StageManagerCore {
 
   private elementLayer: PIXI.Container = new PIXI.Container()
   private uiLayer: PIXI.Container = new PIXI.Container()
-  private guidelineLayer: PIXI.Graphics = new PIXI.Graphics() // 辅助线图层
+  private guidelineLayer!: PIXI.Graphics // 辅助线图层
+
+  // 显式定义事件处理函数引用
+  private _boundDrawGuidelines: (e: Event) => void
+  private _boundClearGuidelines: () => void
 
   private elementRenderer = new ElementRenderer()
   private transformerRenderer = new TransformerRenderer()
@@ -61,11 +65,26 @@ export class StageManagerCore {
   private isCtrlPressed = false
 
   constructor(container: HTMLElement) {
+    // 在构造函数中绑定上下文
+    this._boundDrawGuidelines = (event: Event) => {
+      const customEvent = event as CustomEvent
+      this.drawGuidelines(customEvent.detail)
+      document.body.classList.add('has-guidelines')
+    }
+
+    this._boundClearGuidelines = () => {
+      this.clearGuidelines()
+      document.body.classList.remove('has-guidelines')
+    }
+
     this.app = new PIXI.Application()
     this.initApp(container).then(() => {
       this.setupViewport(container)
       this.viewport.addChild(this.elementLayer)
       this.viewport.addChild(this.uiLayer)
+
+      // 初始化辅助线图层
+      this.guidelineLayer = new PIXI.Graphics()
 
       // 调整图层顺序，确保辅助线图层在最上层
       this.uiLayer.addChild(this.selectionRectGraphic)
@@ -175,22 +194,19 @@ export class StageManagerCore {
 
   // 设置辅助线事件监听
   private setupGuidelineEvents() {
-    window.addEventListener('drawGuidelines', (event: Event) => {
-      const customEvent = event as CustomEvent
-      this.drawGuidelines(customEvent.detail)
-      // 标记页面有辅助线显示
-      document.body.classList.add('has-guidelines')
-    })
-
-    window.addEventListener('clearGuidelines', () => {
-      this.clearGuidelines()
-      // 移除辅助线显示标记
-      document.body.classList.remove('has-guidelines')
-    })
+    // 使用保存的引用添加监听
+    window.addEventListener('drawGuidelines', this._boundDrawGuidelines)
+    window.addEventListener('clearGuidelines', this._boundClearGuidelines)
   }
 
   // 绘制辅助线
   private drawGuidelines(guidelines: Array<{ type: string; position: number }>) {
+    // 确保辅助线图层存在且未被销毁
+    if (!this.guidelineLayer || this.state.destroyed) {
+      //console.warn('Guideline layer is not available')
+      return
+    }
+
     // 清除之前的辅助线
     this.guidelineLayer.clear()
 
@@ -236,6 +252,12 @@ export class StageManagerCore {
 
   // 清除辅助线
   private clearGuidelines() {
+    // 确保辅助线图层存在且未被销毁
+    if (!this.guidelineLayer || this.state.destroyed) {
+      //console.warn('Guideline layer is not available')
+      return
+    }
+
     this.guidelineLayer.clear()
     // this.guidelineLayer.dirty = true
     //console.log('辅助线已清除')
@@ -372,8 +394,24 @@ export class StageManagerCore {
 
   public destroy() {
     this.state.destroyed = true
+
+    // 移除全局监听器，防止内存泄漏和幽灵调用
+    window.removeEventListener('drawGuidelines', this._boundDrawGuidelines)
+    window.removeEventListener('clearGuidelines', this._boundClearGuidelines)
+
     this.interactionHandler.removeInteraction()
     this.elementRenderer.clear()
+
+    // 销毁辅助线图层
+    if (this.guidelineLayer) {
+      // 检查是否已被 Pixi 自动销毁
+      if (!this.guidelineLayer.destroyed) {
+        this.guidelineLayer.destroy()
+      }
+      this.guidelineLayer = null as any
+    }
+
+    // 销毁应用
     this.app.destroy(true, { children: true, texture: true })
   }
 }

@@ -35,6 +35,8 @@
         "tailwindcss-animate": "^1.0.7",
         "tldraw": "^4.2.0",
         "wangeditor": "^4.7.15",
+        "y-indexeddb": "^9.0.12",
+        "yjs": "^13.6.27",
         "zustand": "^5.0.8",
       },
       "devDependencies": {
@@ -1303,6 +1305,8 @@
 
     "ismobilejs": ["ismobilejs@1.1.1", "https://registry.npmmirror.com/ismobilejs/-/ismobilejs-1.1.1.tgz", {}, "sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw=="],
 
+    "isomorphic.js": ["isomorphic.js@0.2.5", "https://registry.npmmirror.com/isomorphic.js/-/isomorphic.js-0.2.5.tgz", {}, "sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw=="],
+
     "iterator.prototype": ["iterator.prototype@1.1.5", "https://registry.npmmirror.com/iterator.prototype/-/iterator.prototype-1.1.5.tgz", { "dependencies": { "define-data-property": "^1.1.4", "es-object-atoms": "^1.0.0", "get-intrinsic": "^1.2.6", "get-proto": "^1.0.0", "has-symbols": "^1.1.0", "set-function-name": "^2.0.2" } }, "sha512-H0dkQoCa3b2VEeKQBOxFph+JAbcrQdE7KC0UkqwpLmv2EC4P41QXP+rqo9wYodACiG5/WM5s9oDApTU8utwj9g=="],
 
     "jest-worker": ["jest-worker@27.5.1", "https://registry.npmmirror.com/jest-worker/-/jest-worker-27.5.1.tgz", { "dependencies": { "@types/node": "*", "merge-stream": "^2.0.0", "supports-color": "^8.0.0" } }, "sha512-7vuh85V5cdDofPyxn58nrPjBktZo0u9x1g8WtjQol+jZDaE+fhN+cIvTj11GndBnMnyfrUOG1sZQxCdjKh+DKg=="],
@@ -1346,6 +1350,8 @@
     "less": ["less@4.4.2", "https://registry.npmmirror.com/less/-/less-4.4.2.tgz", { "dependencies": { "copy-anything": "^2.0.1", "parse-node-version": "^1.0.1", "tslib": "^2.3.0" }, "optionalDependencies": { "errno": "^0.1.1", "graceful-fs": "^4.1.2", "image-size": "~0.5.0", "make-dir": "^2.1.0", "mime": "^1.4.1", "needle": "^3.1.0", "source-map": "~0.6.0" }, "bin": { "lessc": "bin/lessc" } }, "sha512-j1n1IuTX1VQjIy3tT7cyGbX7nvQOsFLoIqobZv4ttI5axP923gA44zUj6miiA6R5Aoms4sEGVIIcucXUbRI14g=="],
 
     "levn": ["levn@0.4.1", "https://registry.npmmirror.com/levn/-/levn-0.4.1.tgz", { "dependencies": { "prelude-ls": "^1.2.1", "type-check": "~0.4.0" } }, "sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ=="],
+
+    "lib0": ["lib0@0.2.114", "https://registry.npmmirror.com/lib0/-/lib0-0.2.114.tgz", { "dependencies": { "isomorphic.js": "^0.2.4" }, "bin": { "0gentesthtml": "bin/gentesthtml.js", "0serve": "bin/0serve.js", "0ecdsa-generate-keypair": "bin/0ecdsa-generate-keypair.js" } }, "sha512-gcxmNFzA4hv8UYi8j43uPlQ7CGcyMJ2KQb5kZASw6SnAKAf10hK12i2fjrS3Cl/ugZa5Ui6WwIu1/6MIXiHttQ=="],
 
     "lilconfig": ["lilconfig@2.1.0", "https://registry.npmmirror.com/lilconfig/-/lilconfig-2.1.0.tgz", {}, "sha512-utWOt/GHzuUxnLKxB6dk81RoOeoNeHgbrXiuGk4yyF5qlRz+iIVWu56E2fqGHFrXz0QNUhLB/8nKqvRH66JKGQ=="],
 
@@ -1993,6 +1999,8 @@
 
     "write-file-atomic": ["write-file-atomic@5.0.1", "https://registry.npmmirror.com/write-file-atomic/-/write-file-atomic-5.0.1.tgz", { "dependencies": { "imurmurhash": "^0.1.4", "signal-exit": "^4.0.1" } }, "sha512-+QU2zd6OTD8XWIJCbffaiQeH9U73qIqafo1x6V1snCWYGJf6cVE0cDR4D8xRzcEnfI21IFrUPzPGtcPf8AC+Rw=="],
 
+    "y-indexeddb": ["y-indexeddb@9.0.12", "https://registry.npmmirror.com/y-indexeddb/-/y-indexeddb-9.0.12.tgz", { "dependencies": { "lib0": "^0.2.74" }, "peerDependencies": { "yjs": "^13.0.0" } }, "sha512-9oCFRSPPzBK7/w5vOkJBaVCQZKHXB/v6SIT+WYhnJxlEC61juqG0hBrAf+y3gmSMLFLwICNH9nQ53uscuse6Hg=="],
+
     "y18n": ["y18n@5.0.8", "https://registry.npmmirror.com/y18n/-/y18n-5.0.8.tgz", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
 
     "yallist": ["yallist@3.1.1", "https://registry.npmmirror.com/yallist/-/yallist-3.1.1.tgz", {}, "sha512-a4UGQaWPH59mOXUYnAG2ewncQS4i4F43Tv3JoAM+s2VDAmS9NsK8GpDMLrCHPksFT7h3K6TOoUNn2pb7RoXx4g=="],
@@ -2002,6 +2010,8 @@
     "yargs": ["yargs@17.7.2", "https://registry.npmmirror.com/yargs/-/yargs-17.7.2.tgz", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 
     "yargs-parser": ["yargs-parser@21.1.1", "https://registry.npmmirror.com/yargs-parser/-/yargs-parser-21.1.1.tgz", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
+
+    "yjs": ["yjs@13.6.27", "https://registry.npmmirror.com/yjs/-/yjs-13.6.27.tgz", { "dependencies": { "lib0": "^0.2.99" } }, "sha512-OIDwaflOaq4wC6YlPBy2L6ceKeKuF7DeTxx+jPzv1FHn9tCZ0ZwSRnUBxD05E3yed46fv/FWJbvR+Ud7x0L7zw=="],
 
     "yn": ["yn@3.1.1", "https://registry.npmmirror.com/yn/-/yn-3.1.1.tgz", {}, "sha512-Ux4ygGWsu2c7isFWe8Yu1YluJmqVhxqK2cLXNQA5AcC3QfbGNpM7fu0Y8b/z16pXLnFxZYvWhd3fhBY9DLmC6Q=="],
 

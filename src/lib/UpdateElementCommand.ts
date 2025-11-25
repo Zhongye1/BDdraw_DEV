@@ -24,17 +24,9 @@ export class UpdateElementCommand implements Command {
 
   execute(): void {
     // 应用最终状态
-    const updates: Record<string, Partial<CanvasElement>> = {}
+    const store = useStore.getState()
     this.operations.forEach((op) => {
-      updates[op.id] = op.finalAttrs
-    })
-
-    useStore.setState((state) => {
-      const newElements = { ...state.elements }
-      Object.entries(updates).forEach(([id, attrs]) => {
-        if (newElements[id]) newElements[id] = { ...newElements[id], ...attrs }
-      })
-      return { elements: newElements }
+      store.updateElement(op.id, op.finalAttrs)
     })
 
     //consoleCommandStack.logCommandExecution('UpdateElementCommand', this.commandId)
@@ -42,17 +34,9 @@ export class UpdateElementCommand implements Command {
 
   undo(): void {
     // 撤销：恢复到 initialAttrs
-    const updates: Record<string, Partial<CanvasElement>> = {}
+    const store = useStore.getState()
     this.operations.forEach((op) => {
-      updates[op.id] = op.initialAttrs
-    })
-
-    useStore.setState((state) => {
-      const newElements = { ...state.elements }
-      Object.entries(updates).forEach(([id, attrs]) => {
-        if (newElements[id]) newElements[id] = { ...newElements[id], ...attrs }
-      })
-      return { elements: newElements }
+      store.updateElement(op.id, op.initialAttrs)
     })
 
     //consoleCommandStack.logUndo('UpdateElementCommand', this.commandId)
@@ -60,17 +44,9 @@ export class UpdateElementCommand implements Command {
 
   redo(): void {
     // 重做：恢复到 finalAttrs
-    const updates: Record<string, Partial<CanvasElement>> = {}
+    const store = useStore.getState()
     this.operations.forEach((op) => {
-      updates[op.id] = op.finalAttrs
-    })
-
-    useStore.setState((state) => {
-      const newElements = { ...state.elements }
-      Object.entries(updates).forEach(([id, attrs]) => {
-        if (newElements[id]) newElements[id] = { ...newElements[id], ...attrs }
-      })
-      return { elements: newElements }
+      store.updateElement(op.id, op.finalAttrs)
     })
 
     //consoleCommandStack.logRedo('UpdateElementCommand', this.commandId)

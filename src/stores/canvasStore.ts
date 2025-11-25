@@ -1,9 +1,11 @@
-//快照机制大本营
+//快_snapshot机制大本营
 import { create } from 'zustand'
 import { subscribeWithSelector, devtools } from 'zustand/middleware'
-
 import { nanoid } from 'nanoid'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { yElements, yDoc, persistenceProvider } from './persistenceStore'
+import { AddElementCommand } from '@/lib/AddElementCommand'
+import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
 
 export type ToolType =
   | 'select'
@@ -66,6 +68,7 @@ interface CanvasState {
   clipboard: CanvasElement[] | null
   // 添加粘贴偏移计数
   pasteOffset: number
+  status: 'loading' | 'idle'
 
   currentStyle: {
     fill: string
@@ -127,6 +130,40 @@ function getAllAncestorGroupIds(elementId: string, elements: Record<string, Canv
 export const useStore = create<CanvasState>()(
   devtools(
     subscribeWithSelector((set, get) => {
+      console.log('[CanvasStore] 创建 store')
+      // 绑定：Yjs 变动 -> 更新 Zustand -> 触发 React 重绘
+      yElements.observe(() => {
+        set({ elements: yElements.toJSON() })
+      })
+
+      // 监听 IndexedDB 同步状态
+      persistenceProvider.on('synced', () => {
+        console.log('✅ 本地数据加载完成')
+        set({ status: 'idle' })
+      })
+
+      // 添加对 synced 状态的轮询检查
+      // 这解决了初始化时可能错过 synced 事件的问题
+      const checkSyncStatus = () => {
+        if (persistenceProvider.synced) {
+          console.log('✅ 本地数据已同步')
+          set({ status: 'idle' })
+        } else {
+          // 如果尚未同步，稍后再检查
+          setTimeout(checkSyncStatus, 100)
+          console.log('⏳ 正在同步本地数据...')
+        }
+      }
+
+      // 启动检查
+      checkSyncStatus()
+
+      // 初始加载状态 - 备用方案
+      yDoc.on('update', () => {
+        // 第一次有数据进来时，说明加载完成了
+        set((state) => (state.status === 'loading' ? { status: 'idle' } : state))
+      })
+
       // 保存原始的set方法
       const originalSet: typeof set = (partial, replace?) => {
         // 工具切换不记录到撤销/重做栈
@@ -255,11 +292,12 @@ export const useStore = create<CanvasState>()(
 
       return {
         tool: 'select',
-        elements: {},
+        elements: yElements.toJSON(), // 初始值来自 Yjs
         selectedIds: [],
         editingId: null,
         clipboard: null,
         pasteOffset: 0,
+        status: 'loading', // 初始状态为 loading
         currentStyle: {
           fill: '#fbfbfdd2', // 默认文字颜色
           stroke: '#000000',
@@ -272,17 +310,26 @@ export const useStore = create<CanvasState>()(
         },
 
         setTool: (tool) => originalSet({ tool }),
-        addElement: (el) => originalSet((state) => ({ elements: { ...state.elements, [el.id]: el } })),
-        updateElement: (id, attrs) =>
-          originalSet((state) => ({
-            elements: { ...state.elements, [id]: { ...state.elements[id], ...attrs } },
-          })),
-        removeElements: (ids) =>
-          originalSet((state) => {
-            const newElements = { ...state.elements }
-            ids.forEach((id) => delete newElements[id])
-            return { elements: newElements }
-          }),
+        addElement: (el) => {
+          // 使用 transact 保证原子性，这对撤销重做很重要
+          yDoc.transact(() => {
+            yElements.set(el.id, el)
+          })
+        },
+        updateElement: (id, attrs) => {
+          // 使用 transact 保证原子性，这对撤销重做很重要
+          yDoc.transact(() => {
+            const oldEl = yElements.get(id)
+            if (oldEl) {
+              yElements.set(id, { ...oldEl, ...attrs })
+            }
+          })
+        },
+        removeElements: (ids) => {
+          yDoc.transact(() => {
+            ids.forEach((id) => yElements.delete(id))
+          })
+        },
         setSelected: (ids) => originalSet({ selectedIds: ids }),
         setEditingId: (id) => originalSet({ editingId: id }),
         copyElements: (ids) =>
@@ -316,8 +363,20 @@ export const useStore = create<CanvasState>()(
               }
             })
 
+            // 使用 transact 保证原子性
+            yDoc.transact(() => {
+              Object.entries(newElements).forEach(([id, el]) => {
+                yElements.set(id, el)
+              })
+            })
+
+            // 创建并执行添加元素命令以支持撤销/重做
+            Object.values(newElements).forEach((el) => {
+              const addCommand = new AddElementCommand({ element: el })
+              undoRedoManager.executeCommand(addCommand)
+            })
+
             return {
-              elements: { ...state.elements, ...newElements },
               selectedIds: newIds,
               pasteOffset: newOffset,
             }
@@ -379,11 +438,25 @@ export const useStore = create<CanvasState>()(
               }
             })
 
-            // 添加组元素到画布
-            updatedElements[groupId] = groupElement
+            // 使用 transact 保证原子性
+            yDoc.transact(() => {
+              // 更新子元素的groupId属性
+              elementIds.forEach((id) => {
+                if (yElements.has(id)) {
+                  const element = yElements.get(id)!
+                  yElements.set(id, { ...element, groupId })
+                }
+              })
+
+              // 添加组元素到画布
+              yElements.set(groupId, groupElement)
+            })
+
+            // 创建并执行添加元素命令以支持撤销/重做
+            const addCommand = new AddElementCommand({ element: groupElement })
+            undoRedoManager.executeCommand(addCommand)
 
             return {
-              elements: updatedElements,
               selectedIds: [groupId],
             }
           }),
@@ -391,28 +464,40 @@ export const useStore = create<CanvasState>()(
         // 实现取消分组方法，支持嵌套组
         ungroupElements: (groupIds) =>
           originalSet((state) => {
-            const updatedElements = { ...state.elements }
             const newSelectedIds: string[] = []
 
-            groupIds.forEach((groupId) => {
-              const group = updatedElements[groupId]
-              if (group && group.type === 'group') {
-                // 将组内直接子元素的groupId属性移除
-                ;(group as GroupElement).children.forEach((childId) => {
-                  if (updatedElements[childId]) {
-                    const { groupId: removedGroupId, ...rest } = updatedElements[childId]
-                    updatedElements[childId] = rest
-                    newSelectedIds.push(childId)
-                  }
-                })
+            // 收集要删除的组元素
+            const groupsToRemove = groupIds
+              .map((id) => state.elements[id])
+              .filter((el) => el !== undefined) as GroupElement[]
 
-                // 删除组元素本身
-                delete updatedElements[groupId]
-              }
+            // 使用 transact 保证原子性
+            yDoc.transact(() => {
+              groupIds.forEach((groupId) => {
+                const group = yElements.get(groupId)
+                if (group && group.type === 'group') {
+                  // 将组内直接子元素的groupId属性移除
+                  ;(group as GroupElement).children.forEach((childId) => {
+                    if (yElements.has(childId)) {
+                      const { groupId: removedGroupId, ...rest } = yElements.get(childId)!
+                      yElements.set(childId, rest)
+                      newSelectedIds.push(childId)
+                    }
+                  })
+
+                  // 删除组元素本身
+                  yElements.delete(groupId)
+                }
+              })
+            })
+
+            // 为每个删除的组元素创建并执行删除命令以支持撤销/重做
+            groupsToRemove.forEach((group) => {
+              const removeCommand = new RemoveElementCommand({ element: group })
+              undoRedoManager.executeCommand(removeCommand)
             })
 
             return {
-              elements: updatedElements,
               selectedIds: newSelectedIds,
             }
           }),

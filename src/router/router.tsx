@@ -9,17 +9,22 @@ export const routerObjects: RouteObject[] = [
   {
     path: '/about',
     Component: HomePage,
+    handle: {
+      layout: getDefaultLayout,
+    },
   },
   {
     path: '/',
     Component: CanvasPage,
+    handle: {
+      layout: getDefaultLayout,
+    },
   },
 ]
 
 export function createRouter(): ReturnType<typeof createHashRouter> {
   const routeWrappers = routerObjects.map((router) => {
-    // @ts-ignore TODO: better type support
-    const getLayout = router.Component?.getLayout || getDefaultLayout
+    const getLayout = (router.handle as { layout: typeof getDefaultLayout })?.layout || getDefaultLayout
     const Component = router.Component!
     const page = getLayout(<Component />)
     return {
