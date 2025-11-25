@@ -9,12 +9,82 @@ import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
 import { Minimap } from '@/components/minimap/Minimap'
 import { getDefaultLayout } from '@/components/layout'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
+import { CollaboratorCursors } from '@/components/collaboration/CollaboratorCursors'
+import { initWsProvider, getAwareness } from '@/stores/persistenceStore'
+import { useParams, useNavigate } from 'react-router-dom'
+
+import { Button } from '@arco-design/web-react'
+import { IconNotification as IconWarning } from '@arco-design/web-react/icon'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
   const stageManagerRef = useRef<StageManager | null>(null)
   const [stageManager, setStageManager] = useState<StageManager | null>(null)
   const { elements, status } = useStore()
+  const { roomId } = useParams<{ roomId: string }>()
+  const navigate = useNavigate()
+
+  // 生成随机颜色和名字用于演示
+  const myColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+  const myName = 'User ' + Math.floor(Math.random() * 100)
+
+  const [awareness, setAwareness] = useState<any>(null)
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+
+  // 初始化 WebSocket 连接
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!token) {
+      // 显示登录提示而不是直接重定向
+      setShowLoginPrompt(true)
+      // 仍然初始化默认的协作功能，但不连接到真实房间
+      const wsProvider = initWsProvider('default')
+      const currentAwareness = getAwareness()
+      setAwareness(currentAwareness)
+
+      // 初始化自己的信息
+      if (currentAwareness) {
+        currentAwareness.setLocalStateField('user', {
+          name: myName,
+          color: myColor,
+        })
+      }
+
+      return () => {
+        wsProvider.destroy()
+      }
+    }
+
+    const wsProvider = initWsProvider(roomId || 'default')
+    const currentAwareness = getAwareness()
+    setAwareness(currentAwareness)
+
+    // 初始化自己的信息
+    if (currentAwareness) {
+      currentAwareness.setLocalStateField('user', {
+        name: myName,
+        color: myColor,
+      })
+    }
+
+    return () => {
+      wsProvider.destroy()
+    }
+  }, [roomId, navigate])
+
+  const handleLoginRedirect = () => {
+    navigate('/login')
+  }
+
+  // 监听鼠标移动，广播自己的位置
+  const handlePointerMove = (e: React.PointerEvent) => {
+    if (!awareness) return
+
+    // 转换坐标为画布相对坐标...
+    const point = { x: e.clientX, y: e.clientY }
+
+    awareness.setLocalStateField('cursor', point)
+  }
 
   // 使用自定义hook管理快捷键
   useCanvasShortcuts()
@@ -51,7 +121,23 @@ export default function PixiCanvas() {
   }
 
   return (
-    <div className="relative h-[90vh] w-auto overflow-hidden bg-blue-200">
+    <div className="relative h-[92vh] w-auto overflow-hidden bg-blue-200" onPointerMove={handlePointerMove}>
+      {/* 登录提示横幅 */}
+      {showLoginPrompt && (
+        <div className="absolute  bottom-0 left-0 right-0 z-50 bg-orange-100 p-2 text-center text-sm">
+          <div className="flex items-center justify-center">
+            <IconWarning className="mr-2 text-orange-500" />
+            <span>当前处于演示模式，登录以启用完整功能</span>
+            <Button type="primary" size="small" className="ml-4" onClick={handleLoginRedirect}>
+              登录
+            </Button>
+            <Button type="text" size="small" className="ml-2" onClick={() => setShowLoginPrompt(false)}>
+              关闭
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* 1. 悬浮工具栏 (内部已经配置了 fixed 定位) */}
       <TopToolbar />
 
@@ -60,6 +146,9 @@ export default function PixiCanvas() {
         ref={containerRef}
         className="absolute inset-0 h-full w-full touch-none overflow-hidden bg-white" // touch-none 防止移动端误触
       />
+
+      {/* 协作光标 */}
+      {awareness && <CollaboratorCursors awareness={awareness} />}
 
       {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
       <PropertyPanel />

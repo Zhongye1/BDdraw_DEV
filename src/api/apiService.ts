@@ -1,11 +1,12 @@
 import apiClient, { makeCancelableRequest, cancelRequest } from './utils/apiClient'
+import { AuthResponse } from './types/types'
 
 // 用户认证
-export const registerUser = async (username: string, password: string) => {
+export const registerUser = async (username: string, password: string): Promise<AuthResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
-      url: '/auth/register',
+      url: '/api/auth/register',
       data: { username, password },
     })
     return await apiClient(config)
@@ -15,11 +16,11 @@ export const registerUser = async (username: string, password: string) => {
   }
 }
 
-export const loginUser = async (username: string, password: string) => {
+export const loginUser = async (username: string, password: string): Promise<AuthResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
-      url: '/auth/login',
+      url: '/api/auth/login',
       data: { username, password },
     })
     return await apiClient(config)

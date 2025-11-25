@@ -1,46 +1,102 @@
 import React from 'react'
-import { createHashRouter, RouteObject } from 'react-router-dom'
-import ErrorPage from '../components/error-page'
-import { getDefaultLayout } from '../components/layout'
-import HomePage from '../pages/home'
-import CanvasPage from '../pages/canvas'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
+import Home from '@/pages/home'
+import CanvasPage from '@/pages/canvas'
+import IntroPage from '@/pages/intro'
+import Login from '@/pages/auth/Login'
+import Register from '@/pages/auth/Register'
+import RoomManagement from '@/pages/room/RoomManagement'
+import ErrorPage from '@/components/error-page'
+import { Header } from '@/components/header'
 
-export const routerObjects: RouteObject[] = [
-  {
-    path: '/about',
-    Component: HomePage,
-    handle: {
-      layout: getDefaultLayout,
+const router = createBrowserRouter(
+  [
+    {
+      path: '/',
+      element: <Navigate to="/canvas" replace />,
     },
-  },
-  {
-    path: '/',
-    Component: CanvasPage,
-    handle: {
-      layout: getDefaultLayout,
+    {
+      path: '/canvas',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <CanvasPage />
+          </div>
+        </>
+      ),
     },
+    {
+      path: '/canvas/:roomId',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <CanvasPage />
+          </div>
+        </>
+      ),
+    },
+    {
+      path: '/intro',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <IntroPage />
+          </div>
+        </>
+      ),
+    },
+    {
+      path: '/login',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <Login />
+          </div>
+        </>
+      ),
+    },
+    {
+      path: '/register',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <Register />
+          </div>
+        </>
+      ),
+    },
+    {
+      path: '/rooms',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <RoomManagement />
+          </div>
+        </>
+      ),
+    },
+    {
+      path: '/home',
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <Home />
+          </div>
+        </>
+      ),
+      errorElement: <ErrorPage />,
+    },
+  ],
+  {
+    basename: '/BDdraw_DEV/',
   },
-]
+)
 
-export function createRouter(): ReturnType<typeof createHashRouter> {
-  const routeWrappers = routerObjects.map((router) => {
-    const getLayout = (router.handle as { layout: typeof getDefaultLayout })?.layout || getDefaultLayout
-    const Component = router.Component!
-    const page = getLayout(<Component />)
-    return {
-      ...router,
-      element: page,
-      Component: null,
-      ErrorBoundary: ErrorPage,
-    }
-  })
-  return createHashRouter(routeWrappers, {
-    future: {
-      v7_fetcherPersist: true,
-      v7_relativeSplatPath: true,
-      v7_partialHydration: true,
-      v7_normalizeFormMethod: true,
-      v7_skipActionErrorRevalidation: true,
-    },
-  })
-}
+export default router
