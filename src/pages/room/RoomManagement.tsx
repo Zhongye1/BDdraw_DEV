@@ -31,7 +31,7 @@ const RoomManagement: React.FC = () => {
     setLoading(true)
     try {
       const response = await listRooms(token)
-      setRooms(response.data)
+      setRooms(response)
     } catch (error: any) {
       Notification.error({
         title: '获取房间列表失败',
@@ -47,7 +47,7 @@ const RoomManagement: React.FC = () => {
       const response = await createRoom(values.name, token)
       Notification.success({
         title: '创建成功',
-        content: `房间 "${response.data.name}" 创建成功`,
+        content: `房间 "${response.name}" 创建成功`,
       })
       fetchRooms()
     } catch (error: any) {
@@ -63,11 +63,11 @@ const RoomManagement: React.FC = () => {
     try {
       // 获取房间详情
       const roomResponse = await getRoomDetails(roomId, token)
-      setSelectedRoom(roomResponse.data)
+      setSelectedRoom(roomResponse)
 
       // 获取房间成员
       const membersResponse = await getRoomMembers(roomId, token)
-      setRoomMembers(membersResponse.data)
+      setRoomMembers(membersResponse)
     } catch (error: any) {
       Notification.error({
         title: '获取房间信息失败',
@@ -90,7 +90,7 @@ const RoomManagement: React.FC = () => {
       })
       // 刷新成员列表
       const membersResponse = await getRoomMembers(selectedRoom.id, token)
-      setRoomMembers(membersResponse.data)
+      setRoomMembers(membersResponse)
       // 重置表单
       inviteForm.resetFields()
     } catch (error: any) {

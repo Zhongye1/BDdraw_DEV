@@ -31,6 +31,8 @@ export interface RoomBasic {
   id: string
   name: string
   created_at?: string // 可选字段
+  creator_id?: string // 可选字段
+  activeUsers?: number // 可选字段
 }
 
 // 房间详情信息
@@ -54,6 +56,37 @@ export interface Member {
 export interface SuccessResponse {
   success: boolean
   message: string
+}
+
+// API 响应包装器
+export interface ApiResponse<T> {
+  data: T
+  success?: boolean
+  message?: string
+}
+
+// 房间列表响应 - 直接返回房间数组
+export type RoomsResponse = RoomBasic[]
+
+// 创建房间响应 - 直接返回房间详情
+export type CreateRoomResponse = RoomDetail
+
+// 房间详情响应 - 直接返回房间详情
+export type RoomDetailResponse = RoomDetail
+
+// 房间成员响应 - 直接返回成员数组
+export type RoomMembersResponse = Member[]
+
+// 邀请用户响应 - 直接返回成功响应
+export type InviteUserResponse = SuccessResponse
+
+// 删除房间响应 - 直接返回成功响应
+export type DeleteRoomResponse = SuccessResponse
+
+// 实际的 API 响应格式（如果 API 实际返回的是 { data: T } 格式）
+export type ActualApiResponse<T> = {
+  data: T
+  [key: string]: any // 允许其他属性
 }
 
 // 错误响应

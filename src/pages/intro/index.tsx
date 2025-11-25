@@ -2,11 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listRooms } from '../../api/apiService'
 import { Button, Card, List, Typography, Notification } from '@arco-design/web-react'
+import { RoomBasic } from '../../api/types/types'
 
 const { Title } = Typography
 
 const IntroPage: React.FC = () => {
-  const [rooms, setRooms] = useState<any[]>([])
+  const [rooms, setRooms] = useState<RoomBasic[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -21,7 +22,7 @@ const IntroPage: React.FC = () => {
     const fetchRooms = async () => {
       try {
         const response = await listRooms(token)
-        setRooms(response.data)
+        setRooms(response)
       } catch (err: any) {
         setError(err.response?.data?.error || 'Failed to load rooms.')
         Notification.error({

@@ -66,6 +66,13 @@ app.get('/swagger-ui', (c) => {
 // 中间件：跨域和错误处理
 app.use('/api/*', cors())
 
+// 全局错误处理中间件
+app.onError((err, c) => {
+  console.error('Unhandled error:', err)
+  // 防止服务器因未处理的错误而崩溃
+  return c.json({ error: 'Internal Server Error' }, 500)
+})
+
 // 挂载API路由模块
 app.route('/', authApp)
 app.route('/', roomsApp)
@@ -76,8 +83,22 @@ app.route('/', roomsApp)
 const wsServer = createServer()
 // 使用 handleConnection 替代 attach 方法
 wsServer.on('upgrade', (request, socket, head) => {
-  collabServer.handleConnection(socket, request)
+  try {
+    collabServer.handleConnection(socket, request)
+  } catch (error) {
+    console.error('WebSocket upgrade error:', error)
+  }
 })
+
+// 添加全局未捕获异常处理
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err)
+})
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason)
+})
+
 wsServer.listen(1234, () => {
   console.log('🔌 WebSocket Server running on ws://localhost:1234')
 })

@@ -1,5 +1,13 @@
 import apiClient, { makeCancelableRequest, cancelRequest } from './utils/apiClient'
-import { AuthResponse } from './types/types'
+import {
+  AuthResponse,
+  RoomsResponse,
+  CreateRoomResponse,
+  RoomDetailResponse,
+  RoomMembersResponse,
+  InviteUserResponse,
+  DeleteRoomResponse,
+} from './types/types'
 
 // 用户认证
 export const registerUser = async (username: string, password: string): Promise<AuthResponse> => {
@@ -31,11 +39,11 @@ export const loginUser = async (username: string, password: string): Promise<Aut
 }
 
 // 房间管理
-export const createRoom = async (name: string, token: string) => {
+export const createRoom = async (name: string, token: string): Promise<CreateRoomResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
-      url: '/rooms',
+      url: '/api/rooms',
       data: { name },
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -46,11 +54,11 @@ export const createRoom = async (name: string, token: string) => {
   }
 }
 
-export const listRooms = async (token: string) => {
+export const listRooms = async (token: string): Promise<RoomsResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
-      url: '/rooms',
+      url: '/api/rooms',
       headers: { Authorization: `Bearer ${token}` },
     })
     return await apiClient(config)
@@ -60,11 +68,11 @@ export const listRooms = async (token: string) => {
   }
 }
 
-export const getRoomDetails = async (roomId: string, token: string) => {
+export const getRoomDetails = async (roomId: string, token: string): Promise<RoomDetailResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
-      url: `/rooms/${roomId}`,
+      url: `/api/rooms/${roomId}`,
       headers: { Authorization: `Bearer ${token}` },
     })
     return await apiClient(config)
@@ -74,11 +82,15 @@ export const getRoomDetails = async (roomId: string, token: string) => {
   }
 }
 
-export const inviteUserToRoom = async (roomId: string, username: string, token: string) => {
+export const inviteUserToRoom = async (
+  roomId: string,
+  username: string,
+  token: string,
+): Promise<InviteUserResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
-      url: `/rooms/${roomId}/invite`,
+      url: `/api/rooms/${roomId}/invite`,
       data: { username },
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -89,11 +101,11 @@ export const inviteUserToRoom = async (roomId: string, username: string, token: 
   }
 }
 
-export const getRoomMembers = async (roomId: string, token: string) => {
+export const getRoomMembers = async (roomId: string, token: string): Promise<RoomMembersResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
-      url: `/rooms/${roomId}/members`,
+      url: `/api/rooms/${roomId}/members`,
       headers: { Authorization: `Bearer ${token}` },
     })
     return await apiClient(config)
@@ -103,11 +115,11 @@ export const getRoomMembers = async (roomId: string, token: string) => {
   }
 }
 
-export const deleteRoom = async (roomId: string, token: string) => {
+export const deleteRoom = async (roomId: string, token: string): Promise<DeleteRoomResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'delete',
-      url: `/rooms/${roomId}`,
+      url: `/api/rooms/${roomId}`,
       headers: { Authorization: `Bearer ${token}` },
     })
     return await apiClient(config)
