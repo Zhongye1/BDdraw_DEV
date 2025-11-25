@@ -17,6 +17,7 @@ export class StageManagerCore {
 
   private elementLayer: PIXI.Container = new PIXI.Container()
   private uiLayer: PIXI.Container = new PIXI.Container()
+  private guidelineLayer: PIXI.Graphics = new PIXI.Graphics() // 辅助线图层
 
   private elementRenderer = new ElementRenderer()
   private transformerRenderer = new TransformerRenderer()
@@ -65,9 +66,19 @@ export class StageManagerCore {
       this.setupViewport(container)
       this.viewport.addChild(this.elementLayer)
       this.viewport.addChild(this.uiLayer)
+
+      // 调整图层顺序，确保辅助线图层在最上层
       this.uiLayer.addChild(this.selectionRectGraphic)
       this.uiLayer.addChild(this.eraserGraphic)
       this.uiLayer.addChild(this.transformerRenderer.getGraphic())
+      this.uiLayer.addChild(this.guidelineLayer) // 最后添加辅助线图层，确保在最上层
+
+      // 设置辅助线图层的一些属性以确保可见性
+      this.uiLayer.sortableChildren = true // 启用自动排序
+      this.guidelineLayer.zIndex = 2000
+
+      // 监听辅助线绘制事件
+      this.setupGuidelineEvents()
 
       this.interactionHandler = new InteractionHandler(
         this.viewport,
@@ -160,6 +171,74 @@ export class StageManagerCore {
       )
       this.updateViewportState(tool)
     })
+  }
+
+  // 设置辅助线事件监听
+  private setupGuidelineEvents() {
+    window.addEventListener('drawGuidelines', (event: Event) => {
+      const customEvent = event as CustomEvent
+      this.drawGuidelines(customEvent.detail)
+      // 标记页面有辅助线显示
+      document.body.classList.add('has-guidelines')
+    })
+
+    window.addEventListener('clearGuidelines', () => {
+      this.clearGuidelines()
+      // 移除辅助线显示标记
+      document.body.classList.remove('has-guidelines')
+    })
+  }
+
+  // 绘制辅助线
+  private drawGuidelines(guidelines: Array<{ type: string; position: number }>) {
+    // 清除之前的辅助线
+    this.guidelineLayer.clear()
+
+    // 如果没有辅助线要绘制，直接返回
+    if (!guidelines || guidelines.length === 0) {
+      return
+    }
+
+    // 获取视口边界
+    const visibleBounds = this.viewport.getVisibleBounds()
+    const startX = visibleBounds.x - 1000
+    const endX = visibleBounds.x + visibleBounds.width + 1000
+    const startY = visibleBounds.y - 1000
+    const endY = visibleBounds.y + visibleBounds.height + 1000
+
+    // 添加调试日志
+    //console.log('绘制辅助线:', guidelines)
+
+    // 绘制每条辅助线 - 先构建路径
+    guidelines.forEach((guideline) => {
+      if (guideline.type === 'horizontal') {
+        // 绘制水平辅助线
+        this.guidelineLayer.moveTo(startX, guideline.position)
+        this.guidelineLayer.lineTo(endX, guideline.position)
+        //console.log(`绘制水平辅助线: y=${guideline.position}`)
+      } else if (guideline.type === 'vertical') {
+        // 绘制垂直辅助线
+        this.guidelineLayer.moveTo(guideline.position, startY)
+        this.guidelineLayer.lineTo(guideline.position, endY)
+        //console.log(`绘制垂直辅助线: x=${guideline.position}`)
+      }
+    })
+
+    // 最后应用样式并绘制
+    this.guidelineLayer.stroke({
+      width: 1,
+      color: 0x78deff,
+      alpha: 0.8,
+    })
+
+    //console.log('辅助线绘制完成')
+  }
+
+  // 清除辅助线
+  private clearGuidelines() {
+    this.guidelineLayer.clear()
+    // this.guidelineLayer.dirty = true
+    //console.log('辅助线已清除')
   }
 
   // 添加键盘事件处理

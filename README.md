@@ -460,11 +460,9 @@ Zustand 状态变化同时触发数据持久化：
 
 [2025-11-22-使用 GitHub Actions 自动部署基于 vite 的项目到 GitHub Pages ](https://zhongye1.github.io/Arknight-notes/posts/33040.html)
 
-[2025-11-24-canvas项目相关-TransformerRenderer](https://zhongye1.github.io/Arknight-notes/posts/46327.html)
+[2025-11-24-canvas 项目相关-TransformerRenderer](https://zhongye1.github.io/Arknight-notes/posts/46327.html)
 
-[2025-11-24-canvas项目相关-元素操作和打组机制实现](https://zhongye1.github.io/Arknight-notes/posts/54304.html)
-
-
+[2025-11-24-canvas 项目相关-元素操作和打组机制实现](https://zhongye1.github.io/Arknight-notes/posts/54304.html)
 
 ### TODO 待补充的文档
 
@@ -490,7 +488,7 @@ Zustand 状态变化同时触发数据持久化：
 
 ### TODO
 
-#### 【P0】基础渲染
+#### ~~【P0】基础渲染~~
 
 - ~~支持图形渲染，需要支持至少 3 种不同图形，比如矩形、圆角矩形、圆形、三角形等。需要支持以下图形属性：~~
   - ~~背景色（background）~~
@@ -514,7 +512,7 @@ Zustand 状态变化同时触发数据持久化：
   - ~~框选选中多个元素~~
 - 支持数据持久化，每次操作后自动保存数据，刷新页面数据仍然存在
 - 快捷键复制选中元素，粘贴后刷新页面还存在
-- 支持辅助线功能
+- ~~支持辅助线功能~~
 
 #### ~~【P0】调参工具栏~~
 
@@ -523,7 +521,7 @@ Zustand 状态变化同时触发数据持久化：
   - ~~当选中图形元素时出现在上方，支持设置不同图形属性~~
   - ~~选中文本元素的部分文字时也能够出现，支持设置局部文本的文本属性~~（编辑器内编辑可实现）
 
-#### 【P0】元素编辑
+#### ~~【P0】元素编辑~~
 
 - ~~支持双击文本进入编辑，可以输入/删除文本内容~~
 - ~~支持对选中元素（单个或多个）删除~~
@@ -540,7 +538,7 @@ Zustand 状态变化同时触发数据持久化：
 
 #### 【P1】协同
 
-- ~~支持 undo & redo 操作~~ （大体实现了，可能要修一下 undo，redo 栈，有个不能稳定复现的 bug）
+- ~~支持 undo & redo 操作~~ ~~（大体实现了，可能要修一下 undo，redo 栈，有个不能稳定复现的 bug）~~（已实现）
 - 支持协同编辑，多人打开同一个画布可以协同编辑
 - 支持离线编辑，断网后仍然可以对画布编辑，恢复网络后自动提交数据
 
