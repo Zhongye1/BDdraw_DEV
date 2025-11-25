@@ -6,6 +6,7 @@ import PropertyPanel from '@/components/property-panel'
 import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
 import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
 import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
+import { Minimap } from '@/components/minimap/Minimap'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -44,6 +45,9 @@ export default function PixiCanvas() {
 
       {/* 底部文本编辑器：自动根据选中状态显示/隐藏 */}
       <BottomTextEditor />
+
+      {/* 小地图组件 */}
+      <Minimap stageManager={stageManagerRef.current} />
 
       {/* 4. 调试面板 (可选) */}
       {/* <div className="pointer-events-none absolute right-4 bottom-4 z-10 rounded-md bg-gray-100/80 p-2 text-xs text-gray-500">
