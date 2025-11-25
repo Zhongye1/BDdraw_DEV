@@ -1,0 +1,23 @@
+{
+  "name": "ald_backend",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/node": "^24.10.1"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@hocuspocus/extension-database": "^3.4.0",
+    "@hocuspocus/server": "^3.4.0",
+    "@hono/zod-openapi": "^1.1.5",
+    "hono": "^4.10.6",
+    "hono-openapi": "^1.1.1",
+    "jose": "^6.1.2",
+    "yjs": "^13.6.27",
+    "zod": "^4.1.13"
+  }
+}
