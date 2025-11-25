@@ -2,6 +2,16 @@ import * as PIXI from 'pixi.js'
 import type { CanvasElement } from '@/stores/canvasStore'
 import type { HandleType } from '../shared/types'
 
+// 辅助函数：旋转点
+function rotatePoint(x: number, y: number, cx: number, cy: number, angle: number) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  return {
+    x: (x - cx) * cos - (y - cy) * sin + cx,
+    y: (x - cx) * sin + (y - cy) * cos + cy,
+  }
+}
+
 export class TransformerRenderer {
   private transformerGraphic = new PIXI.Graphics()
 
@@ -23,19 +33,22 @@ export class TransformerRenderer {
 
     if (selectedIds.length === 0) return
 
-    // 添加安全检查，确保所有选中的元素都存在
     const validSelectedIds = selectedIds.filter((id) => elements[id])
     if (validSelectedIds.length === 0) return
 
-    const el = elements[validSelectedIds[0]]
-    const isLinearElement =
-      validSelectedIds.length === 1 && el && (el.type === 'line' || el.type === 'arrow') && el.points?.length === 2
+    const firstEl = elements[validSelectedIds[0]]
 
-    // --- A. 直线/箭头模式 ---
+    // --- A. 直线/箭头模式 (保持不变) ---
+    const isLinearElement =
+      validSelectedIds.length === 1 &&
+      firstEl &&
+      (firstEl.type === 'line' || firstEl.type === 'arrow') &&
+      firstEl.points?.length === 2
+
     if (isLinearElement) {
-      const points = el.points ?? []
-      const p0 = { x: el.x + points[0][0], y: el.y + points[0][1] }
-      const p1 = { x: el.x + points[1][0], y: el.y + points[1][1] }
+      const points = firstEl.points ?? []
+      const p0 = { x: firstEl.x + points[0][0], y: firstEl.y + points[0][1] }
+      const p1 = { x: firstEl.x + points[1][0], y: firstEl.y + points[1][1] }
       const handleSize = 10 / viewportScale
 
       const drawHandle = (x: number, y: number, type: 'p0' | 'p1') => {
@@ -60,107 +73,115 @@ export class TransformerRenderer {
       return
     }
 
-    // --- B. 普通包围盒模式 (Text, Rect, etc) ---
+    // --- B. 通用包围盒模式 (Text, Rect, Group, Multi-select) ---
 
-    // [修改逻辑核心]
-    // 1. 如果有强制覆盖的 Bounds (说明正在旋转中)，直接使用它
+    let finalBounds: { x: number; y: number; width: number; height: number }
+    let finalRotation: number
+
+    // 1. 如果有强制覆盖 (Resizing / Rotating 中)，直接使用
     if (overrideBounds && overrideRotation !== null) {
-      // 直接调用绘制旋转框的方法
-      this.drawRotatedBounds(overrideBounds, overrideRotation, viewportScale, validSelectedIds, onHandleDown, elements)
-      return // 结束，不再进行后续计算
-    }
-
-    // 2. 否则，执行原有的 AABB 计算逻辑 (非旋转交互状态)
-    let minX = Infinity,
-      minY = Infinity,
-      maxX = -Infinity,
-      maxY = -Infinity
-
-    // 检查是否有旋转的元素
-    let hasRotation = false
-    let rotation = 0
-
-    validSelectedIds.forEach((id) => {
-      const el = elements[id]
-      if (el && el.rotation && el.type !== 'group') {
-        hasRotation = true
-        rotation = el.rotation
-      }
-    })
-
-    validSelectedIds.forEach((id) => {
-      const el = elements[id]
-      const sprite = spriteMap.get(id)
-
-      if (!el || !sprite) return
-
-      // 针对 Text，读取 sprite 的实时尺寸
-      // 文本的高度是由内容决定的，Store 里的 height 往往不准
-      if (el.type === 'text') {
-        // 注意：Text/HTMLText 的宽高是包含内容的实时边界
-        minX = Math.min(minX, el.x)
-        minY = Math.min(minY, el.y)
-        maxX = Math.max(maxX, el.x + sprite.width)
-        maxY = Math.max(maxY, el.y + sprite.height)
-      } else if (el.type === 'group') {
-        // 对于组元素，检查是否有旋转
-        if (el.rotation) {
-          hasRotation = true
-          rotation = el.rotation
-        }
-        minX = Math.min(minX, el.x)
-        minY = Math.min(minY, el.y)
-        maxX = Math.max(maxX, el.x + el.width)
-        maxY = Math.max(maxY, el.y + el.height)
-      } else {
-        minX = Math.min(minX, el.x)
-        minY = Math.min(minY, el.y)
-        maxX = Math.max(maxX, el.x + el.width)
-        maxY = Math.max(maxY, el.y + el.height)
-      }
-    })
-
-    const bounds = { x: minX, y: minY, width: maxX - minX, height: maxY - minY }
-
-    // 如果有旋转，则绘制旋转后的选择框（支持单个和多个元素）
-    // 组元素也可以使用旋转边界框
-    const isGroupSelected = validSelectedIds.length === 1 && elements[validSelectedIds[0]]?.type === 'group'
-
-    if (hasRotation && validSelectedIds.length > 0) {
-      // 对于多个元素，我们使用第一个有旋转的元素的角度
-      this.drawRotatedBounds(bounds, rotation, viewportScale, validSelectedIds, onHandleDown, elements)
+      finalBounds = overrideBounds
+      finalRotation = overrideRotation
     } else {
-      // 绘制普通包围盒边框
-      this.transformerGraphic.rect(bounds.x, bounds.y, bounds.width, bounds.height)
-      this.transformerGraphic.stroke({ width: 1, color: isGroupSelected ? 0x0099ff : 0x8b5cf6 })
+      // 2. 否则，执行与 Handler 完全一致的几何计算逻辑
 
-      // 如果是组元素，添加蓝色小字标签
-      if (isGroupSelected) {
-        const groupName = `Group ${validSelectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
+      // 2.1 确定组的旋转角度 (Group Angle)
+      // 逻辑：如果是单选，或者多选但所有元素旋转角度一致，则使用该角度。否则为0。
+      let groupAngle = 0
+      const firstRotation = elements[validSelectedIds[0]]?.rotation || 0
+      const isUniform = validSelectedIds.every((id) => Math.abs((elements[id]?.rotation || 0) - firstRotation) < 0.001)
+      if (isUniform) {
+        groupAngle = firstRotation
+      }
 
-        // 创建文本样式
-        const textStyle = new PIXI.TextStyle({
-          fontSize: 22 / viewportScale,
-          fill: 0x0099ff,
-          fontWeight: 'bold',
+      // 2.2 计算 Local OBB (局部有向包围盒)
+      // 我们需要找到一组 minX/Y/W/H，使得它们构成的矩形，旋转 groupAngle 后，能包住所有元素
+      let minLx = Infinity,
+        maxLx = -Infinity,
+        minLy = Infinity,
+        maxLy = -Infinity
+
+      validSelectedIds.forEach((id) => {
+        const el = elements[id]
+        if (!el) return
+
+        // 获取元素未旋转时的宽高
+        // 针对 Text 特殊处理：优先读取 sprite 尺寸（因为 Store 里的可能滞后），但要除以 scale
+        let elW = el.width
+        let elH = el.height
+        if (el.type === 'text') {
+          const sprite = spriteMap.get(id)
+          if (sprite) {
+            // 简单的近似，假设 Text 内部没有缩放。如果 Text 有 scale 属性这里需要调整
+            elW = sprite.width
+            elH = sprite.height
+            // sprite.width 是 AABB 宽度。
+            // 严谨的做法应该获取 text 的 localBounds。
+            // 这里假设 store 中的 width/height 对于非 Text 元素是准确的。
+            // 如果 Text 旋转了，sprite.width 也是旋转后的 AABB，这会导致双重计算。
+            // 最佳实践：相信 Store 中的 width/height，或者 updateElement 时确保 store 是准的。
+            // 这里为了修复错位，暂时回退到使用 Store 的数据，因为 Store 是 Source of Truth。
+            const localBounds = sprite.getLocalBounds()
+            elW = el.width || localBounds.width || 0
+            elH = el.height || localBounds.height || 0
+          }
+        }
+
+        const elCx = el.x + elW / 2
+        const elCy = el.y + elH / 2
+        const elRot = el.rotation || 0
+
+        // 计算元素四个角点在世界坐标的位置
+        const halfW = elW / 2
+        const halfH = elH / 2
+
+        const corners = [
+          { x: -halfW, y: -halfH },
+          { x: halfW, y: -halfH },
+          { x: halfW, y: halfH },
+          { x: -halfW, y: halfH },
+        ].map((p) => {
+          // 1. 元素局部 -> 世界 (考虑元素自身旋转)
+          const pWorld = rotatePoint(elCx + p.x, elCy + p.y, elCx, elCy, elRot)
+          // 2. 世界 -> 组局部 (逆向旋转 groupAngle，对齐到组轴)
+          // 这里的旋转中心选 (0,0) 即可，算出的 min/max 是相对原点的，最后算出 width/height 无影响
+          return rotatePoint(pWorld.x, pWorld.y, 0, 0, -groupAngle)
         })
 
-        // 创建文本对象
-        const text = new PIXI.Text(groupName, textStyle)
-        text.x = bounds.x + 5 / viewportScale // 离左边5像素
-        text.y = bounds.y - 15 / viewportScale // 在框上方15像素
+        corners.forEach((p) => {
+          minLx = Math.min(minLx, p.x)
+          maxLx = Math.max(maxLx, p.x)
+          minLy = Math.min(minLy, p.y)
+          maxLy = Math.max(maxLy, p.y)
+        })
+      })
 
-        this.transformerGraphic.addChild(text)
-      }
+      // 2.3 组装最终数据
+      const width = maxLx - minLx
+      const height = maxLy - minLy
 
-      // 如果只有一个元素被选中，显示各个控制手柄
-      if (validSelectedIds.length === 1) {
-        this.drawHandles(bounds, viewportScale, validSelectedIds, onHandleDown, elements)
-      } else if (validSelectedIds.length > 1) {
-        // 多元素选择模式 - 显示包围盒控制手柄
-        this.drawHandles(bounds, viewportScale, validSelectedIds, onHandleDown, elements)
+      // 中心点在组局部坐标系的位置
+      const cxLocal = minLx + width / 2
+      const cyLocal = minLy + height / 2
+
+      // 将中心点旋转回世界坐标
+      const centerWorld = rotatePoint(cxLocal, cyLocal, 0, 0, groupAngle)
+
+      // 算出左上角 (注意：这里的 bounds x,y 指的是未旋转状态下的左上角，或者理解为 DrawRotatedBounds 需要的基准)
+      // drawRotatedBounds 接收的是 bounds 和 rotation。
+      // 它内部会基于 bounds 中心旋转。
+      // 所以我们传递的 bounds 应该是：中心点正确，宽高正确，且假设无旋转时的 x,y
+      finalBounds = {
+        x: centerWorld.x - width / 2,
+        y: centerWorld.y - height / 2,
+        width: width,
+        height: height,
       }
+      finalRotation = groupAngle
     }
+
+    // 3. 统一绘制
+    this.drawRotatedBounds(finalBounds, finalRotation, viewportScale, validSelectedIds, onHandleDown, elements)
   }
 
   private drawRotatedBounds(
@@ -173,158 +194,62 @@ export class TransformerRenderer {
   ) {
     const centerX = bounds.x + bounds.width / 2
     const centerY = bounds.y + bounds.height / 2
-
-    // 计算旋转后的四个角点
     const halfWidth = bounds.width / 2
     const halfHeight = bounds.height / 2
 
-    // 四个角点（相对于中心点）
+    // 1. 绘制边框
     const corners = [
-      { x: -halfWidth, y: -halfHeight }, // 左上
-      { x: halfWidth, y: -halfHeight }, // 右上
-      { x: halfWidth, y: halfHeight }, // 右下
-      { x: -halfWidth, y: halfHeight }, // 左下
-    ]
-
-    // 旋转后的角点
-    const rotatedCorners = corners.map((corner) => {
-      const cos = Math.cos(rotation)
-      const sin = Math.sin(rotation)
+      { x: -halfWidth, y: -halfHeight },
+      { x: halfWidth, y: -halfHeight },
+      { x: halfWidth, y: halfHeight },
+      { x: -halfWidth, y: halfHeight },
+    ].map((corner) => {
+      // 绕中心旋转
       return {
-        x: centerX + corner.x * cos - corner.y * sin,
-        y: centerY + corner.x * sin + corner.y * cos,
+        x: centerX + corner.x * Math.cos(rotation) - corner.y * Math.sin(rotation),
+        y: centerY + corner.x * Math.sin(rotation) + corner.y * Math.cos(rotation),
       }
     })
 
-    // 绘制旋转后的边框
-    this.transformerGraphic.poly(rotatedCorners)
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-    this.transformerGraphic.closePath()
-
-    // 绘制控制手柄
-    const handleSize = 8 / viewportScale
-    rotatedCorners.forEach((corner, index) => {
-      const handleTypes = ['tl', 'tr', 'br', 'bl']
-      const type = handleTypes[index]
-
-      this.transformerGraphic.rect(corner.x - handleSize / 2, corner.y - handleSize / 2, handleSize, handleSize)
-      this.transformerGraphic.fill({ color: 0xffffff })
-      this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-
-      const hitZone = new PIXI.Graphics()
-      hitZone.rect(corner.x - handleSize, corner.y - handleSize, handleSize * 2, handleSize * 2)
-      hitZone.fill({ color: 0x000000, alpha: 0.0001 })
-      hitZone.eventMode = 'static'
-      hitZone.cursor = this.getCursorForHandle(type as HandleType)
-      hitZone.label = `handle:${type}`
-
-      hitZone.on('pointerdown', (e) => {
-        e.stopPropagation()
-        onHandleDown(e, type as HandleType, selectedIds[0])
-      })
-
-      this.transformerGraphic.addChild(hitZone)
-    })
-
-    // 绘制旋转手柄
-    // 计算未旋转时顶部中心点
-    const topCenterX = centerX
-    const topCenterY = bounds.y
-
-    // 将顶部中心点也进行旋转
-    const rotatedTopCenterX =
-      centerX + (topCenterX - centerX) * Math.cos(rotation) - (topCenterY - centerY) * Math.sin(rotation)
-    const rotatedTopCenterY =
-      centerY + (topCenterX - centerX) * Math.sin(rotation) + (topCenterY - centerY) * Math.cos(rotation)
-
-    const rotationHandleDist = 20 / viewportScale
-    const rotationHandleAngle = rotation - Math.PI / 2
-    const rotationHandleX = rotatedTopCenterX + Math.cos(rotationHandleAngle) * rotationHandleDist
-    const rotationHandleY = rotatedTopCenterY + Math.sin(rotationHandleAngle) * rotationHandleDist
-
-    // 连接线，从旋转后的顶部中心点到旋转手柄
-    this.transformerGraphic.moveTo(rotatedTopCenterX, rotatedTopCenterY)
-    this.transformerGraphic.lineTo(rotationHandleX, rotationHandleY)
-    this.transformerGraphic.stroke({ width: 1, color: 0x8b5cf6 })
-
-    // 旋转手柄圆圈
-    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, handleSize / 2)
-    this.transformerGraphic.fill({ color: 0xffffff })
-    this.transformerGraphic.stroke({ width: 1 / viewportScale, color: 0x8b5cf6 })
-    this.transformerGraphic.lineStyle(1 / viewportScale, 0x8b5cf6)
-    this.transformerGraphic.moveTo(bounds.x + bounds.width / 2, bounds.y)
-    this.transformerGraphic.lineTo(bounds.x + bounds.width / 2, rotationHandleY + 5 / viewportScale)
-
-    // 旋转手柄点击区域
-    const rotationHitZone = new PIXI.Graphics()
-    rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
-    rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
-    rotationHitZone.eventMode = 'static'
-    rotationHitZone.cursor = 'grab'
-    rotationHitZone.label = 'handle:rotate'
-
-    rotationHitZone.on('pointerdown', (e) => {
-      e.stopPropagation()
-      onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
-    })
-
-    this.transformerGraphic.addChild(rotationHitZone)
-
-    // 如果是组元素，添加蓝色小字标签
     const isGroupSelected = selectedIds.length === 1 && elements[selectedIds[0]]?.type === 'group'
-    if (isGroupSelected) {
-      const groupName = `Group ${selectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
+    const strokeColor = isGroupSelected ? 0x0099ff : 0x8b5cf6
 
-      // 创建文本样式
-      const textStyle = new PIXI.TextStyle({
-        fontSize: 22 / viewportScale,
-        fill: 0x0099ff,
-        fontWeight: 'bold',
-      })
-
-      // 创建文本对象
-      const text = new PIXI.Text(groupName, textStyle)
-      text.x = rotatedTopCenterX + 5 / viewportScale // 离左边5像素
-      text.y = rotatedTopCenterY - 20 / viewportScale // 在框上方20像素
-
-      this.transformerGraphic.addChild(text)
+    this.transformerGraphic.moveTo(corners[0].x, corners[0].y)
+    for (let i = 1; i < 4; i++) {
+      this.transformerGraphic.lineTo(corners[i].x, corners[i].y)
     }
-  }
+    this.transformerGraphic.lineTo(corners[0].x, corners[0].y)
+    this.transformerGraphic.stroke({ width: 1, color: strokeColor })
 
-  private drawHandles(
-    bounds: { x: number; y: number; width: number; height: number },
-    viewportScale: number,
-    selectedIds: string[],
-    onHandleDown: (e: PIXI.FederatedPointerEvent, handle: HandleType | 'p0' | 'p1', elementId: string) => void,
-    elements: Record<string, CanvasElement>,
-  ) {
+    // 2. 绘制 8 个控制手柄
     const handleSize = 8 / viewportScale
-    const handles = {
-      tl: { x: bounds.x, y: bounds.y },
-      t: { x: bounds.x + bounds.width / 2, y: bounds.y },
-      tr: { x: bounds.x + bounds.width, y: bounds.y },
-      r: { x: bounds.x + bounds.width, y: bounds.y + bounds.height / 2 },
-      br: { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
-      b: { x: bounds.x + bounds.width / 2, y: bounds.y + bounds.height },
-      bl: { x: bounds.x, y: bounds.y + bounds.height },
-      l: { x: bounds.x, y: bounds.y + bounds.height / 2 },
-    }
+    // 定义手柄相对于中心的偏移（未旋转）
+    const handleOffsets = [
+      { type: 'tl', x: -halfWidth, y: -halfHeight },
+      { type: 't', x: 0, y: -halfHeight },
+      { type: 'tr', x: halfWidth, y: -halfHeight },
+      { type: 'r', x: halfWidth, y: 0 },
+      { type: 'br', x: halfWidth, y: halfHeight },
+      { type: 'b', x: 0, y: halfHeight },
+      { type: 'bl', x: -halfWidth, y: halfHeight },
+      { type: 'l', x: -halfWidth, y: 0 },
+    ]
 
-    // 绘制控制手柄
-    Object.entries(handles).forEach(([type, pos]) => {
-      // 对于组元素，使用不同的颜色
-      const isSelectedGroup =
-        selectedIds.length === 1 && elements[selectedIds[0]] && elements[selectedIds[0]].type === 'group'
+    handleOffsets.forEach(({ type, x, y }) => {
+      // 旋转手柄位置
+      const rotatedX = centerX + x * Math.cos(rotation) - y * Math.sin(rotation)
+      const rotatedY = centerY + x * Math.sin(rotation) + y * Math.cos(rotation)
 
-      this.transformerGraphic.rect(pos.x - handleSize / 2, pos.y - handleSize / 2, handleSize, handleSize)
+      this.transformerGraphic.rect(rotatedX - handleSize / 2, rotatedY - handleSize / 2, handleSize, handleSize)
       this.transformerGraphic.fill({ color: 0xffffff })
-      this.transformerGraphic.stroke({ width: 1, color: isSelectedGroup ? 0x0099ff : 0x8b5cf6 })
+      this.transformerGraphic.stroke({ width: 1, color: strokeColor })
 
       const hitZone = new PIXI.Graphics()
-      hitZone.rect(pos.x - handleSize, pos.y - handleSize, handleSize * 2, handleSize * 2)
+      hitZone.rect(rotatedX - handleSize, rotatedY - handleSize, handleSize * 2, handleSize * 2)
       hitZone.fill({ color: 0x000000, alpha: 0.0001 })
       hitZone.eventMode = 'static'
-      hitZone.cursor = this.getCursorForHandle(type as HandleType)
+      // 计算光标方向：需要加上旋转角度，否则光标指示方向不对
+      hitZone.cursor = this.getCursorForHandle(type as HandleType, rotation)
       hitZone.label = `handle:${type}`
 
       hitZone.on('pointerdown', (e) => {
@@ -335,24 +260,24 @@ export class TransformerRenderer {
       this.transformerGraphic.addChild(hitZone)
     })
 
-    // 绘制旋转手柄
-    const rotationHandleY = bounds.y - 20 / viewportScale
-    const rotationHandleX = bounds.x + bounds.width / 2
+    // 3. 绘制旋转手柄 (顶部中心上方)
+    const rotDist = 20 / viewportScale
+    const topCenterX = centerX + 0 * Math.cos(rotation) - -halfHeight * Math.sin(rotation)
+    const topCenterY = centerY + 0 * Math.sin(rotation) + -halfHeight * Math.cos(rotation)
 
-    // 对于组元素，使用不同的颜色
-    const isSelectedGroup =
-      selectedIds.length === 1 && elements[selectedIds[0]] && elements[selectedIds[0]].type === 'group'
+    const rotHandleX = centerX + 0 * Math.cos(rotation) - (-halfHeight - rotDist) * Math.sin(rotation)
+    const rotHandleY = centerY + 0 * Math.sin(rotation) + (-halfHeight - rotDist) * Math.cos(rotation)
 
-    this.transformerGraphic.circle(rotationHandleX, rotationHandleY, 5 / viewportScale)
+    this.transformerGraphic.moveTo(topCenterX, topCenterY)
+    this.transformerGraphic.lineTo(rotHandleX, rotHandleY)
+    this.transformerGraphic.stroke({ width: 1, color: strokeColor })
+
+    this.transformerGraphic.circle(rotHandleX, rotHandleY, handleSize / 2)
     this.transformerGraphic.fill({ color: 0xffffff })
-    this.transformerGraphic.stroke({ width: 1 / viewportScale, color: isSelectedGroup ? 0x0099ff : 0x8b5cf6 })
-    this.transformerGraphic.lineStyle(1 / viewportScale, isSelectedGroup ? 0x0099ff : 0x8b5cf6)
-    this.transformerGraphic.moveTo(bounds.x + bounds.width / 2, bounds.y)
-    this.transformerGraphic.lineTo(bounds.x + bounds.width / 2, rotationHandleY + 5 / viewportScale)
+    this.transformerGraphic.stroke({ width: 1 / viewportScale, color: strokeColor })
 
-    // 旋转手柄点击区域
     const rotationHitZone = new PIXI.Graphics()
-    rotationHitZone.circle(rotationHandleX, rotationHandleY, handleSize)
+    rotationHitZone.circle(rotHandleX, rotHandleY, handleSize * 1.5)
     rotationHitZone.fill({ color: 0x000000, alpha: 0.0001 })
     rotationHitZone.eventMode = 'static'
     rotationHitZone.cursor = 'grab'
@@ -362,31 +287,50 @@ export class TransformerRenderer {
       e.stopPropagation()
       onHandleDown(e, 'rotate' as HandleType, selectedIds[0])
     })
-
     this.transformerGraphic.addChild(rotationHitZone)
 
-    // 如果是组元素，添加蓝色小字标签
-    if (isSelectedGroup) {
-      const groupName = `Group ${selectedIds[0].substring(0, 4)}` // 使用ID前4位作为组名
-
-      // 创建文本样式
+    // 4. 组名标签
+    if (isGroupSelected) {
+      const groupName = `Group ${selectedIds[0].substring(0, 4)}`
       const textStyle = new PIXI.TextStyle({
-        fontSize: 22 / viewportScale,
+        fontSize: 20 / viewportScale,
         fill: 0x0099ff,
         fontWeight: 'bold',
       })
-
-      // 创建文本对象
       const text = new PIXI.Text(groupName, textStyle)
-      text.x = bounds.x + 5 / viewportScale // 离左边5像素
-      text.y = bounds.y - 15 / viewportScale // 在框上方15像素
-
+      // 简单定位到旋转手柄附近
+      text.x = rotHandleX + 20 / viewportScale
+      text.y = rotHandleY - 20 / viewportScale
       this.transformerGraphic.addChild(text)
     }
   }
 
-  private getCursorForHandle(handle: HandleType): string {
+  private getCursorForHandle(handle: HandleType, rotation = 0): string {
     if (handle === 'p0' || handle === 'p1') return 'move'
+    if (handle === 'rotate') return 'grab'
+
+    // 根据旋转角度动态调整光标方向
+    // 将角度标准化到 0-360
+    /** 
+    const deg = (rotation * 180) / Math.PI
+
+    // 基础光标映射 (未旋转时)
+    const cursorMap = {
+      tl: 0,
+      t: 45,
+      tr: 90,
+      r: 135,
+      br: 180,
+      b: 225,
+      bl: 270,
+      l: 315,
+    }
+*/
+    // 这里简化处理，实际上应该根据 handle + rotation 计算出一个 0-180 的角度，然后映射到对应的 css cursor
+    // PIXI 或浏览器会自动处理简单的 ns-resize 旋转吗？通常不会。
+    // 为了完美体验，需要根据角度返回 'nwse-resize', 'ns-resize' 等。
+    // 这是一个简化版本，暂时保持原样，如果需要完美光标跟随旋转，需要复杂的查找表。
+
     switch (handle) {
       case 'tl':
       case 'br':
@@ -400,8 +344,6 @@ export class TransformerRenderer {
       case 'l':
       case 'r':
         return 'ew-resize'
-      case 'rotate':
-        return 'grab'
       default:
         return 'default'
     }
