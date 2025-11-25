@@ -1,0 +1,633 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "version": "1.0.0",
+        "title": "ALD Backend API",
+        "description": "ALD 协作绘图应用的后端 API 文档"
+    },
+    "servers": [
+        {
+            "url": "http://localhost:3000",
+            "description": "本地开发服务器"
+        }
+    ],
+    "components": {
+        "schemas": {},
+        "parameters": {}
+    },
+    "paths": {
+        "/api/auth/register": {
+            "post": {
+                "summary": "用户注册",
+                "description": "注册新用户账号",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "john_doe",
+                                        "description": "用户名"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 6,
+                                        "example": "securepassword",
+                                        "description": "密码（至少6位）"
+                                    }
+                                },
+                                "required": [
+                                    "username",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "注册成功",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "description": "JWT 访问令牌"
+                                        },
+                                        "user": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "username": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "username"
+                                            ],
+                                            "description": "用户信息"
+                                        }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "用户名已存在",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/auth/login": {
+            "post": {
+                "summary": "用户登录",
+                "description": "使用已有账户登录",
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "john_doe",
+                                        "description": "用户名"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "securepassword",
+                                        "description": "密码"
+                                    }
+                                },
+                                "required": [
+                                    "username",
+                                    "password"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "登录成功",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "token": {
+                                            "type": "string",
+                                            "description": "JWT 访问令牌"
+                                        },
+                                        "user": {
+                                            "type": "object",
+                                            "properties": {
+                                                "id": {
+                                                    "type": "string",
+                                                    "format": "uuid"
+                                                },
+                                                "username": {
+                                                    "type": "string"
+                                                }
+                                            },
+                                            "required": [
+                                                "id",
+                                                "username"
+                                            ],
+                                            "description": "用户信息"
+                                        }
+                                    },
+                                    "required": [
+                                        "token",
+                                        "user"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "无效凭证",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rooms": {
+            "post": {
+                "summary": "创建房间",
+                "description": "创建一个新的协作绘图房间",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "name": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "My Drawing Room",
+                                        "description": "房间名称"
+                                    }
+                                },
+                                "required": [
+                                    "name"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "房间创建成功",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "roomId": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "creator": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        }
+                                    },
+                                    "required": [
+                                        "roomId",
+                                        "name",
+                                        "creator"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "get": {
+                "summary": "获取房间列表",
+                "description": "获取当前用户加入的所有房间列表",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "返回房间列表",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "name": {
+                                                "type": "string"
+                                            },
+                                            "created_at": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "id",
+                                            "name"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rooms/{id}": {
+            "get": {
+                "summary": "获取房间详情",
+                "description": "获取指定房间的详细信息",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "123e4567-e89b-12d3-a456-426614174000"
+                        },
+                        "required": true,
+                        "name": "id",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "返回房间详情",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "creator_id": {
+                                            "type": "string",
+                                            "format": "uuid"
+                                        },
+                                        "created_at": {
+                                            "type": "string"
+                                        },
+                                        "activeUsers": {
+                                            "type": "integer",
+                                            "minimum": 0
+                                        }
+                                    },
+                                    "required": [
+                                        "id",
+                                        "name",
+                                        "creator_id",
+                                        "activeUsers"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "房间未找到",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "summary": "删除房间",
+                "description": "房间创建者可以删除房间",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "123e4567-e89b-12d3-a456-426614174000"
+                        },
+                        "required": true,
+                        "name": "id",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "房间删除成功",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "房间未找到或无权限",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rooms/{id}/invite": {
+            "post": {
+                "summary": "邀请用户加入房间",
+                "description": "房间创建者可以邀请其他用户加入房间",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "123e4567-e89b-12d3-a456-426614174000"
+                        },
+                        "required": true,
+                        "name": "id",
+                        "in": "path"
+                    }
+                ],
+                "requestBody": {
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "properties": {
+                                    "username": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "jane_doe",
+                                        "description": "要邀请的用户名"
+                                    }
+                                },
+                                "required": [
+                                    "username"
+                                ]
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "用户邀请成功",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "message": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "success",
+                                        "message"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "用户已在房间中",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "权限不足",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "房间或用户未找到",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/api/rooms/{id}/members": {
+            "get": {
+                "summary": "获取房间成员列表",
+                "description": "获取指定房间的所有成员列表",
+                "security": [
+                    {
+                        "Bearer": []
+                    }
+                ],
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string",
+                            "format": "uuid",
+                            "example": "123e4567-e89b-12d3-a456-426614174000"
+                        },
+                        "required": true,
+                        "name": "id",
+                        "in": "path"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "返回房间成员列表",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "array",
+                                    "items": {
+                                        "type": "object",
+                                        "properties": {
+                                            "id": {
+                                                "type": "string",
+                                                "format": "uuid"
+                                            },
+                                            "username": {
+                                                "type": "string"
+                                            }
+                                        },
+                                        "required": [
+                                            "id",
+                                            "username"
+                                        ]
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "房间未找到",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "required": [
+                                        "error"
+                                    ]
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
