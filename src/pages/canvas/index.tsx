@@ -127,7 +127,7 @@ export default function PixiCanvas() {
         <div className="absolute  bottom-0 left-0 right-0 z-50 bg-orange-100 p-2 text-center text-sm">
           <div className="flex items-center justify-center">
             <IconWarning className="mr-2 text-orange-500" />
-            <span>当前处于演示模式，登录以启用完整功能</span>
+            <span>当前处于离线模式，登录以启用多人协作</span>
             <Button type="primary" size="small" className="ml-4" onClick={handleLoginRedirect}>
               登录
             </Button>

@@ -43,9 +43,16 @@ export function Header(props: IProps) {
     navigate('/login')
   }
 
+  const showLoginRequired = () => {
+    Notification.warning({
+      title: '需要登录',
+      content: '此功能在离线模式下不可用，请先登录',
+    })
+  }
+
   const userMenu = (
     <Menu>
-      <Menu.Item key="profile" onClick={() => navigate('/rooms')}>
+      <Menu.Item key="profile" onClick={() => (isLoggedIn ? navigate('/rooms') : showLoginRequired())}>
         <IconUser className="mr-2" />
         房间管理
       </Menu.Item>
@@ -69,44 +76,42 @@ export function Header(props: IProps) {
               BDdraw_DEV
             </a>
 
-            {isLoggedIn && (
-              <>
-                <Button
-                  type="secondary"
-                  size="large"
-                  onClick={() => navigate('/')}
-                  className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
-                >
-                  <IconHome />
-                  <span>画布</span>
-                </Button>
-                <Button
-                  type="secondary"
-                  size="large"
-                  onClick={() => navigate('/rooms')}
-                  className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
-                >
-                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M15 3v4a1 1 0 001 1h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
-                    />
-                  </svg>
-                  <span>房间管理</span>
-                </Button>
-                <Button
-                  type="secondary"
-                  size="large"
-                  onClick={() => navigate('/home')}
-                  className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
-                >
-                  <IconHome />
-                  <span>关于项目</span>
-                </Button>
-              </>
-            )}
+            <>
+              <Button
+                type="secondary"
+                size="large"
+                onClick={() => navigate('/')}
+                className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
+              >
+                <IconHome />
+                <span>画布</span>
+              </Button>
+              <Button
+                type="secondary"
+                size="large"
+                onClick={() => (isLoggedIn ? navigate('/rooms') : showLoginRequired())}
+                className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M15 3v4a1 1 0 001 1h4M5 3h14a2 2 0 012 2v14a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2z"
+                  />
+                </svg>
+                <span>房间管理</span>
+              </Button>
+              <Button
+                type="secondary"
+                size="large"
+                onClick={() => navigate('/home')}
+                className="hidden items-center space-x-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors hover:bg-gray-100 sm:flex"
+              >
+                <IconHome />
+                <span>关于项目</span>
+              </Button>
+            </>
           </div>
 
           {/* 右侧：功能按钮 */}
