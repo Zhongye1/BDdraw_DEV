@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Button, Form, Input, Notification } from '@arco-design/web-react'
 import { loginUser } from '@/api/apiService'
+import ParallaxBackground from '@/components/ParallaxBackground'
 
 const Login: React.FC = () => {
   const [form] = Form.useForm()
@@ -33,37 +34,64 @@ const Login: React.FC = () => {
     navigate('/register')
   }
 
+  const onOfflineMode = () => {
+    navigate('/canvas')
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-lg">
-        <div className="mb-8 text-center">
-          <h1 className="text-2xl font-bold text-gray-800">用户登录</h1>
-          <p className="mt-2 text-gray-600">请输入您的账号信息</p>
-        </div>
+    <div className="flex  h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
+      <ParallaxBackground
+        className="hidden w-[60vw] bg-gray-900 lg:block"
+        imageUrl="https://images.unsplash.com/photo-1497294815431-9365093b7331?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
+        title="欢迎回来"
+        description="高效管理您的工作流程"
+      />
 
-        <Form form={form} layout="vertical" onSubmit={onFinish} className="space-y-6">
-          <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
-            <Input placeholder="请输入用户名" />
-          </Form.Item>
+      {/* 右侧表单区域 */}
+      <div className="flex w-full flex-col justify-center px-8 sm:px-12 lg:w-1/2 xl:px-24">
+        <div className="mx-auto w-full max-w-md">
+          <div className="mb-10">
+            <h1 className="text-3xl font-extrabold text-gray-900">用户登录</h1>
+            <p className="mt-2 text-gray-600">输入账号信息以继续</p>
+          </div>
 
-          <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
-            <Input.Password placeholder="请输入密码" autoComplete="current-password" />
-          </Form.Item>
+          <Form
+            form={form}
+            layout="vertical"
+            onSubmit={onFinish}
+            size="large"
+            className="space-y-4"
+            requiredSymbol={false}
+          >
+            <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
+              <Input placeholder="请输入用户名" />
+            </Form.Item>
 
-          <Form.Item>
-            <Button type="primary" htmlType="submit" loading={loading} long>
-              登录
+            <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
+              <Input.Password placeholder="请输入密码" autoComplete="current-password" />
+            </Form.Item>
+
+            <Form.Item className="pt-4">
+              <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
+                登录
+              </Button>
+            </Form.Item>
+          </Form>
+
+          <div className="mt-4 flex flex-col gap-2">
+            <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
+              离线模式
             </Button>
-          </Form.Item>
-        </Form>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
-            还没有账号？{' '}
-            <Button type="text" onClick={onRegister}>
-              立即注册
-            </Button>
-          </p>
+            <div className="text-center">
+              <p className="text-gray-600">
+                还没有账号？{' '}
+                <Button type="text" onClick={onRegister} className="px-0 font-semibold hover:bg-transparent">
+                  立即注册
+                </Button>
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>

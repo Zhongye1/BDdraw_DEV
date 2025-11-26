@@ -22,7 +22,7 @@ type Variables = {
 const app = new OpenAPIHono<{ Variables: Variables }>()
 
 // --- API 文档路由 ---
-// OpenAPI 规范端点 (放在 CORS 之前，避免认证检查)
+// OpenAPI 规范端点
 app.doc('/doc', {
   openapi: '3.0.0',
   info: {
@@ -100,7 +100,7 @@ process.on('unhandledRejection', (reason, promise) => {
 })
 
 wsServer.listen(1234, () => {
-  console.log('🔌 WebSocket Server running on ws://localhost:1234')
+  console.log('websocket服务 ws://localhost:1234')
 })
 
 // 2. 启动 API 服务 (端口 3000)
@@ -109,5 +109,5 @@ export default {
   fetch: app.fetch,
 }
 
-console.log('🚀 API Server running on http://localhost:3000')
-console.log('📖 API Documentation available at http://localhost:3000/swagger-ui')
+console.log('API服务运行在 http://localhost:3000')
+console.log('API文档 http://localhost:3000/swagger-ui')
