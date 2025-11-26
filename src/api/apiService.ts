@@ -7,6 +7,9 @@ import {
   RoomMembersResponse,
   InviteUserResponse,
   DeleteRoomResponse,
+  PaginatedRoomsResult,
+  SearchRoomsQuery,
+  BrowseRoomsQuery,
 } from './types/types'
 
 // 用户认证
@@ -64,6 +67,40 @@ export const listRooms = async (token: string): Promise<RoomsResponse> => {
     return await apiClient(config)
   } catch (error) {
     console.error('列出房间失败:', error)
+    throw error
+  }
+}
+
+export const browseRooms = async (token: string, params?: BrowseRoomsQuery): Promise<PaginatedRoomsResult> => {
+  try {
+    const config = makeCancelableRequest({
+      method: 'get',
+      url: '/api/rooms/browse',
+      params,
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return await apiClient(config)
+  } catch (error) {
+    console.error('浏览房间失败:', error)
+    throw error
+  }
+}
+
+export const searchRooms = async (
+  keyword: string,
+  token: string,
+  params?: Omit<SearchRoomsQuery, 'q'>,
+): Promise<PaginatedRoomsResult> => {
+  try {
+    const config = makeCancelableRequest({
+      method: 'get',
+      url: '/api/rooms/search',
+      params: { q: keyword, ...params },
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    return await apiClient(config)
+  } catch (error) {
+    console.error('搜索房间失败:', error)
     throw error
   }
 }

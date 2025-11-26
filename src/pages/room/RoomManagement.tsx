@@ -1,31 +1,92 @@
 import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Button, Form, Input, Notification, Card, List, Typography } from '@arco-design/web-react'
-import { createRoom, listRooms, getRoomDetails, inviteUserToRoom, getRoomMembers, deleteRoom } from '@/api/apiService'
+import {
+  Button,
+  Form,
+  Input,
+  Notification,
+  Card,
+  Typography,
+  Tabs,
+  Grid,
+  Modal,
+  Drawer,
+  Empty,
+  Spin,
+  Space,
+  Tag,
+  Avatar,
+  Descriptions,
+  List,
+  Popconfirm,
+} from '@arco-design/web-react'
+import { IconPlus, IconUser, IconUserGroup, IconDelete, IconClockCircle } from '@arco-design/web-react/icon'
+import {
+  createRoom,
+  listRooms,
+  getRoomDetails,
+  inviteUserToRoom,
+  getRoomMembers,
+  deleteRoom,
+  searchRooms,
+  browseRooms,
+} from '@/api/apiService'
 
 const { Title, Text } = Typography
+const { Row, Col } = Grid
+const { TabPane } = Tabs
+
+// 定义接口以规范类型
+interface Room {
+  id: string
+  name: string
+  creator_id?: string // 添加可选标记
+  creator_name?: string
+  created_at?: string
+  member_count?: number
+  activeUsers?: number
+}
 
 const RoomManagement: React.FC = () => {
-  const [rooms, setRooms] = useState<any[]>([])
-  const [loading, setLoading] = useState(false)
-  const [roomLoading, setRoomLoading] = useState(false)
-  const [inviteLoading, setInviteLoading] = useState(false)
-  const [deleteLoading, setDeleteLoading] = useState(false)
-  const [selectedRoom, setSelectedRoom] = useState<any>(null)
-  const [roomMembers, setRoomMembers] = useState<any[]>([])
   const navigate = useNavigate()
-
-  const [inviteForm] = Form.useForm() // 创建表单实例
-
   const token = localStorage.getItem('token') || ''
 
+  // --- State Management ---
+  const [rooms, setRooms] = useState<Room[]>([])
+  const [allRooms, setAllRooms] = useState<Room[]>([])
+  const [searchResults, setSearchResults] = useState<Room[]>([])
+
+  // Loading States
+  const [loading, setLoading] = useState(false)
+  const [actionLoading, setActionLoading] = useState(false) // 通用的操作loading
+
+  // UI States
+  const [activeTab, setActiveTab] = useState('myRooms')
+  const [isCreateModalVisible, setIsCreateModalVisible] = useState(false)
+  const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false)
+  const [selectedRoom, setSelectedRoom] = useState<Room | null>(null)
+  const [roomMembers, setRoomMembers] = useState<any[]>([])
+  const [searchText, setSearchText] = useState('')
+
+  // Forms
+  const [createForm] = Form.useForm()
+  const [inviteForm] = Form.useForm()
+
+  // --- Effects ---
   useEffect(() => {
     if (!token) {
       navigate('/login')
     } else {
-      fetchRooms()
+      fetchDataByTab(activeTab)
     }
-  }, [token, navigate])
+  }, [token, navigate, activeTab])
+
+  // --- Data Fetching ---
+  const fetchDataByTab = (tab: string) => {
+    if (tab === 'myRooms') fetchRooms()
+    if (tab === 'allRooms') fetchAllRooms()
+    // searchResults 不需要自动刷新，保留当前结果
+  }
 
   const fetchRooms = async () => {
     setLoading(true)
@@ -33,274 +94,346 @@ const RoomManagement: React.FC = () => {
       const response = await listRooms(token)
       setRooms(response)
     } catch (error: any) {
-      Notification.error({
-        title: '获取房间列表失败',
-        content: error.response?.data?.error || '获取房间列表时发生错误',
-      })
+      handleError('获取房间列表失败', error)
     } finally {
       setLoading(false)
     }
   }
 
-  const handleCreateRoom = async (values: { name: string }) => {
+  const fetchAllRooms = async () => {
+    setLoading(true)
     try {
+      const response = await browseRooms(token)
+      setAllRooms(response.rooms)
+    } catch (error: any) {
+      handleError('获取所有房间失败', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // --- Actions ---
+
+  const handleCreateRoom = async () => {
+    try {
+      const values = await createForm.validate()
+      setActionLoading(true)
       const response = await createRoom(values.name, token)
-      Notification.success({
-        title: '创建成功',
-        content: `房间 "${response.name}" 创建成功`,
-      })
+      Notification.success({ title: '创建成功', content: `房间 "${response.name}" 创建成功` })
+      setIsCreateModalVisible(false)
+      createForm.resetFields()
+      setActiveTab('myRooms')
       fetchRooms()
     } catch (error: any) {
-      Notification.error({
-        title: '创建房间失败',
-        content: error.response?.data?.error || '创建房间时发生错误',
-      })
-    }
-  }
-
-  const handleSelectRoom = async (roomId: string) => {
-    setRoomLoading(true)
-    try {
-      // 获取房间详情
-      const roomResponse = await getRoomDetails(roomId, token)
-      setSelectedRoom(roomResponse)
-
-      // 获取房间成员
-      const membersResponse = await getRoomMembers(roomId, token)
-      setRoomMembers(membersResponse)
-    } catch (error: any) {
-      Notification.error({
-        title: '获取房间信息失败',
-        content: error.response?.data?.error || '获取房间信息时发生错误',
-      })
+      handleError('创建房间失败', error)
     } finally {
-      setRoomLoading(false)
+      setActionLoading(false)
     }
   }
 
-  const handleInviteUser = async (values: { username: string }) => {
+  const handleSearch = async (value: string) => {
+    setSearchText(value)
+    if (!value.trim()) {
+      setActiveTab('myRooms')
+      return
+    }
+
+    setLoading(true)
+    setActiveTab('searchResults')
+    try {
+      const response = await searchRooms(value, token)
+      setSearchResults(response.rooms)
+    } catch (error: any) {
+      handleError('搜索房间失败', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleOpenDetail = async (room: Room) => {
+    setSelectedRoom(room)
+    setIsDetailDrawerVisible(true)
+    // 异步加载详情和成员，不阻塞UI打开
+    fetchRoomFullDetails(room.id)
+  }
+
+  const fetchRoomFullDetails = async (roomId: string) => {
+    try {
+      const [details, members] = await Promise.all([getRoomDetails(roomId, token), getRoomMembers(roomId, token)])
+      setSelectedRoom(details) // 更新为更详细的信息
+      setRoomMembers(members)
+    } catch (error: any) {
+      // 不弹窗报错，可能只是静默失败，避免打断用户
+      console.error(error)
+    }
+  }
+
+  const handleInviteUser = async () => {
     if (!selectedRoom) return
-
-    setInviteLoading(true)
     try {
+      const values = await inviteForm.validate()
+      setActionLoading(true)
       await inviteUserToRoom(selectedRoom.id, values.username, token)
-      Notification.success({
-        title: '邀请成功',
-        content: `用户 "${values.username}" 已被邀请加入房间`,
-      })
-      // 刷新成员列表
-      const membersResponse = await getRoomMembers(selectedRoom.id, token)
-      setRoomMembers(membersResponse)
-      // 重置表单
+      Notification.success({ title: '邀请成功', content: `用户 "${values.username}" 已被邀请` })
       inviteForm.resetFields()
+      // 刷新成员
+      const members = await getRoomMembers(selectedRoom.id, token)
+      setRoomMembers(members)
     } catch (error: any) {
-      Notification.error({
-        title: '邀请用户失败',
-        content: error.response?.data?.error || '邀请用户时发生错误',
-      })
+      handleError('邀请用户失败', error)
     } finally {
-      setInviteLoading(false)
+      setActionLoading(false)
     }
   }
 
-  const handleDeleteRoom = async (roomId: string, roomName: string) => {
-    setDeleteLoading(true)
+  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
+    e.stopPropagation() // 防止触发卡片点击
     try {
       await deleteRoom(roomId, token)
       Notification.success({
         title: '删除成功',
-        content: `房间 "${roomName}" 已被删除`,
+        content: '房间已被成功删除',
       })
-      fetchRooms()
-      if (selectedRoom && selectedRoom.id === roomId) {
+      // 从当前列表中移除
+      setRooms((prev) => prev.filter((r) => r.id !== roomId))
+      if (selectedRoom?.id === roomId) {
+        setIsDetailDrawerVisible(false)
         setSelectedRoom(null)
-        setRoomMembers([])
       }
     } catch (error: any) {
-      Notification.error({
-        title: '删除房间失败',
-        content: error.response?.data?.error || '删除房间时发生错误',
-      })
-    } finally {
-      setDeleteLoading(false)
+      handleError('删除房间失败', error)
     }
   }
 
-  const handleEnterRoom = (roomId: string) => {
-    navigate(`/canvas/${roomId}`)
+  const handleError = (title: string, error: any) => {
+    Notification.error({
+      title,
+      content: error.response?.data?.error || error.message || '发生未知错误',
+    })
   }
 
-  return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="mx-auto max-w-6xl">
-        <Title heading={3} className="mb-6">
-          房间管理
-        </Title>
+  // --- Render Helpers ---
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-          {/* 左侧：创建房间和房间列表 */}
-          <div className="space-y-6">
-            {/* 创建房间卡片 */}
-            <Card title="创建房间">
-              <Form layout="vertical" onSubmit={handleCreateRoom}>
-                <Form.Item label="房间名称" field="name" rules={[{ required: true, message: '请输入房间名称' }]}>
-                  <Input placeholder="请输入房间名称" />
-                </Form.Item>
-                <Form.Item>
-                  <Button type="primary" htmlType="submit">
-                    创建房间
-                  </Button>
-                </Form.Item>
-              </Form>
-            </Card>
+  const getCurrentList = () => {
+    switch (activeTab) {
+      case 'myRooms':
+        return rooms
+      case 'allRooms':
+        return allRooms
+      case 'searchResults':
+        return searchResults
+      default:
+        return rooms
+    }
+  }
 
-            {/* 房间列表卡片 */}
-            <Card
-              title="我的房间"
-              extra={
-                <Button onClick={fetchRooms} loading={loading}>
-                  刷新
-                </Button>
-              }
-            >
-              {rooms.length === 0 ? (
-                <Text>暂无房间，请先创建一个房间</Text>
-              ) : (
-                <List
-                  dataSource={rooms}
-                  render={(item) => (
-                    <List.Item
-                      key={item.id}
-                      extra={
-                        <div className="flex space-x-2">
-                          <Button type="primary" size="small" onClick={() => handleEnterRoom(item.id)}>
-                            进入
-                          </Button>
-                          <Button
-                            type="outline"
-                            status="danger"
-                            size="small"
-                            loading={deleteLoading}
-                            onClick={() => handleDeleteRoom(item.id, item.name)}
-                          >
-                            删除
-                          </Button>
-                        </div>
-                      }
-                    >
-                      <List.Item.Meta
-                        title={item.name}
-                        description={
-                          <div>
-                            <Text>ID: {item.id}</Text>
-                            {item.created_at && (
-                              <Text className="ml-4">创建时间: {new Date(item.created_at).toLocaleString()}</Text>
-                            )}
-                          </div>
-                        }
-                      />
-                      <Button type="text" size="small" onClick={() => handleSelectRoom(item.id)}>
-                        查看详情
-                      </Button>
-                    </List.Item>
-                  )}
-                />
-              )}
-            </Card>
+  const renderRoomCard = (room: Room) => (
+    <Col xs={24} sm={12} md={8} lg={6} xl={6} key={room.id}>
+      <Card
+        hoverable
+        className="flex h-full cursor-pointer flex-col transition-all hover:shadow-lg"
+        onClick={() => handleOpenDetail(room)}
+        actions={[
+          <Button key="delete" type="text" status="danger" size="mini" onClick={(e) => e.stopPropagation()}>
+            <IconDelete /> 删除
+          </Button>,
+
+          activeTab === 'myRooms' || room.creator_id === 'CURRENT_USER_ID_IF_KNOWN' ? (
+            <Popconfirm
+              title="确定删除该房间吗？"
+              onOk={(e) => handleDeleteRoom(e, room.id)}
+              onCancel={(e) => e.stopPropagation()}
+            ></Popconfirm>
+          ) : (
+            <span className="text-xs text-gray-400">只读</span>
+          ),
+        ]}
+      >
+        <div className="mb-4 flex items-center">
+          <Avatar style={{ backgroundColor: '#165DFF' }} size={40}>
+            {room.name[0]?.toUpperCase()}
+          </Avatar>
+          <div className="ml-3 overflow-hidden">
+            <Title heading={6} className="m-0 truncate" title={room.name}>
+              {room.name}
+            </Title>
+            <Text type="secondary" className="text-xs">
+              ID: {room.id.slice(0, 8)}...
+            </Text>
           </div>
+        </div>
 
-          {/* 右侧：房间详情和成员管理 */}
-          <div className="space-y-6">
-            {/* 房间详情卡片 */}
-            <Card title="房间详情">
-              {selectedRoom ? (
-                <div className="space-y-4">
-                  <div>
-                    <Text className="font-medium">房间名称:</Text>
-                    <Text className="ml-2">{selectedRoom.name}</Text>
-                  </div>
-                  <div>
-                    <Text className="font-medium">房间ID:</Text>
-                    <Text className="ml-2">{selectedRoom.id}</Text>
-                  </div>
-                  <div>
-                    <Text className="font-medium">创建者ID:</Text>
-                    <Text className="ml-2">{selectedRoom.creator_id}</Text>
-                  </div>
-                  {selectedRoom.created_at && (
-                    <div>
-                      <Text className="font-medium">创建时间:</Text>
-                      <Text className="ml-2">{new Date(selectedRoom.created_at).toLocaleString()}</Text>
-                    </div>
-                  )}
-                  <div>
-                    <Text className="font-medium">在线人数:</Text>
-                    <Text className="ml-2">{selectedRoom.activeUsers}</Text>
-                  </div>
-                </div>
-              ) : (
-                <Text>请选择一个房间查看详细信息</Text>
-              )}
-            </Card>
+        <Space wrap size={[0, 8]} className="mb-2">
+          <Tag color="arcoblue" icon={<IconUser />}>
+            {room.creator_name || '未知创建者 '}
+          </Tag>
+          <div className="w-1"></div>
+          <Tag color="green" icon={<IconUserGroup />}>
+            {room.member_count ?? 0} 成员
+          </Tag>
+        </Space>
 
-            {/* 成员管理卡片 */}
-            <Card
-              title="房间成员"
-              extra={
-                selectedRoom && (
-                  <Button
-                    type="primary"
-                    size="small"
-                    onClick={() => {
-                      // 刷新成员列表
-                      handleSelectRoom(selectedRoom.id)
-                    }}
-                  >
-                    刷新成员
-                  </Button>
-                )
-              }
-            >
-              {selectedRoom ? (
-                <div className="space-y-4">
-                  <Form layout="vertical" form={inviteForm} onSubmit={handleInviteUser}>
-                    <Form.Item
-                      label="邀请用户"
-                      field="username"
-                      rules={[{ required: true, message: '请输入要邀请的用户名' }]}
-                    >
-                      <Input placeholder="请输入要邀请的用户名" />
-                    </Form.Item>
-                    <Form.Item>
-                      <Button type="primary" htmlType="submit" loading={inviteLoading}>
-                        邀请
-                      </Button>
-                    </Form.Item>
-                  </Form>
+        <div className="mt-2 flex items-center text-xs text-gray-400">
+          <IconClockCircle className="mr-1" />
+          {room.created_at ? new Date(room.created_at).toLocaleDateString() : '-'}
+        </div>
+      </Card>
+    </Col>
+  )
 
-                  <div>
-                    <Title heading={6}>成员列表</Title>
-                    {roomMembers.length === 0 ? (
-                      <Text>暂无成员</Text>
-                    ) : (
-                      <List
-                        dataSource={roomMembers}
-                        render={(member) => (
-                          <List.Item key={member.id}>
-                            <List.Item.Meta title={member.username} description={`ID: ${member.id}`} />
-                          </List.Item>
-                        )}
-                      />
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <Text>请选择一个房间查看和管理成员</Text>
-              )}
-            </Card>
+  return (
+    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-gray-100 p-6">
+      <div className="mx-auto max-w-7xl">
+        {/* Header Section */}
+        <div className="mb-6 flex justify-between rounded-lg bg-white p-4 pb-1 pt-1 shadow-sm">
+          <Title heading={4}>房间管理</Title>
+
+          <Space size="large">
+            <Input.Search
+              allowClear
+              placeholder="搜索房间名称..."
+              style={{ width: 300 }}
+              searchButton
+              onSearch={handleSearch}
+              loading={loading && activeTab === 'searchResults'}
+            />
+            <Button type="primary" icon={<IconPlus />} onClick={() => setIsCreateModalVisible(true)}>
+              创建新房间
+            </Button>
+          </Space>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="min-h-[500px] rounded-lg bg-white p-6 shadow-sm">
+          <Tabs
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            type="line"
+            size="large"
+            extra={
+              <Button type="secondary" size="small" onClick={() => fetchDataByTab(activeTab)}>
+                刷新列表
+              </Button>
+            }
+          >
+            <TabPane key="myRooms" title="我的房间" />
+            <TabPane key="allRooms" title="发现房间" />
+            {searchResults.length > 0 && <TabPane key="searchResults" title={`搜索结果 (${searchResults.length})`} />}
+          </Tabs>
+
+          <div className="mt-6">
+            {loading ? (
+              <div className="flex h-64 items-center justify-center">
+                <Spin tip="加载中..." />
+              </div>
+            ) : getCurrentList().length === 0 ? (
+              <Empty description={activeTab === 'searchResults' ? '未找到相关房间' : '暂无数据，快去创建一个吧'} />
+            ) : (
+              <Row gutter={[24, 24]}>{getCurrentList().map(renderRoomCard)}</Row>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Create Room Modal */}
+      <Modal
+        title="创建新房间"
+        visible={isCreateModalVisible}
+        onOk={handleCreateRoom}
+        onCancel={() => setIsCreateModalVisible(false)}
+        confirmLoading={actionLoading}
+        unmountOnExit
+      >
+        <Form form={createForm} layout="vertical">
+          <Form.Item
+            label="房间名称"
+            field="name"
+            requiredSymbol={false}
+            rules={[{ required: true, message: '请输入房间名称' }]}
+          >
+            <Input placeholder="给房间起个名字..." maxLength={20} showWordLimit />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Room Detail Drawer (Side Panel) */}
+      <Drawer
+        width={400}
+        title="房间详情"
+        visible={isDetailDrawerVisible}
+        onOk={() => setIsDetailDrawerVisible(false)}
+        onCancel={() => setIsDetailDrawerVisible(false)}
+        footer={null}
+      >
+        {selectedRoom && (
+          <div className="flex h-full flex-col">
+            {/* Info Header */}
+            <div className="mb-6 text-center">
+              <Avatar size={64} style={{ backgroundColor: '#165DFF', fontSize: 24, marginBottom: 16 }}>
+                {selectedRoom.name[0]?.toUpperCase()}
+              </Avatar>
+              <Title heading={5} className="m-0">
+                {selectedRoom.name}
+              </Title>
+              <Text type="secondary">ID: {selectedRoom.id}</Text>
+              <div className="mt-4">
+                <Button type="primary" long onClick={() => navigate(`/canvas/${selectedRoom.id}`)}>
+                  立即进入房间
+                </Button>
+              </div>
+            </div>
+
+            <Tabs defaultActiveTab="info">
+              <TabPane key="info" title="基本信息">
+                <Descriptions
+                  column={1}
+                  data={[
+                    { label: '创建者', value: selectedRoom.creator_name || selectedRoom.creator_id },
+                    {
+                      label: '创建时间',
+                      value: selectedRoom.created_at ? new Date(selectedRoom.created_at).toLocaleString() : '-',
+                    },
+                    { label: '在线人数', value: <Tag color="green">{selectedRoom.activeUsers || 0} 人在线</Tag> },
+                    { label: '总成员数', value: `${roomMembers.length} 人` },
+                  ]}
+                  layout="inline-horizontal"
+                  colon=" :"
+                />
+              </TabPane>
+
+              <TabPane key="members" title="成员管理">
+                <div className="mb-4 rounded bg-gray-50 p-3">
+                  <Form form={inviteForm} layout="vertical" onSubmit={handleInviteUser}>
+                    <div className="flex gap-2">
+                      <Form.Item field="username" noStyle rules={[{ required: true }]}>
+                        <Input placeholder="输入用户名邀请..." />
+                      </Form.Item>
+                      <Button type="primary" htmlType="submit" loading={actionLoading}>
+                        邀请
+                      </Button>
+                    </div>
+                  </Form>
+                </div>
+
+                <div className="flex-1 overflow-y-auto" style={{ maxHeight: '400px' }}>
+                  <List
+                    dataSource={roomMembers}
+                    render={(member, index) => (
+                      <List.Item key={index}>
+                        <List.Item.Meta
+                          avatar={<Avatar size={32}>{member.username[0]}</Avatar>}
+                          title={member.username}
+                          description={`ID: ${member.id}`}
+                        />
+                      </List.Item>
+                    )}
+                  />
+                </div>
+              </TabPane>
+            </Tabs>
+          </div>
+        )}
+      </Drawer>
     </div>
   )
 }

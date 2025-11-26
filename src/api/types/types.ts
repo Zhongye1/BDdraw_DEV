@@ -68,6 +68,36 @@ export interface ApiResponse<T> {
 // 房间列表响应 - 直接返回房间数组
 export type RoomsResponse = RoomBasic[]
 
+// 房间分页结果
+export interface PaginatedRoomsResult {
+  rooms: Array<{
+    id: string
+    name: string
+    creator_id: string
+    creator_name: string
+    created_at?: string
+    member_count: number
+  }>
+  pagination: {
+    page: number
+    limit: number
+    total: number
+  }
+}
+
+// 搜索房间请求查询参数
+export interface SearchRoomsQuery {
+  q: string
+  page?: string
+  limit?: string
+}
+
+// 浏览房间请求查询参数
+export interface BrowseRoomsQuery {
+  page?: string
+  limit?: string
+}
+
 // 创建房间响应 - 直接返回房间详情
 export type CreateRoomResponse = RoomDetail
 
