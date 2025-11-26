@@ -73,18 +73,52 @@ const Register: React.FC = () => {
             >
               <Input placeholder="请输入用户名" />
             </Form.Item>
-
-            <Form.Item
-              label="密码"
-              field="password"
-              rules={[
-                { required: true, message: '请输入密码' },
-                { minLength: 6, message: '密码至少6个字符' },
-              ]}
+            <Form
+              form={form}
+              layout="vertical"
+              onSubmit={onFinish}
+              size="large"
+              className="space-y-4"
+              requiredSymbol={false}
             >
-              <Input.Password placeholder="请输入密码" autoComplete="new-password" />
-            </Form.Item>
+              <Form.Item
+                label="用户名"
+                field="username"
+                rules={[
+                  { required: true, message: '请输入用户名' },
+                  { minLength: 3, message: '用户名至少3个字符' },
+                ]}
+              >
+                <Input placeholder="请输入用户名" />
+              </Form.Item>
 
+              <Form.Item
+                label="密码"
+                field="password"
+                rules={[
+                  { required: true, message: '请输入密码' },
+                  { minLength: 6, message: '密码至少6个字符' },
+                ]}
+              >
+                <Input.Password placeholder="请输入密码" autoComplete="new-password" />
+              </Form.Item>
+              <Form.Item
+                label="密码"
+                field="password"
+                rules={[
+                  { required: true, message: '请输入密码' },
+                  { minLength: 6, message: '密码至少6个字符' },
+                ]}
+              >
+                <Input.Password placeholder="请输入密码" autoComplete="new-password" />
+              </Form.Item>
+
+              <Form.Item className="pt-4">
+                <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
+                  注册
+                </Button>
+              </Form.Item>
+            </Form>
             <Form.Item className="pt-4">
               <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
                 注册
@@ -92,6 +126,20 @@ const Register: React.FC = () => {
             </Form.Item>
           </Form>
 
+          <div className="mt-4 flex flex-col gap-2">
+            <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
+              离线模式
+            </Button>
+
+            <div className="text-center">
+              <p className="text-gray-600">
+                已有账号？{' '}
+                <Button type="text" onClick={onLogin} className="px-0 font-semibold hover:bg-transparent">
+                  立即登录
+                </Button>
+              </p>
+            </div>
+          </div>
           <div className="mt-4 flex flex-col gap-2">
             <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
               离线模式

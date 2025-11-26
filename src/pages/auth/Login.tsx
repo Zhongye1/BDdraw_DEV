@@ -66,11 +66,31 @@ const Login: React.FC = () => {
             <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input placeholder="请输入用户名" />
             </Form.Item>
+            <Form
+              form={form}
+              layout="vertical"
+              onSubmit={onFinish}
+              size="large"
+              className="space-y-4"
+              requiredSymbol={false}
+            >
+              <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
+                <Input placeholder="请输入用户名" />
+              </Form.Item>
 
-            <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password placeholder="请输入密码" autoComplete="current-password" />
-            </Form.Item>
+              <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
+                <Input.Password placeholder="请输入密码" autoComplete="current-password" />
+              </Form.Item>
+              <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
+                <Input.Password placeholder="请输入密码" autoComplete="current-password" />
+              </Form.Item>
 
+              <Form.Item className="pt-4">
+                <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
+                  登录
+                </Button>
+              </Form.Item>
+            </Form>
             <Form.Item className="pt-4">
               <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
                 登录
@@ -78,6 +98,20 @@ const Login: React.FC = () => {
             </Form.Item>
           </Form>
 
+          <div className="mt-4 flex flex-col gap-2">
+            <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
+              离线模式
+            </Button>
+
+            <div className="text-center">
+              <p className="text-gray-600">
+                还没有账号？{' '}
+                <Button type="text" onClick={onRegister} className="px-0 font-semibold hover:bg-transparent">
+                  立即注册
+                </Button>
+              </p>
+            </div>
+          </div>
           <div className="mt-4 flex flex-col gap-2">
             <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
               离线模式
