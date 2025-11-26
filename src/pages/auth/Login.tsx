@@ -66,7 +66,6 @@ const Login: React.FC = () => {
             <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
               <Input placeholder="请输入用户名" />
             </Form.Item>
-
             <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
               <Input.Password placeholder="请输入密码" autoComplete="current-password" />
             </Form.Item>

@@ -16,8 +16,8 @@ const Register: React.FC = () => {
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       Notification.success({
-        title: '注册成功',
-        content: '欢迎加入我们！',
+        title: '欢迎',
+        content: '注册成功',
       })
       navigate('/')
     } catch (error: any) {
@@ -73,7 +73,6 @@ const Register: React.FC = () => {
             >
               <Input placeholder="请输入用户名" />
             </Form.Item>
-
             <Form.Item
               label="密码"
               field="password"
