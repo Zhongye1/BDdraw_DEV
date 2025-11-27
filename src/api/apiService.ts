@@ -1,19 +1,18 @@
 import apiClient, { makeCancelableRequest, cancelRequest } from './utils/apiClient'
 import {
-  AuthResponse,
-  RoomsResponse,
-  CreateRoomResponse,
-  RoomDetailResponse,
-  RoomMembersResponse,
+  RegisterResponse,
+  ListRoomsResponse,
+  GetRoomResponse,
+  GetRoomMembersResponse,
   InviteUserResponse,
   DeleteRoomResponse,
-  PaginatedRoomsResult,
+  BrowseRoomsResponse,
   SearchRoomsQuery,
   BrowseRoomsQuery,
-} from './types/types'
+} from './types'
 
 // 用户认证
-export const registerUser = async (username: string, password: string): Promise<AuthResponse> => {
+export const registerUser = async (username: string, password: string): Promise<RegisterResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
@@ -27,7 +26,7 @@ export const registerUser = async (username: string, password: string): Promise<
   }
 }
 
-export const loginUser = async (username: string, password: string): Promise<AuthResponse> => {
+export const loginUser = async (username: string, password: string): Promise<RegisterResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
@@ -42,7 +41,7 @@ export const loginUser = async (username: string, password: string): Promise<Aut
 }
 
 // 房间管理
-export const createRoom = async (name: string, token: string): Promise<CreateRoomResponse> => {
+export const createRoom = async (name: string, token: string): Promise<GetRoomResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'post',
@@ -57,7 +56,7 @@ export const createRoom = async (name: string, token: string): Promise<CreateRoo
   }
 }
 
-export const listRooms = async (token: string): Promise<RoomsResponse> => {
+export const listRooms = async (token: string): Promise<ListRoomsResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
@@ -71,7 +70,7 @@ export const listRooms = async (token: string): Promise<RoomsResponse> => {
   }
 }
 
-export const browseRooms = async (token: string, params?: BrowseRoomsQuery): Promise<PaginatedRoomsResult> => {
+export const browseRooms = async (token: string, params?: BrowseRoomsQuery): Promise<BrowseRoomsResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
@@ -90,7 +89,7 @@ export const searchRooms = async (
   keyword: string,
   token: string,
   params?: Omit<SearchRoomsQuery, 'q'>,
-): Promise<PaginatedRoomsResult> => {
+): Promise<BrowseRoomsResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
@@ -105,7 +104,7 @@ export const searchRooms = async (
   }
 }
 
-export const getRoomDetails = async (roomId: string, token: string): Promise<RoomDetailResponse> => {
+export const getRoomDetails = async (roomId: string, token: string): Promise<GetRoomResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',
@@ -138,7 +137,7 @@ export const inviteUserToRoom = async (
   }
 }
 
-export const getRoomMembers = async (roomId: string, token: string): Promise<RoomMembersResponse> => {
+export const getRoomMembers = async (roomId: string, token: string): Promise<GetRoomMembersResponse> => {
   try {
     const config = makeCancelableRequest({
       method: 'get',

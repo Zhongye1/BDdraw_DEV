@@ -50,6 +50,7 @@ interface Room {
 const RoomManagement: React.FC = () => {
   const navigate = useNavigate()
   const token = localStorage.getItem('token') || ''
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}')
 
   // --- State Management ---
   const [rooms, setRooms] = useState<Room[]>([])
@@ -186,16 +187,25 @@ const RoomManagement: React.FC = () => {
     }
   }
 
-  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
-    e.stopPropagation() // 防止触发卡片点击
+  const handleDeleteRoom = async (e: React.MouseEvent | any, roomId: string) => {
+    // 防止事件冒泡
+    if (e && e.stopPropagation) {
+      e.stopPropagation()
+    }
+
     try {
       await deleteRoom(roomId, token)
       Notification.success({
         title: '删除成功',
         content: '房间已被成功删除',
       })
-      // 从当前列表中移除
+
+      // 从所有可能的列表中移除房间
       setRooms((prev) => prev.filter((r) => r.id !== roomId))
+      setAllRooms((prev) => prev.filter((r) => r.id !== roomId))
+      setSearchResults((prev) => prev.filter((r) => r.id !== roomId))
+
+      // 如果详情抽屉显示的是被删除的房间，则关闭抽屉
       if (selectedRoom?.id === roomId) {
         setIsDetailDrawerVisible(false)
         setSelectedRoom(null)
@@ -233,21 +243,6 @@ const RoomManagement: React.FC = () => {
         hoverable
         className="flex h-full cursor-pointer flex-col transition-all hover:shadow-lg"
         onClick={() => handleOpenDetail(room)}
-        actions={[
-          <Button key="delete" type="text" status="danger" size="mini" onClick={(e) => e.stopPropagation()}>
-            <IconDelete /> 删除
-          </Button>,
-
-          activeTab === 'myRooms' || room.creator_id === 'CURRENT_USER_ID_IF_KNOWN' ? (
-            <Popconfirm
-              title="确定删除该房间吗？"
-              onOk={(e) => handleDeleteRoom(e, room.id)}
-              onCancel={(e) => e.stopPropagation()}
-            ></Popconfirm>
-          ) : (
-            <span className="text-xs text-gray-400">只读</span>
-          ),
-        ]}
       >
         <div className="mb-4 flex items-center">
           <Avatar style={{ backgroundColor: '#165DFF' }} size={40}>
@@ -277,6 +272,24 @@ const RoomManagement: React.FC = () => {
           <IconClockCircle className="mr-1" />
           {room.created_at ? new Date(room.created_at).toLocaleDateString() : '-'}
         </div>
+
+        <div className="mt-4 flex justify-end">
+          {activeTab === 'myRooms' || room.creator_id === currentUser.id ? (
+            <Popconfirm
+              title="确定删除该房间吗？"
+              onConfirm={(e) => handleDeleteRoom(e as any, room.id)}
+              onCancel={(e) => e?.stopPropagation()}
+              okText="确定"
+              cancelText="取消"
+            >
+              <Button type="text" status="danger" size="mini" onClick={(e) => e.stopPropagation()}>
+                <IconDelete /> 删除
+              </Button>
+            </Popconfirm>
+          ) : (
+            <span className="text-xs text-gray-400">只读</span>
+          )}
+        </div>
       </Card>
     </Col>
   )
@@ -284,27 +297,24 @@ const RoomManagement: React.FC = () => {
   return (
     <div className="h-[calc(100vh-4rem)] overflow-hidden bg-gray-100 p-6">
       <div className="mx-auto max-w-7xl">
-        {/* Header Section */}
-        <div className="mb-6 flex justify-between rounded-lg bg-white p-4 pb-1 pt-1 shadow-sm">
-          <Title heading={4}>房间管理</Title>
+        <div className="min-h-[700px] rounded-lg bg-white p-6 shadow-sm">
+          <div className="mb-6 flex justify-between bg-white p-4 pb-1 pt-1">
+            <Title heading={4}>房间管理</Title>
 
-          <Space size="large">
-            <Input.Search
-              allowClear
-              placeholder="搜索房间名称..."
-              style={{ width: 300 }}
-              searchButton
-              onSearch={handleSearch}
-              loading={loading && activeTab === 'searchResults'}
-            />
-            <Button type="primary" icon={<IconPlus />} onClick={() => setIsCreateModalVisible(true)}>
-              创建新房间
-            </Button>
-          </Space>
-        </div>
-
-        {/* Main Content Area */}
-        <div className="min-h-[500px] rounded-lg bg-white p-6 shadow-sm">
+            <Space size="large">
+              <Input.Search
+                allowClear
+                placeholder="搜索房间名称..."
+                style={{ width: 300 }}
+                searchButton
+                onSearch={handleSearch}
+                loading={loading && activeTab === 'searchResults'}
+              />
+              <Button type="primary" icon={<IconPlus />} onClick={() => setIsCreateModalVisible(true)}>
+                创建新房间
+              </Button>
+            </Space>
+          </div>
           <Tabs
             activeTab={activeTab}
             onChange={setActiveTab}
@@ -321,7 +331,7 @@ const RoomManagement: React.FC = () => {
             {searchResults.length > 0 && <TabPane key="searchResults" title={`搜索结果 (${searchResults.length})`} />}
           </Tabs>
 
-          <div className="mt-6">
+          <div className="mt-2">
             {loading ? (
               <div className="flex h-64 items-center justify-center">
                 <Spin tip="加载中..." />
@@ -394,7 +404,7 @@ const RoomManagement: React.FC = () => {
                       value: selectedRoom.created_at ? new Date(selectedRoom.created_at).toLocaleString() : '-',
                     },
                     { label: '在线人数', value: <Tag color="green">{selectedRoom.activeUsers || 0} 人在线</Tag> },
-                    { label: '总成员数', value: `${roomMembers.length} 人` },
+                    { label: '总成员数', value: <Tag color="blue">{roomMembers.length} 人</Tag> },
                   ]}
                   layout="inline-horizontal"
                   colon=" :"

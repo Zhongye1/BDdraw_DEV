@@ -2,12 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listRooms } from '../../api/apiService'
 import { Button, Card, List, Typography, Notification } from '@arco-design/web-react'
-import { RoomBasic } from '../../api/types/types'
+import { RoomInfo } from '../../api/types'
 
 const { Title } = Typography
 
 const IntroPage: React.FC = () => {
-  const [rooms, setRooms] = useState<RoomBasic[]>([])
+  const [rooms, setRooms] = useState<RoomInfo[]>([])
   const [loading, setLoading] = useState<boolean>(true)
   const [error, setError] = useState<string | null>(null)
   const navigate = useNavigate()
@@ -87,23 +87,6 @@ const IntroPage: React.FC = () => {
               )}
             />
           )}
-        </Card>
-
-        <Card title="功能介绍">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <div className="rounded border p-4">
-              <h3 className="mb-2 text-lg font-bold">协作绘图</h3>
-              <p>与团队成员实时协作绘制图表和设计</p>
-            </div>
-            <div className="rounded border p-4">
-              <h3 className="mb-2 text-lg font-bold">多种图形</h3>
-              <p>支持矩形、圆形、三角形、线条等多种基本图形</p>
-            </div>
-            <div className="rounded border p-4">
-              <h3 className="mb-2 text-lg font-bold">实时同步</h3>
-              <p>所有操作实时同步，确保团队协作顺畅</p>
-            </div>
-          </div>
         </Card>
       </div>
     </div>
