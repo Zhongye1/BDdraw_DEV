@@ -17,6 +17,23 @@ export function rotatePoint(x: number, y: number, cx: number, cy: number, angle:
 }
 
 /**
+ * 计算点绕中心旋转后的新坐标 (增强版本)
+ * @param x 点的 x
+ * @param y 点的 y
+ * @param cx 中心点 x
+ * @param cy 中心点 y
+ * @param angle 旋转角度 (弧度)
+ */
+export function rotatePointAdvanced(x: number, y: number, cx: number, cy: number, angle: number) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  return {
+    x: cx + (x - cx) * cos - (y - cy) * sin,
+    y: cy + (x - cx) * sin + (y - cy) * cos,
+  }
+}
+
+/**
  * 计算选中元素的整体包围盒
  * @param selectedIds 选中的元素ID列表
  * @param elements 元素映射

@@ -19,7 +19,7 @@ export function calculateGuidelines(
   movingElement: CanvasElement,
   allElements: Record<string, CanvasElement>,
   selectedIds: string[],
-  threshold = 3, //辅助线吸附
+  threshold = 1, //辅助线吸附
 ): SnapResult {
   const result: SnapResult = {
     guidelines: [],
@@ -89,7 +89,17 @@ export function calculateGuidelines(
       result.y = bounds.centerY - movingElement.height / 2
       result.guidelines.push({ type: 'horizontal', position: bounds.centerY, originId: id })
     }
+
+    // 限制辅助线数量为3条
+    if (result.guidelines.length > 3) {
+      result.guidelines = result.guidelines.slice(0, 3)
+    }
   })
+
+  // 确保最终结果不超过3条辅助线
+  if (result.guidelines.length > 3) {
+    result.guidelines = result.guidelines.slice(0, 3)
+  }
 
   return result
 }

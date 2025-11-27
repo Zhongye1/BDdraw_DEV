@@ -91,6 +91,9 @@ interface CanvasState {
   copyElements: (ids: string[]) => void
   pasteElements: () => void
 
+  // 添加批量更新元素方法，用于提高性能
+  batchUpdateElements: (updates: Record<string, Partial<CanvasElement>>) => void
+
   // 添加撤销/重做方法
   undo: () => void
   redo: () => void
@@ -346,6 +349,20 @@ export const useStore = create<CanvasState>()(
             }
           })
         },
+
+        // 添加批量更新元素方法，用于提高性能
+        batchUpdateElements: (updates) => {
+          // 使用 transact 保证原子性，这对撤销重做很重要
+          currentYDoc?.transact(() => {
+            Object.entries(updates).forEach(([id, attrs]) => {
+              const oldEl = currentYElements?.get(id)
+              if (oldEl) {
+                currentYElements?.set(id, { ...oldEl, ...attrs })
+              }
+            })
+          })
+        },
+
         removeElements: (ids) => {
           currentYDoc?.transact(() => {
             ids.forEach((id) => currentYElements?.delete(id))

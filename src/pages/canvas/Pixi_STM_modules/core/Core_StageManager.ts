@@ -152,6 +152,7 @@ export class StageManagerCore {
           },
           //triggerDebounceSnapshot: () => this.triggerDebounceSnapshot(),
         },
+        this.transformerRenderer, // 添加 transformerRenderer 引用
       )
 
       // 添加键盘事件监听
