@@ -3,9 +3,9 @@ import { create } from 'zustand'
 import { subscribeWithSelector, devtools } from 'zustand/middleware'
 import { nanoid } from 'nanoid'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
-import { yElements, yDoc, persistenceProvider } from './persistenceStore'
 import { AddElementCommand } from '@/lib/AddElementCommand'
 import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
+import * as Y from 'yjs'
 
 export type ToolType =
   | 'select'
@@ -100,6 +100,9 @@ interface CanvasState {
   // 添加分组方法
   groupElements: (elementIds: string[]) => void
   ungroupElements: (groupIds: string[]) => void
+
+  // 添加重置方法
+  resetStore: () => void
 }
 
 // 递归获取所有后代元素的 ID（包括子元素的子元素）
@@ -127,46 +130,58 @@ function getAllAncestorGroupIds(elementId: string, elements: Record<string, Canv
   return ancestors.concat(getAllAncestorGroupIds(element.groupId, elements))
 }
 
+let currentYDoc: Y.Doc | null = null
+let currentYElements: Y.Map<any> | null = null
+let currentProvider: any | null = null
+
+// 设置 Yjs 数据的函数
+export const setYjsData = (yDoc: Y.Doc, yElements: Y.Map<any>, provider: any) => {
+  // 更新当前引用
+  currentYDoc = yDoc
+  currentYElements = yElements
+  currentProvider = provider
+
+  // 重置 store
+  useStore.getState().resetStore()
+
+  // 绑定：Yjs 变动 -> 更新 Zustand -> 触发 React 重绘
+  yElements.observe(() => {
+    useStore.setState({ elements: yElements.toJSON() })
+  })
+
+  // 监听 IndexedDB 同步状态
+  provider.on('synced', () => {
+    console.log('✅ 本地数据加载完成')
+    useStore.setState({ status: 'idle' })
+  })
+
+  // 添加对 synced 状态的轮询检查
+  // 这解决了初始化时可能错过 synced 事件的问题
+  const checkSyncStatus = () => {
+    if (provider.synced) {
+      console.log('✅ 本地数据已同步')
+      useStore.setState({ status: 'idle' })
+    } else {
+      // 如果尚未同步，稍后再检查
+      setTimeout(checkSyncStatus, 100)
+      console.log('⏳ 正在同步本地数据...')
+    }
+  }
+
+  // 启动检查
+  checkSyncStatus()
+
+  // 初始加载状态 - 备用方案
+  yDoc.on('update', () => {
+    // 第一次有数据进来时，说明加载完成了
+    useStore.setState((state) => (state.status === 'loading' ? { status: 'idle' } : state))
+  })
+}
+
 export const useStore = create<CanvasState>()(
   devtools(
     subscribeWithSelector((set, get) => {
       console.log('[CanvasStore] 创建 store')
-      // 绑定：Yjs 变动 -> 更新 Zustand -> 触发 React 重绘
-      yElements.observe(() => {
-        set({ elements: yElements.toJSON() })
-      })
-
-      // 添加粘贴操作锁，防止短时间内重复粘贴
-      //let pasteLock = false
-      //let pasteLockTimeout: NodeJS.Timeout | null = null
-
-      // 监听 IndexedDB 同步状态
-      persistenceProvider.on('synced', () => {
-        console.log('✅ 本地数据加载完成')
-        set({ status: 'idle' })
-      })
-
-      // 添加对 synced 状态的轮询检查
-      // 这解决了初始化时可能错过 synced 事件的问题
-      const checkSyncStatus = () => {
-        if (persistenceProvider.synced) {
-          console.log('✅ 本地数据已同步')
-          set({ status: 'idle' })
-        } else {
-          // 如果尚未同步，稍后再检查
-          setTimeout(checkSyncStatus, 100)
-          console.log('⏳ 正在同步本地数据...')
-        }
-      }
-
-      // 启动检查
-      checkSyncStatus()
-
-      // 初始加载状态 - 备用方案
-      yDoc.on('update', () => {
-        // 第一次有数据进来时，说明加载完成了
-        set((state) => (state.status === 'loading' ? { status: 'idle' } : state))
-      })
 
       // 保存原始的set方法
       const originalSet: typeof set = (partial, replace?) => {
@@ -225,6 +240,7 @@ export const useStore = create<CanvasState>()(
             redo,
             canUndo,
             canRedo,
+            resetStore,
             ...dataOnlyState
           } = state
 
@@ -252,6 +268,7 @@ export const useStore = create<CanvasState>()(
             redo,
             canUndo,
             canRedo,
+            resetStore,
             ...dataOnlyState
           } = state
 
@@ -296,7 +313,7 @@ export const useStore = create<CanvasState>()(
 
       return {
         tool: 'select',
-        elements: yElements.toJSON(), // 初始值来自 Yjs
+        elements: currentYElements?.toJSON() || {}, // 初始值来自 Yjs
         selectedIds: [],
         editingId: null,
         clipboard: null,
@@ -316,22 +333,22 @@ export const useStore = create<CanvasState>()(
         setTool: (tool) => originalSet({ tool }),
         addElement: (el) => {
           // 使用 transact 保证原子性，这对撤销重做很重要
-          yDoc.transact(() => {
-            yElements.set(el.id, el)
+          currentYDoc?.transact(() => {
+            currentYElements?.set(el.id, el)
           })
         },
         updateElement: (id, attrs) => {
           // 使用 transact 保证原子性，这对撤销重做很重要
-          yDoc.transact(() => {
-            const oldEl = yElements.get(id)
+          currentYDoc?.transact(() => {
+            const oldEl = currentYElements?.get(id)
             if (oldEl) {
-              yElements.set(id, { ...oldEl, ...attrs })
+              currentYElements?.set(id, { ...oldEl, ...attrs })
             }
           })
         },
         removeElements: (ids) => {
-          yDoc.transact(() => {
-            ids.forEach((id) => yElements.delete(id))
+          currentYDoc?.transact(() => {
+            ids.forEach((id) => currentYElements?.delete(id))
           })
         },
         setSelected: (ids) => originalSet({ selectedIds: ids }),
@@ -403,9 +420,9 @@ export const useStore = create<CanvasState>()(
             })
 
             // 使用 transact 保证原子性
-            yDoc.transact(() => {
+            currentYDoc?.transact(() => {
               Object.entries(newElements).forEach(([id, element]) => {
-                yElements.set(id, element)
+                currentYElements?.set(id, element)
               })
             })
 
@@ -465,11 +482,11 @@ export const useStore = create<CanvasState>()(
           }
 
           // Yjs 事务
-          yDoc.transact(() => {
+          currentYDoc?.transact(() => {
             elementIds.forEach((id) => {
-              if (yElements.has(id)) {
-                const element = yElements.get(id)!
-                yElements.set(id, { ...element, groupId })
+              if (currentYElements?.has(id)) {
+                const element = currentYElements.get(id)!
+                currentYElements.set(id, { ...element, groupId })
               }
             })
           })
@@ -499,14 +516,14 @@ export const useStore = create<CanvasState>()(
             .filter((el) => el !== undefined) as GroupElement[]
 
           // Yjs 事务
-          yDoc.transact(() => {
+          currentYDoc?.transact(() => {
             groupIds.forEach((groupId) => {
-              const group = yElements.get(groupId)
+              const group = currentYElements?.get(groupId)
               if (group && group.type === 'group') {
                 ;(group as GroupElement).children.forEach((childId) => {
-                  if (yElements.has(childId)) {
-                    const { groupId: removedGroupId, ...rest } = yElements.get(childId)!
-                    yElements.set(childId, rest)
+                  if (currentYElements?.has(childId)) {
+                    const { groupId: removedGroupId, ...rest } = currentYElements.get(childId)!
+                    currentYElements.set(childId, rest)
                     newSelectedIds.push(childId)
                   }
                 })
@@ -532,6 +549,18 @@ export const useStore = create<CanvasState>()(
         canUndo: () => undoRedoManager.canUndo(),
         canRedo: () => undoRedoManager.canRedo(),
         // ===================================
+
+        // 重置 store 状态
+        resetStore: () => {
+          originalSet({
+            elements: currentYElements?.toJSON() || {},
+            selectedIds: [],
+            editingId: null,
+            clipboard: null,
+            pasteOffset: 0,
+            status: 'loading',
+          })
+        },
       }
     }),
     { name: 'CanvasStore' },

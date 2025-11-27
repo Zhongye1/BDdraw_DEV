@@ -1,7 +1,7 @@
 // src/Canvas.tsx
 import React, { useEffect, useRef, useState } from 'react'
 import { StageManager } from './Pixi_stageManager'
-import { useStore } from '@/stores/canvasStore'
+import { useStore, setYjsData } from '@/stores/canvasStore'
 import PropertyPanel from '@/components/property-panel'
 import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
 import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
@@ -10,7 +10,15 @@ import { Minimap } from '@/components/minimap/Minimap'
 import { getDefaultLayout } from '@/components/layout'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { CollaboratorCursors } from '@/components/collaboration/CollaboratorCursors'
-import { initWsProvider, getAwareness } from '@/stores/persistenceStore'
+import {
+  initWsProvider,
+  getAwareness,
+  getYDocForRoom,
+  getYElementsForRoom,
+  getIndexedDBProviderForRoom,
+  destroyRoomResources,
+} from '@/stores/persistenceStore'
+
 import { useParams, useNavigate } from 'react-router-dom'
 
 import { Button } from '@arco-design/web-react'
@@ -33,30 +41,17 @@ export default function PixiCanvas() {
 
   // 初始化 WebSocket 连接
   useEffect(() => {
+    // 1. 立即设置状态为 loading，清空当前视图，避免残影
+    useStore.setState({ status: 'loading', elements: {} })
+
     const token = localStorage.getItem('token')
-    if (!token) {
-      // 显示登录提示而不是直接重定向
-      setShowLoginPrompt(true)
-      // 仍然初始化默认的协作功能，但不连接到真实房间
-      const wsProvider = initWsProvider('default', '')
-      const currentAwareness = getAwareness()
-      setAwareness(currentAwareness)
+    const targetRoomId = token ? roomId || 'default' : 'default'
 
-      // 初始化自己的信息
-      if (currentAwareness) {
-        currentAwareness.setLocalStateField('user', {
-          name: myName,
-          color: myColor,
-        })
-      }
+    console.log(`[Canvas] Switching to room: ${targetRoomId}`)
 
-      return () => {
-        wsProvider.destroy()
-      }
-    }
-
-    const wsProvider = initWsProvider(roomId || 'default', token)
-    const currentAwareness = getAwareness()
+    // 初始化 Provider
+    const wsProvider = initWsProvider(targetRoomId, token || '')
+    const currentAwareness = getAwareness(targetRoomId)
     setAwareness(currentAwareness)
 
     // 初始化自己的信息
@@ -67,10 +62,21 @@ export default function PixiCanvas() {
       })
     }
 
+    // 设置 Yjs 数据
+    const ydoc = getYDocForRoom(targetRoomId)
+    const yElements = getYElementsForRoom(targetRoomId)
+    const provider = getIndexedDBProviderForRoom(targetRoomId)
+
+    // 这会触发 Store 内部的重置和重新绑定
+    setYjsData(ydoc, yElements, provider)
+
     return () => {
-      wsProvider.destroy()
+      // 组件卸载或 roomId 变化时的清理
+      destroyRoomResources(targetRoomId)
+      // 可选：清理 store，防止下次加载前显示旧数据
+      useStore.getState().resetStore()
     }
-  }, [roomId, navigate])
+  }, [roomId, navigate, setYjsData])
 
   const handleLoginRedirect = () => {
     navigate('/login')

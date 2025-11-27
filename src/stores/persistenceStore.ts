@@ -3,50 +3,111 @@ import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
 import { WebsocketProvider } from 'y-websocket'
 
-// 1. 创建 Yjs 文档 (这是内存中的数据源)
-export const yDoc = new Y.Doc()
+// 存储不同房间的 Yjs 文档和相关提供者
+const roomDocuments = new Map<
+  string,
+  {
+    yDoc: Y.Doc
+    yElements: Y.Map<any>
+    indexeddbProvider: IndexeddbPersistence
+    wsProvider: WebsocketProvider | null
+  }
+>()
 
-// 2. 定义共享数据类型
-// 所有的画布元素都存在这个 Map 里
-export const yElements = yDoc.getMap<any>('elements')
+// 获取或创建指定房间的 Yjs 文档
+export const getYDocForRoom = (roomId: string) => {
+  if (!roomDocuments.has(roomId)) {
+    const yDoc = new Y.Doc()
+    const yElements = yDoc.getMap<any>('elements')
+    const indexeddbProvider = new IndexeddbPersistence(`canvas-local-db-${roomId}`, yDoc)
 
-// 3. 连接 IndexedDB (实现断网编辑的关键)
-// 这一行代码会做两件事：
-// A. 初始化时，把 IndexedDB 的数据加载到 yDoc (内存)
-// B. 内存数据变化时，异步保存回 IndexedDB
-const provider = new IndexeddbPersistence('canvas-local-db', yDoc)
-
-// 4. 连接 WebSocket (新增，负责多人协同)
-// 'ws://localhost:1234' 是后端地址
-// 'my-drawing-room' 是房间号，实际项目中应该从 URL 获取，如 'room-' + roomId
-let wsProvider: WebsocketProvider | null = null
-
-// 初始化 WebSocket Provider 的函数
-export const initWsProvider = (roomId: string, token: string) => {
-  if (wsProvider) {
-    wsProvider.destroy()
+    roomDocuments.set(roomId, {
+      yDoc,
+      yElements,
+      indexeddbProvider,
+      wsProvider: null,
+    })
   }
 
-  wsProvider = new WebsocketProvider('ws://localhost:1234', roomId, yDoc, {
+  return roomDocuments.get(roomId)!.yDoc
+}
+
+// 获取指定房间的元素映射
+export const getYElementsForRoom = (roomId: string) => {
+  if (!roomDocuments.has(roomId)) {
+    getYDocForRoom(roomId) // 初始化文档
+  }
+
+  return roomDocuments.get(roomId)!.yElements
+}
+
+// 获取指定房间的 IndexedDB 提供者
+export const getIndexedDBProviderForRoom = (roomId: string) => {
+  if (!roomDocuments.has(roomId)) {
+    getYDocForRoom(roomId) // 初始化文档
+  }
+
+  return roomDocuments.get(roomId)!.indexeddbProvider
+}
+
+// 初始化指定房间的 WebSocket 提供者
+export const initWsProvider = (roomId: string, token: string) => {
+  // 如果房间不存在，先创建
+  if (!roomDocuments.has(roomId)) {
+    getYDocForRoom(roomId)
+  }
+
+  const roomData = roomDocuments.get(roomId)!
+
+  // 如果已存在 WebSocket 提供者，先销毁
+  if (roomData.wsProvider) {
+    roomData.wsProvider.destroy()
+  }
+
+  // 创建新的 WebSocket 提供者
+  const wsProvider = new WebsocketProvider('ws://localhost:1234', roomId, roomData.yDoc, {
     params: { token },
   })
 
   // 监听 WebSocket 连接状态
   wsProvider.on('status', (event: any) => {
-    console.log('WebSocket status:', event.status) // 'connected' or 'disconnected'
+    console.log(`[Room ${roomId}] WebSocket status:`, event.status) // 'connected' or 'disconnected'
   })
+
+  // 更新房间数据中的 WebSocket 提供者
+  roomData.wsProvider = wsProvider
 
   return wsProvider
 }
 
-// 5. 监听同步状态 (用于 UI 显示 "已保存" 或 "离线中")
-// 这是一个简单的状态存储，不存入 DB
-export const syncStatus = {
-  synced: false,
+// 销毁指定房间的所有资源
+export const destroyRoomResources = (roomId: string) => {
+  if (roomDocuments.has(roomId)) {
+    const roomData = roomDocuments.get(roomId)!
+
+    // 销毁 WebSocket 提供者
+    if (roomData.wsProvider) {
+      roomData.wsProvider.destroy()
+      roomData.wsProvider = null
+    }
+
+    // 销毁 IndexedDB 提供者
+    roomData.indexeddbProvider.destroy()
+
+    // 销毁 Yjs 文档
+    roomData.yDoc.destroy()
+
+    // 从映射中删除
+    roomDocuments.delete(roomId)
+
+    console.log(`[Room ${roomId}] Resources destroyed`)
+  }
 }
 
-// 导出 provider 以便后续销毁或监听
-export const persistenceProvider = provider
-
-// 6. 导出 Awareness (感知能力：用于同步光标和用户信息)
-export const getAwareness = () => wsProvider?.awareness || null
+// 获取当前房间的 Awareness 对象
+export const getAwareness = (roomId: string) => {
+  if (roomDocuments.has(roomId) && roomDocuments.get(roomId)!.wsProvider) {
+    return roomDocuments.get(roomId)!.wsProvider?.awareness || null
+  }
+  return null
+}
