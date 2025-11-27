@@ -1,6 +1,18 @@
-import { createRoute, z } from '@hono/zod-openapi'
+import { createRoute } from '@hono/zod-openapi'
 import db from '../../db'
 import { collabServer } from '../../collab'
+import {
+  CreateRoomRequestSchema,
+  CreateRoomResponseSchema,
+  RoomParamSchema,
+  GetRoomResponseSchema,
+  DeleteRoomResponseSchema,
+  DeleteRoomErrorResponseSchema,
+  UpdateRoomRequestSchema,
+  UpdateRoomResponseSchema,
+  PermissionErrorResponseSchema,
+  RoomNotFoundResponseSchema,
+} from './types/Room_CRUD_types'
 
 // 定义创建房间路由
 export const createRoomRoute = createRoute({
@@ -12,12 +24,7 @@ export const createRoomRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            name: z.string().min(1).openapi({
-              example: 'My Drawing Room',
-              description: '房间名称',
-            }),
-          }),
+          schema: CreateRoomRequestSchema,
         },
       },
     },
@@ -27,11 +34,7 @@ export const createRoomRoute = createRoute({
       description: '房间创建成功',
       content: {
         'application/json': {
-          schema: z.object({
-            roomId: z.string().uuid(),
-            name: z.string(),
-            creator: z.string().uuid(),
-          }),
+          schema: CreateRoomResponseSchema,
         },
       },
     },
@@ -65,28 +68,14 @@ export const getRoomRoute = createRoute({
   summary: '获取房间详情',
   description: '获取指定房间的详细信息',
   request: {
-    params: z.object({
-      id: z
-        .string()
-        .uuid()
-        .openapi({
-          param: { name: 'id', in: 'path' },
-          example: '123e4567-e89b-12d3-a456-426614174000',
-        }),
-    }),
+    params: RoomParamSchema,
   },
   responses: {
     200: {
       description: '返回房间详情',
       content: {
         'application/json': {
-          schema: z.object({
-            id: z.string().uuid(),
-            name: z.string(),
-            creator_id: z.string().uuid(),
-            created_at: z.string().optional(),
-            activeUsers: z.number().int().nonnegative(),
-          }),
+          schema: GetRoomResponseSchema,
         },
       },
     },
@@ -94,9 +83,7 @@ export const getRoomRoute = createRoute({
       description: '房间未找到',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: RoomNotFoundResponseSchema,
         },
       },
     },
@@ -134,25 +121,14 @@ export const deleteRoomRoute = createRoute({
   summary: '删除房间',
   description: '房间创建者可以删除房间',
   request: {
-    params: z.object({
-      id: z
-        .string()
-        .uuid()
-        .openapi({
-          param: { name: 'id', in: 'path' },
-          example: '123e4567-e89b-12d3-a456-426614174000',
-        }),
-    }),
+    params: RoomParamSchema,
   },
   responses: {
     200: {
       description: '房间删除成功',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            message: z.string(),
-          }),
+          schema: DeleteRoomResponseSchema,
         },
       },
     },
@@ -160,9 +136,7 @@ export const deleteRoomRoute = createRoute({
       description: '房间未找到或无权限',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: DeleteRoomErrorResponseSchema,
         },
       },
     },
@@ -197,24 +171,11 @@ export const updateRoomRoute = createRoute({
   summary: '修改房间信息',
   description: '房间创建者可以修改房间信息',
   request: {
-    params: z.object({
-      id: z
-        .string()
-        .uuid()
-        .openapi({
-          param: { name: 'id', in: 'path' },
-          example: '123e4567-e89b-12d3-a456-426614174000',
-        }),
-    }),
+    params: RoomParamSchema,
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            name: z.string().min(1).openapi({
-              example: 'Updated Room Name',
-              description: '新的房间名称',
-            }),
-          }),
+          schema: UpdateRoomRequestSchema,
         },
       },
     },
@@ -224,12 +185,7 @@ export const updateRoomRoute = createRoute({
       description: '房间信息更新成功',
       content: {
         'application/json': {
-          schema: z.object({
-            id: z.string().uuid(),
-            name: z.string(),
-            creator_id: z.string().uuid(),
-            created_at: z.string().optional(),
-          }),
+          schema: UpdateRoomResponseSchema,
         },
       },
     },
@@ -237,9 +193,7 @@ export const updateRoomRoute = createRoute({
       description: '权限不足',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: PermissionErrorResponseSchema,
         },
       },
     },
@@ -247,9 +201,7 @@ export const updateRoomRoute = createRoute({
       description: '房间未找到',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: RoomNotFoundResponseSchema,
         },
       },
     },

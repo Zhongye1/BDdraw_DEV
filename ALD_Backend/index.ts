@@ -8,7 +8,7 @@ import { createServer } from 'http'
 import { OpenAPIHono } from '@hono/zod-openapi'
 
 // 导入API路由模块
-import authApp from './src/api/auth_API'
+import authApp from './src/api/USER_management/auth_API'
 import roomsApp from './src/api/Room_management/CORE'
 
 type Variables = {

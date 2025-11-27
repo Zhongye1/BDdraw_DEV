@@ -1,6 +1,14 @@
-import { OpenAPIHono, createRoute, z } from '@hono/zod-openapi'
-import db from '../db'
-import { createToken, hashPassword, verifyPassword } from '../auth'
+import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
+import db from '../../db'
+import { createToken, hashPassword, verifyPassword } from '../../auth'
+import {
+  RegisterRequestSchema,
+  RegisterResponseSchema,
+  RegisterErrorResponseSchema,
+  LoginRequestSchema,
+  LoginResponseSchema,
+  LoginErrorResponseSchema,
+} from './auth_API_types'
 
 type Variables = {
   user: {
@@ -21,16 +29,7 @@ const registerRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            username: z.string().min(1).openapi({
-              example: 'john_doe',
-              description: '用户名',
-            }),
-            password: z.string().min(6).openapi({
-              example: 'securepassword',
-              description: '密码（至少6位）',
-            }),
-          }),
+          schema: RegisterRequestSchema,
         },
       },
     },
@@ -40,15 +39,7 @@ const registerRoute = createRoute({
       description: '注册成功',
       content: {
         'application/json': {
-          schema: z.object({
-            token: z.string().openapi({ description: 'JWT 访问令牌' }),
-            user: z
-              .object({
-                id: z.string().uuid(),
-                username: z.string(),
-              })
-              .openapi({ description: '用户信息' }),
-          }),
+          schema: RegisterResponseSchema,
         },
       },
     },
@@ -56,9 +47,7 @@ const registerRoute = createRoute({
       description: '用户名已存在',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: RegisterErrorResponseSchema,
         },
       },
     },
@@ -95,16 +84,7 @@ const loginRoute = createRoute({
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            username: z.string().min(1).openapi({
-              example: 'john_doe',
-              description: '用户名',
-            }),
-            password: z.string().min(1).openapi({
-              example: 'securepassword',
-              description: '密码',
-            }),
-          }),
+          schema: LoginRequestSchema,
         },
       },
     },
@@ -114,15 +94,7 @@ const loginRoute = createRoute({
       description: '登录成功',
       content: {
         'application/json': {
-          schema: z.object({
-            token: z.string().openapi({ description: 'JWT 访问令牌' }),
-            user: z
-              .object({
-                id: z.string().uuid(),
-                username: z.string(),
-              })
-              .openapi({ description: '用户信息' }),
-          }),
+          schema: LoginResponseSchema,
         },
       },
     },
@@ -130,9 +102,7 @@ const loginRoute = createRoute({
       description: '无效凭证',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: LoginErrorResponseSchema,
         },
       },
     },

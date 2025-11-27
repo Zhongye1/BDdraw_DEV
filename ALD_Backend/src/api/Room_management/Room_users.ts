@@ -1,5 +1,13 @@
-import { createRoute, z } from '@hono/zod-openapi'
+import { createRoute } from '@hono/zod-openapi'
 import db from '../../db'
+import {
+  InviteUserRequestSchema,
+  InviteUserResponseSchema,
+  InviteUserErrorResponseSchema,
+  RoomMembersParamSchema,
+  GetRoomMembersResponseSchema,
+  RoomNotFoundErrorResponseSchema,
+} from './types/Room_users_types'
 
 // 定义邀请用户路由
 export const inviteUserRoute = createRoute({
@@ -8,24 +16,11 @@ export const inviteUserRoute = createRoute({
   summary: '邀请用户加入房间',
   description: '房间创建者可以邀请其他用户加入房间',
   request: {
-    params: z.object({
-      id: z
-        .string()
-        .uuid()
-        .openapi({
-          param: { name: 'id', in: 'path' },
-          example: '123e4567-e89b-12d3-a456-426614174000',
-        }),
-    }),
+    params: RoomMembersParamSchema,
     body: {
       content: {
         'application/json': {
-          schema: z.object({
-            username: z.string().min(1).openapi({
-              example: 'jane_doe',
-              description: '要邀请的用户名',
-            }),
-          }),
+          schema: InviteUserRequestSchema,
         },
       },
     },
@@ -35,10 +30,7 @@ export const inviteUserRoute = createRoute({
       description: '用户邀请成功',
       content: {
         'application/json': {
-          schema: z.object({
-            success: z.boolean(),
-            message: z.string(),
-          }),
+          schema: InviteUserResponseSchema,
         },
       },
     },
@@ -46,9 +38,7 @@ export const inviteUserRoute = createRoute({
       description: '权限不足',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: InviteUserErrorResponseSchema,
         },
       },
     },
@@ -56,9 +46,7 @@ export const inviteUserRoute = createRoute({
       description: '房间或用户未找到',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: InviteUserErrorResponseSchema,
         },
       },
     },
@@ -66,9 +54,7 @@ export const inviteUserRoute = createRoute({
       description: '用户已在房间中',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: InviteUserErrorResponseSchema,
         },
       },
     },
@@ -117,27 +103,14 @@ export const getRoomMembersRoute = createRoute({
   summary: '获取房间成员列表',
   description: '获取指定房间的所有成员列表',
   request: {
-    params: z.object({
-      id: z
-        .string()
-        .uuid()
-        .openapi({
-          param: { name: 'id', in: 'path' },
-          example: '123e4567-e89b-12d3-a456-426614174000',
-        }),
-    }),
+    params: RoomMembersParamSchema,
   },
   responses: {
     200: {
       description: '返回房间成员列表',
       content: {
         'application/json': {
-          schema: z.array(
-            z.object({
-              id: z.string().uuid(),
-              username: z.string(),
-            }),
-          ),
+          schema: GetRoomMembersResponseSchema,
         },
       },
     },
@@ -145,9 +118,7 @@ export const getRoomMembersRoute = createRoute({
       description: '房间未找到',
       content: {
         'application/json': {
-          schema: z.object({
-            error: z.string(),
-          }),
+          schema: RoomNotFoundErrorResponseSchema,
         },
       },
     },

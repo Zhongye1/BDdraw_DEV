@@ -1,5 +1,12 @@
-import { createRoute, z } from '@hono/zod-openapi'
+import { createRoute } from '@hono/zod-openapi'
 import db from '../../db'
+import {
+  ListRoomsResponseSchema,
+  BrowseRoomsQuerySchema,
+  BrowseRoomsResponseSchema,
+  SearchRoomsQuerySchema,
+  SearchRoomsResponseSchema,
+} from './types/Room_List_types'
 
 // 定义获取房间列表路由
 export const listRoomsRoute = createRoute({
@@ -12,13 +19,7 @@ export const listRoomsRoute = createRoute({
       description: '返回房间列表',
       content: {
         'application/json': {
-          schema: z.array(
-            z.object({
-              id: z.string(),
-              name: z.string(),
-              created_at: z.string().optional(),
-            }),
-          ),
+          schema: ListRoomsResponseSchema,
         },
       },
     },
@@ -35,12 +36,21 @@ export const listRoomsHandler = (c: any) => {
   try {
     console.log('[DEBUG][GET /api/rooms] listRoomsHandler - Executing query with user ID:', user.id)
     // 获取我加入的房间
-    const rooms: { id: string; name: string; created_at?: string }[] = db
+    const rooms: {
+      id: string
+      name: string
+      creator_id: string
+      creator_name: string
+      created_at?: string
+      member_count: number
+    }[] = db
       .query(
         `
-      SELECT r.id, r.name, r.created_at 
+      SELECT r.id, r.name, r.creator_id, u.username as creator_name, r.created_at, 
+             (SELECT COUNT(*) FROM room_members rm WHERE rm.room_id = r.id) as member_count
       FROM rooms r
       JOIN room_members rm ON r.id = rm.room_id
+      JOIN users u ON r.creator_id = u.id
       WHERE rm.user_id = $uid
     `,
       )
@@ -53,7 +63,10 @@ export const listRoomsHandler = (c: any) => {
         return {
           id: String(room.id).trim(),
           name: String(room.name).trim(),
+          creator_id: String(room.creator_id).trim(),
+          creator_name: String(room.creator_name).trim(),
           ...(room.created_at && { created_at: new Date(room.created_at).toISOString() }),
+          member_count: Number(room.member_count),
         }
       })
 
@@ -72,39 +85,14 @@ export const browseRoomsRoute = createRoute({
   summary: '浏览所有房间',
   description: '获取所有公开房间的列表，支持分页',
   request: {
-    query: z.object({
-      page: z.string().optional().default('1').openapi({
-        description: '页码',
-        example: '1',
-      }),
-      limit: z.string().optional().default('10').openapi({
-        description: '每页数量',
-        example: '10',
-      }),
-    }),
+    query: BrowseRoomsQuerySchema,
   },
   responses: {
     200: {
       description: '返回房间列表',
       content: {
         'application/json': {
-          schema: z.object({
-            rooms: z.array(
-              z.object({
-                id: z.string().uuid(),
-                name: z.string(),
-                creator_id: z.string().uuid(),
-                creator_name: z.string(),
-                created_at: z.string().optional(),
-                member_count: z.number().int().nonnegative(),
-              }),
-            ),
-            pagination: z.object({
-              page: z.number(),
-              limit: z.number(),
-              total: z.number(),
-            }),
-          }),
+          schema: BrowseRoomsResponseSchema,
         },
       },
     },
@@ -198,43 +186,14 @@ export const searchRoomsRoute = createRoute({
   summary: '搜索房间',
   description: '根据关键词搜索房间',
   request: {
-    query: z.object({
-      q: z.string().openapi({
-        description: '搜索关键词',
-        example: 'design',
-      }),
-      page: z.string().optional().default('1').openapi({
-        description: '页码',
-        example: '1',
-      }),
-      limit: z.string().optional().default('10').openapi({
-        description: '每页数量',
-        example: '10',
-      }),
-    }),
+    query: SearchRoomsQuerySchema,
   },
   responses: {
     200: {
       description: '返回匹配的房间列表',
       content: {
         'application/json': {
-          schema: z.object({
-            rooms: z.array(
-              z.object({
-                id: z.string(),
-                name: z.string(),
-                creator_id: z.string(),
-                creator_name: z.string(),
-                created_at: z.string().optional(),
-                member_count: z.number().int().nonnegative(),
-              }),
-            ),
-            pagination: z.object({
-              page: z.number(),
-              limit: z.number(),
-              total: z.number(),
-            }),
-          }),
+          schema: SearchRoomsResponseSchema,
         },
       },
     },
