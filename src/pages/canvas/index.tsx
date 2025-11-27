@@ -19,7 +19,7 @@ import {
   destroyRoomResources,
 } from '@/stores/persistenceStore'
 
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Button } from '@arco-design/web-react'
 import { IconNotification as IconWarning } from '@arco-design/web-react/icon'
@@ -30,6 +30,7 @@ export default function PixiCanvas() {
   const [stageManager, setStageManager] = useState<StageManager | null>(null)
   const { elements, status } = useStore()
   const { roomId } = useParams<{ roomId: string }>()
+  const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
   // 生成随机颜色和名字用于演示
@@ -38,6 +39,7 @@ export default function PixiCanvas() {
 
   const [awareness, setAwareness] = useState<any>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
+  const [collaborators, setCollaborators] = useState<Map<number, any>>(new Map())
 
   // 初始化 WebSocket 连接
   useEffect(() => {
@@ -46,6 +48,19 @@ export default function PixiCanvas() {
 
     const token = localStorage.getItem('token')
     const targetRoomId = token ? roomId || 'default' : 'default'
+
+    // 只有当用户主动选择进入房间时才更新lastRoomId
+    const userSelected = searchParams.get('userSelected') === 'true'
+    if (roomId && userSelected) {
+      console.log('[Canvas] User actively selected room, saving lastRoomId to localStorage:', roomId)
+      localStorage.setItem('lastRoomId', roomId)
+    }
+
+    // 如果有roomId但不是用户主动选择的，也要更新lastRoomId（为了向后兼容）
+    if (roomId && !userSelected) {
+      console.log('[Canvas] Updating lastRoomId for room visit:', roomId)
+      localStorage.setItem('lastRoomId', roomId)
+    }
 
     console.log(`[Canvas] Switching to room: ${targetRoomId}`)
 
@@ -77,6 +92,25 @@ export default function PixiCanvas() {
       useStore.getState().resetStore()
     }
   }, [roomId, navigate, setYjsData])
+
+  // 监听协作用户变化
+  useEffect(() => {
+    if (!awareness) return
+
+    const handleAwarenessChange = () => {
+      const states = awareness.getStates() as Map<number, any>
+      setCollaborators(new Map(states))
+    }
+
+    awareness.on('change', handleAwarenessChange)
+
+    // 初始化一次
+    handleAwarenessChange()
+
+    return () => {
+      awareness.off('change', handleAwarenessChange)
+    }
+  }, [awareness])
 
   const handleLoginRedirect = () => {
     navigate('/login')
@@ -146,6 +180,20 @@ export default function PixiCanvas() {
     )
   }
 
+  // 获取当前用户列表（排除自己）
+  const userList = Array.from(collaborators.entries())
+    .map(([clientId, state]) => {
+      if (awareness && clientId === awareness.clientID) return null
+      return state.user || { name: 'Unknown', color: '#000' }
+    })
+    .filter((user) => user !== null)
+
+  // 获取当前用户名
+  const currentUser =
+    awareness && collaborators.has(awareness.clientID)
+      ? collaborators.get(awareness.clientID)?.user || { name: 'Unknown' }
+      : { name: myName }
+
   return (
     <div className="relative h-[92vh] w-auto overflow-hidden bg-blue-200" onPointerMove={handlePointerMove}>
       {/* 登录提示横幅 */}
@@ -185,10 +233,34 @@ export default function PixiCanvas() {
       {/* 小地图组件 */}
       <Minimap stageManager={stageManager} />
 
-      {/* 4. 调试面板 (可选) */}
-      {/* <div className="pointer-events-none absolute right-4 bottom-4 z-10 rounded-md bg-gray-100/80 p-2 text-xs text-gray-500">
-        {Object.keys(elements).length} elements
-      </div> */}
+      {/* 4. 画布信息面板 */}
+      <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-md bg-gray-100/80 p-3 text-xs text-gray-700">
+        <div className="grid grid-cols-1 gap-1">
+          <div>
+            <span className="font-medium">room:</span> {roomId || 'default'}
+          </div>
+          <div>
+            <span className="font-medium">elements:</span> {Object.keys(elements).length}
+          </div>
+          <div>
+            <span className="font-medium">user:</span> {currentUser.name}
+          </div>
+          <div>
+            <span className="font-medium">collaborators:</span>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {[currentUser, ...userList].map((user: any, index: number) => (
+                <span
+                  key={index}
+                  className="inline-flex items-center rounded px-2 py-1 text-xs text-white"
+                  style={{ backgroundColor: user.color }}
+                >
+                  {user.name}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

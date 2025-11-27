@@ -9,6 +9,27 @@ import RoomManagement from '@/pages/room/RoomManagement'
 import ErrorPage from '@/components/error-page'
 import { Header } from '@/components/header'
 
+// 自定义组件，用于处理默认画布路由
+const DefaultCanvasRoute: React.FC = () => {
+  const lastRoomId = localStorage.getItem('lastRoomId')
+  console.log('[Router] Last room ID from localStorage:', lastRoomId)
+
+  if (lastRoomId) {
+    // 如果存在上次访问的房间ID，则重定向到该房间
+    return <Navigate to={`/canvas/${lastRoomId}`} replace />
+  } else {
+    // 否则使用默认画布
+    return (
+      <>
+        <Header />
+        <div className="pt-16">
+          <CanvasPage />
+        </div>
+      </>
+    )
+  }
+}
+
 const router = createBrowserRouter(
   [
     {
@@ -17,14 +38,7 @@ const router = createBrowserRouter(
     },
     {
       path: '/canvas',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <CanvasPage />
-          </div>
-        </>
-      ),
+      element: <DefaultCanvasRoute />,
     },
     {
       path: '/canvas/:roomId',

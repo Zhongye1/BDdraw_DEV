@@ -1,10 +1,9 @@
 import { Helmet } from 'react-helmet-async'
-import { Card, Typography, Divider, Tag, Grid, Badge } from '@arco-design/web-react'
+import { Card, Typography, Divider, Grid, Badge } from '@arco-design/web-react'
 import { IconCheckCircle, IconClockCircle, IconCode, IconCommand } from '@arco-design/web-react/icon'
-import { useNavigate } from 'react-router-dom'
 import { getDefaultLayout } from '@/components/layout'
 
-const { Title, Paragraph, Text } = Typography
+const { Paragraph, Text } = Typography
 const { Row, Col } = Grid
 
 // 技术栈数据配置
@@ -73,12 +72,12 @@ const TASK_PROGRESS = [
     color: 'orange',
     items: [
       { label: '无限画布缩放、滚动、拖拽', done: true },
-      { label: '无限画布滚动条', done: true },
-      { label: 'Minimap 缩略图', done: false },
+      { label: '无限画布滚动', done: true },
+      { label: 'Minimap 缩略图', done: true },
       { label: '选区功能 (点选/框选)', done: true },
-      { label: '数据持久化 (自动保存)', done: false },
+      { label: '数据持久化 (自动保存)', done: true },
       { label: '快捷键复制/粘贴', done: true },
-      { label: '辅助线功能', done: false },
+      { label: '辅助线功能', done: true },
     ],
   },
   {
@@ -98,7 +97,7 @@ const TASK_PROGRESS = [
       { label: '双击文本编辑', done: true },
       { label: '元素删除', done: true },
       { label: '元素拖拽/缩放', done: true },
-      { label: '元素旋转', done: false },
+      { label: '元素旋转', done: true },
       { label: '多元素组合/解组', done: true },
     ],
   },
@@ -114,9 +113,9 @@ const TASK_PROGRESS = [
     title: '【P1】协同 & 高级',
     color: 'cyan',
     items: [
-      { label: 'Undo & Redo (撤销重做)', done: true, note: '部分Bug修复中' },
-      { label: '多人协同编辑', done: false },
-      { label: '离线编辑支持', done: false },
+      { label: 'Undo & Redo (撤销重做)', done: true },
+      { label: '多人协同编辑', done: true },
+      { label: '离线编辑支持', done: true },
     ],
   },
 ]
@@ -196,16 +195,6 @@ BDdraw_DEV/
 `
 
 export default function Home() {
-  const navigate = useNavigate()
-
-  const handleStartDrawing = () => {
-    navigate('/canvas')
-  }
-
-  const handleGithub = () => {
-    window.open('https://github.com/Zhongye1/BDdraw_DEV', '_blank')
-  }
-
   return (
     <>
       <Helmet>
@@ -296,11 +285,6 @@ export default function Home() {
                               >
                                 {item.label}
                               </span>
-                              {item.note && (
-                                <Tag size="small" className="ml-auto text-[10px]">
-                                  {item.note}
-                                </Tag>
-                              )}
                             </div>
                           ))}
                         </div>

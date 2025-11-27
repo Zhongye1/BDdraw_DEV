@@ -387,7 +387,15 @@ const RoomManagement: React.FC = () => {
               </Title>
               <Text type="secondary">ID: {selectedRoom.id}</Text>
               <div className="mt-4">
-                <Button type="primary" long onClick={() => navigate(`/canvas/${selectedRoom.id}`)}>
+                <Button
+                  type="primary"
+                  long
+                  onClick={() => {
+                    // 用户主动选择进入房间时，更新lastRoomId
+                    localStorage.setItem('lastRoomId', selectedRoom.id)
+                    navigate(`/canvas/${selectedRoom.id}?userSelected=true`)
+                  }}
+                >
                   立即进入房间
                 </Button>
               </div>
