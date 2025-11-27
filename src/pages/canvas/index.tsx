@@ -38,7 +38,7 @@ export default function PixiCanvas() {
       // 显示登录提示而不是直接重定向
       setShowLoginPrompt(true)
       // 仍然初始化默认的协作功能，但不连接到真实房间
-      const wsProvider = initWsProvider('default')
+      const wsProvider = initWsProvider('default', '')
       const currentAwareness = getAwareness()
       setAwareness(currentAwareness)
 
@@ -55,7 +55,7 @@ export default function PixiCanvas() {
       }
     }
 
-    const wsProvider = initWsProvider(roomId || 'default')
+    const wsProvider = initWsProvider(roomId || 'default', token)
     const currentAwareness = getAwareness()
     setAwareness(currentAwareness)
 
@@ -77,13 +77,33 @@ export default function PixiCanvas() {
   }
 
   // 监听鼠标移动，广播自己的位置
+  // 用户光标位置
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!awareness) return
+    if (!awareness || !stageManagerRef.current) return
 
-    // 转换坐标为画布相对坐标...
-    const point = { x: e.clientX, y: e.clientY }
+    // 使用 Pixi viewport 将屏幕坐标转换为世界坐标
+    const viewport = stageManagerRef.current.viewport
+    if (viewport) {
+      // 通过 stageManager 获取 canvas 元素
+      const canvas = stageManagerRef.current.app.canvas
+      if (canvas) {
+        // 获取画布容器的边界
+        const containerRect = canvas.getBoundingClientRect()
 
-    awareness.setLocalStateField('cursor', point)
+        // 计算相对于画布的坐标
+        const x = e.clientX - containerRect.left
+        const y = e.clientY - containerRect.top
+
+        // 将屏幕坐标转换为世界坐标
+        const point = viewport.toWorld(x, y)
+
+        // 广播世界坐标
+        awareness.setLocalStateField('cursor', {
+          x: point.x,
+          y: point.y,
+        })
+      }
+    }
   }
 
   // 使用自定义hook管理快捷键
@@ -148,7 +168,7 @@ export default function PixiCanvas() {
       />
 
       {/* 协作光标 */}
-      {awareness && <CollaboratorCursors awareness={awareness} />}
+      {awareness && stageManager && <CollaboratorCursors awareness={awareness} stageManager={stageManager} />}
 
       {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
       <PropertyPanel />

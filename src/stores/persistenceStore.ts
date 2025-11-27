@@ -22,12 +22,14 @@ const provider = new IndexeddbPersistence('canvas-local-db', yDoc)
 let wsProvider: WebsocketProvider | null = null
 
 // 初始化 WebSocket Provider 的函数
-export const initWsProvider = (roomId: string) => {
+export const initWsProvider = (roomId: string, token: string) => {
   if (wsProvider) {
     wsProvider.destroy()
   }
 
-  wsProvider = new WebsocketProvider('ws://localhost:1234', `room-${roomId}`, yDoc)
+  wsProvider = new WebsocketProvider('ws://localhost:1234', roomId, yDoc, {
+    params: { token },
+  })
 
   // 监听 WebSocket 连接状态
   wsProvider.on('status', (event: any) => {

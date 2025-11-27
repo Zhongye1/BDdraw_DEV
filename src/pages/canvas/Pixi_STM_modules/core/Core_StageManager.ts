@@ -399,7 +399,10 @@ export class StageManagerCore {
     window.removeEventListener('drawGuidelines', this._boundDrawGuidelines)
     window.removeEventListener('clearGuidelines', this._boundClearGuidelines)
 
-    this.interactionHandler.removeInteraction()
+    // 确保 interactionHandler 已初始化后再调用 removeInteraction
+    if (this.interactionHandler) {
+      this.interactionHandler.removeInteraction()
+    }
     this.elementRenderer.clear()
 
     // 销毁辅助线图层
@@ -411,7 +414,19 @@ export class StageManagerCore {
       this.guidelineLayer = null as any
     }
 
-    // 销毁应用
-    this.app.destroy(true, { children: true, texture: true })
+    // 销毁应用，确保 app 存在且未被销毁
+    if (this.app && !this.app.renderer?.destroy) {
+      // 确保 viewport 存在再尝试销毁
+      if (this.viewport) {
+        // 移除可能的事件监听器
+        try {
+          this.viewport.removeAllListeners()
+        } catch (e) {
+          // 忽略移除监听器时的错误
+        }
+      }
+
+      this.app.destroy(true, { children: true, texture: true })
+    }
   }
 }

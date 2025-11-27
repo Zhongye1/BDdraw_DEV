@@ -18,7 +18,7 @@ db.run(`
     name TEXT NOT NULL,
     creator_id TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    ydoc_blob BLOB, -- 存储 Yjs 的二进制数据
+    content BLOB, -- 存储 Yjs 的二进制数据
     FOREIGN KEY (creator_id) REFERENCES users(id)
   )
 `)

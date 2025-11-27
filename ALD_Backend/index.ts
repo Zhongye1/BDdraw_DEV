@@ -80,13 +80,76 @@ app.route('/', roomsApp)
 // --- 启动服务 ---
 
 // 1. 启动 WebSocket 服务 (独立端口 1234)
-const wsServer = createServer()
-// 使用 handleConnection 替代 attach 方法
+const wsServer = createServer(async (req, res) => {
+  // 处理 HTTP 请求
+  try {
+    // 将 Node.js 的 req/res 转换为 Hono 可以处理的 Request 对象
+    const url = `http://${req.headers.host}${req.url}`
+    const body = req.method !== 'GET' && req.method !== 'HEAD' ? await getRawBody(req) : null
+
+    const request = new Request(url, {
+      method: req.method,
+      headers: getHeaders(req.headers),
+      body: body,
+    })
+
+    const response = await app.fetch(request)
+
+    // 将 Hono 的 Response 对象转换为 Node.js 响应
+    res.writeHead(response.status, Object.fromEntries(response.headers.entries()))
+    if (response.body) {
+      const reader = response.body.getReader()
+      if (response.body) {
+        for await (const chunk of response.body) {
+          res.write(chunk)
+        }
+        res.end()
+      }
+    }
+    res.end()
+  } catch (err) {
+    console.error('Error handling request:', err)
+    res.statusCode = 500
+    res.end('Internal Server Error')
+  }
+})
+
+// 辅助函数：获取原始请求体
+function getRawBody(req: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = []
+    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    req.on('end', () => resolve(Buffer.concat(chunks)))
+    req.on('error', reject)
+  })
+}
+
+// 辅助函数：转换请求头
+function getHeaders(headers: any): Record<string, string> {
+  const result: Record<string, string> = {}
+  for (const [key, value] of Object.entries(headers)) {
+    if (Array.isArray(value)) {
+      result[key] = value.join(', ')
+    } else if (typeof value === 'string') {
+      result[key] = value
+    }
+  }
+  return result
+}
+
+// 使用 handleConnection 处理 WebSocket 升级请求
 wsServer.on('upgrade', (request, socket, head) => {
   try {
-    collabServer.handleConnection(socket, request)
+    // 检查路径是否为协作端点
+    if (request.url?.startsWith('/collaboration')) {
+      collabServer.handleConnection(socket, request)
+    } else {
+      // 如果不是协作端点，销毁 socket
+      socket.destroy()
+    }
   } catch (error) {
     console.error('WebSocket upgrade error:', error)
+    socket.destroy()
   }
 })
 

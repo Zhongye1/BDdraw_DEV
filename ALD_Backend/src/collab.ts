@@ -1,7 +1,6 @@
 import { Hocuspocus } from '@hocuspocus/server'
 import { Database as HocuspocusDB } from '@hocuspocus/extension-database'
 import db from './db'
-import { createServer } from 'http'
 import { verifyToken } from './auth'
 
 // 1. 定义数据库扩展：告诉 Hocuspocus 如何存取 Yjs 数据
@@ -9,16 +8,16 @@ const dbExtension = new HocuspocusDB({
   // 从数据库加载文档
   fetch: async ({ documentName }) => {
     console.log(`[Yjs] Loading doc: ${documentName}`)
-    const query = db.query('SELECT ydoc_blob FROM rooms WHERE id = $id')
-    const row = query.get({ $id: documentName }) as { ydoc_blob: Uint8Array } | null
-    return row ? row.ydoc_blob : null
+    const query = db.query('SELECT content FROM rooms WHERE id = $id')
+    const row = query.get({ $id: documentName }) as { content: Uint8Array } | null
+    return row ? row.content : null
   },
 
   // 将文档保存到数据库
   store: async ({ documentName, state }) => {
     console.log(`[Yjs] Saving doc: ${documentName}`)
     // state 是二进制 Buffer
-    const update = db.query('UPDATE rooms SET ydoc_blob = $blob WHERE id = $id')
+    const update = db.query('UPDATE rooms SET content = $blob WHERE id = $id')
     update.run({ $blob: state, $id: documentName })
   },
 })
