@@ -89,7 +89,7 @@ const provider = new IndexeddbPersistence('canvas-local-db', yDoc)
 
 ### 4. 状态指示器
 
-我们在界面右上角添加了 [SyncIndicator](file:///e:/ADF-workbase/BDdraw_DEV/src/components/SyncIndicator.tsx#L4-L27) 组件，用于向用户显示当前的连接状态：
+我们在界面右上角添加了 [SyncIndicator](/src/components/SyncIndicator.tsx#L4-L27) 组件，用于向用户显示当前的连接状态：
 
 - 在线时显示绿色"已同步 (在线)"状态
 - 离线时显示橙色"离线编辑中 (已保存到本地)"状态

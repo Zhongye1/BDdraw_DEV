@@ -1,0 +1,211 @@
+# Node.js 后端架构与基础功能
+
+## 架构概览
+
+本项目是一个基于 [Hono](https://hono.dev/) 框架构建的现代化 Node.js 后端系统，采用 TypeScript 编写，主要用于支持协作绘图应用的后端服务。整体架构采用了模块化设计，分离了用户认证、房间管理和协作编辑等核心功能。
+
+### 核心技术栈
+
+- **框架**: [Hono](https://hono.dev/) - 轻量级、高性能的 Web 框架
+- **API 规范**: OpenAPI 3.0 - 用于 API 文档生成
+- **数据库**: SQLite - 使用 Bun SQLite 驱动
+- **认证机制**: JWT (JSON Web Tokens)
+- **实时协作**: WebSocket + Yjs + Hocuspocus
+- **密码安全**: Bun 内置密码哈希功能
+
+## 主要模块
+
+### 应用入口 ([index.ts](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\index.ts))
+
+应用入口文件负责初始化整个后端服务，包括 HTTP API 服务和 WebSocket 协作服务。
+
+#### 核心组件
+
+| 组件名 | 类型 | 描述 |
+|--------|------|------|
+| `app` | `OpenAPIHono` | 主应用实例，处理所有 HTTP 请求 |
+| [wsServer](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\index.ts#L82-L114) | `http.Server` | WebSocket 服务器，处理协作连接 |
+
+#### 服务启动流程
+
+```mermaid
+graph TD
+    A[应用启动] --> B[初始化 Hono 实例]
+    B --> C[挂载路由模块]
+    C --> D[创建 HTTP 服务器]
+    D --> E[监听端口 3000]
+    D --> F[创建 WebSocket 服务器]
+    F --> G[监听端口 1234]
+    G --> H[处理协作连接]
+```
+
+### 认证模块 (`src/api/USER_management/`)
+
+负责用户的注册和登录功能，使用 JWT 进行身份验证。
+
+#### API 接口
+
+##### 用户注册
+
+| 字段名 | 类型 | 必填 | 默认值 | 描述 |
+|--------|------|------|--------|------|
+| `username` | string | 是 | - | 用户名 |
+| `password` | string | 是 | - | 密码 |
+
+##### 用户登录
+
+| 字段名 | 类型 | 必填 | 默认值 | 描述 |
+|--------|------|------|--------|------|
+| `username` | string | 是 | - | 用户名 |
+| `password` | string | 是 | - | 密码 |
+
+#### 核心函数
+
+| 函数名 | 描述 |
+|--------|------|
+| [hashPassword](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\src\auth.ts#L18-L18) | 使用 Bun 的内置功能对密码进行哈希处理 |
+| [verifyPassword](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\src\auth.ts#L19-L19) | 验证输入密码与存储哈希是否匹配 |
+| [createToken](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\src\auth.ts#L4-L6) | 创建 JWT 认证令牌 |
+| [verifyToken](file://e:\ADF-workbase\BDdraw_DEV\ALD_Backend\src\auth.ts#L8-L15) | 验证 JWT 令牌的有效性 |
+
+### 房间管理模块 (`src/api/Room_management/`)
+
+提供协作房间的完整 CRUD 功能以及成员管理。
+
+#### 模块结构
+
+```mermaid
+graph LR
+    A[CORE.ts] --> B[Room_CRUD.ts]
+    A --> C[Room_List.ts]
+    A --> D[Room_users.ts]
+    
+    B --> E[Room_CRUD_types.ts]
+    C --> F[Room_List_types.ts]
+    D --> G[Room_users_types.ts]
+```
+
+#### 核心功能
+
+1. **房间 CRUD 操作**
+   - 创建房间 ([`createRoomHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_CRUD.ts#L41-L61))
+   - 获取房间 ([`getRoomHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_CRUD.ts#L63-L80))
+   - 更新房间 ([`updateRoomHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_CRUD.ts#L82-L105))
+   - 删除房间 ([`deleteRoomHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_CRUD.ts#L107-L121))
+
+2. **房间列表管理**
+   - 列出房间 ([`listRoomsHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_List.ts#L26-L44))
+   - 浏览房间 ([`browseRoomsHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_List.ts#L46-L67))
+   - 搜索房间 ([`searchRoomsHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_List.ts#L69-L91))
+
+3. **成员管理**
+   - 邀请用户 ([`inviteUserHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_users.ts#L28-L53))
+   - 获取成员列表 ([`getRoomMembersHandler`](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/Room_management/Room_users.ts#L55-L76))
+
+### 数据库模块 (`src/db.ts`)
+
+使用 Bun 的 SQLite 驱动实现数据持久化，定义了三个核心表：
+
+#### 数据表结构
+
+##### 用户表 (`users`)
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| `id` | TEXT | 用户唯一标识符 (主键) |
+| `username` | TEXT | 用户名 (唯一且非空) |
+| `password_hash` | TEXT | 哈希后的密码 |
+| `created_at` | DATETIME | 创建时间戳 |
+
+##### 房间表 (`rooms`)
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| `id` | TEXT | 房间唯一标识符 (主键) |
+| `name` | TEXT | 房间名称 |
+| `creator_id` | TEXT | 创建者 ID (外键关联 users) |
+| `created_at` | DATETIME | 创建时间戳 |
+| `content` | BLOB | Yjs 二进制数据 |
+
+##### 房间成员表 (`room_members`)
+
+| 字段名 | 类型 | 描述 |
+|--------|------|------|
+| `room_id` | TEXT | 房间 ID (联合主键) |
+| `user_id` | TEXT | 用户 ID (联合主键) |
+| `joined_at` | DATETIME | 加入时间戳 |
+
+### 协作模块 (`src/collab.ts`)
+
+基于 Hocuspocus 服务器实现 WebSocket 实时协作功能，与 Yjs 协同工作。
+
+#### 核心组件
+
+| 组件名 | 类型 | 描述 |
+|--------|------|------|
+| `collabServer` | `Hocuspocus` | 协作服务器实例 |
+| `dbExtension` | `HocuspocusDB` | 数据库扩展，处理 Yjs 文档的存储和读取 |
+
+#### 工作流程
+
+```mermaid
+sequenceDiagram
+    participant C as 客户端
+    participant S as 服务器
+    participant DB as 数据库
+    
+    C->>S: WebSocket 连接请求
+    S->>S: 验证 JWT Token
+    S->>DB: 检查用户房间权限
+    S-->>C: 连接建立成功
+    C->>S: 发送 Yjs 更新
+    S->>DB: 存储 Yjs 文档状态
+    S->>C: 广播更新给其他客户端
+```
+
+## 认证流程
+
+系统使用 JWT Token 进行用户身份验证，流程如下：
+
+1. 用户通过 [/api/auth/login](file:///E:/ADF-workbase/BDdraw_DEV/ALD_Backend/src/api/USER_management/auth_API.ts#L89-L107) 接口登录
+2. 服务器验证用户名和密码
+3. 验证成功后生成 JWT Token 并返回给客户端
+4. 客户端在后续请求中通过 Authorization Header 传递 Token
+5. 服务器中间件验证 Token 有效性并解析用户信息
+
+```mermaid
+graph TD
+    A[用户登录] --> B[验证凭据]
+    B -->|有效| C[生成 JWT Token]
+    C --> D[返回 Token 给客户端]
+    D --> E[客户端存储 Token]
+    E --> F[发送带 Token 的请求]
+    F --> G[服务器验证 Token]
+    G -->|有效| H[处理业务逻辑]
+    G -->|无效| I[返回 401 错误]
+```
+
+## 错误处理
+
+系统实现了全局错误处理机制：
+
+1. **HTTP 错误处理**：
+   - 使用 Hono 的 `onError` 中间件捕获未处理异常
+   - 返回统一格式的 JSON 错误响应
+
+2. **数据库错误处理**：
+   - 在数据库操作中使用 try-catch 捕获异常
+   - 根据错误类型返回相应的 HTTP 状态码
+
+3. **认证错误处理**：
+   - Token 验证失败返回 401 状态码
+   - 权限不足返回 403 状态码
+
+## 部署架构
+
+系统分为两个独立的服务：
+
+1. **API 服务**：运行在端口 3000，处理所有 RESTful API 请求
+2. **WebSocket 服务**：运行在端口 1234，专门处理实时协作连接
+
+这种分离架构使得可以独立扩展两种不同类型的服务，提高了系统的可维护性和性能。
