@@ -117,7 +117,9 @@ BDdraw_DEV/
 
 #### 运行项目
 
-```shell
+**frontend**
+
+```bash
 git clone git@github.com:Zhongye1/BDdraw_DEV.git
 
 cd BDdraw_DEV (进入项目)
@@ -128,6 +130,16 @@ bun start (启动服务)
 也可以用 npm 和 yarn，个人更推荐使用 bun 包管理器，见个人博客
 
 [关于前端包管理器 npm,pnpm,yarn 和 bun 以及我为何选择后者](https://zhongye1.github.io/Arknight-notes/posts/15722.html)
+
+**backend**
+
+```bash
+cd ALD_Backend/
+
+bun install #安装依赖
+
+bun index.ts  #启动后端服务
+```
 
 #### 整体架构设计
 
@@ -424,7 +436,6 @@ Zustand 状态变化同时触发数据持久化：
 
 部署地址：https://zhongye1.github.io/BDdraw_DEV/
 
-部署地址：https://zhongye1.github.io/BDdraw_DEV/
 
 ![image-20251122221056789](./assets/image-20251122221056789.png)
 
@@ -526,7 +537,7 @@ Zustand 状态变化同时触发数据持久化：
 - ~~支持对选中元素（单个或多个）缩放~~
 - ~~支持对选中元素（单个或多个）旋转~~
 - ~~支持对多个元素进行组合操作，组合可以嵌套~~
-- ~~支持对多个元素进行打组、解组~~
+- ~~支持对多个元素进行打组、解组~~(组操作bug复现了，目前在修)
 
 #### ~~【P0】性能优化~~
 
@@ -536,9 +547,9 @@ Zustand 状态变化同时触发数据持久化：
 #### ~~【P1】协同~~
 
 - ~~支持 undo & redo 操作~~ ~~（大体实现了，可能要修一下 undo，redo 栈，有个不能稳定复现的 bug）~~（已实现）
-- ~~支持协同编辑，多人打开同一个画布可以协同编辑~~(写了个 Node.js 后端)
+- ~~支持协同编辑，多人打开同一个画布可以协同编辑~~ (写了个 Node.js 后端)
 - ~~支持离线编辑，断网后仍然可以对画布编辑，恢复网络后自动提交数据~~（IndexedDB）
 
 > 各模块的技术文档补充中
->
 > 此文档最后编辑于 2025.11.27 by wcx
+> 项目开发中，欢迎提 issue 和 pr
