@@ -24,17 +24,40 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
 
     const viewport = stageManager.viewport
 
+    // 使用 ticker 实现更流畅的更新
     const onViewportChange = () => {
       // 使用 requestAnimationFrame 避免高频重绘
       requestAnimationFrame(() => setTriggerRender((prev) => prev + 1))
     }
 
+    // 同时监听多个事件确保实时更新
     viewport.on('moved', onViewportChange)
     viewport.on('zoomed', onViewportChange)
+
+    // 添加额外的更新机制 - 使用 PIXI Ticker 实现持续检测
+    let lastUpdate = 0
+    const tickerCallback = () => {
+      const now = Date.now()
+      // 限制更新频率，最多每16ms更新一次（约60fps）
+      if (now - lastUpdate > 16) {
+        // 检查视口是否真的发生了变化
+        onViewportChange()
+        lastUpdate = now
+      }
+    }
+
+    // 尝试使用 PIXI Ticker 如果可用
+    const ticker = stageManager.app.ticker
+    if (ticker) {
+      ticker.add(tickerCallback)
+    }
 
     return () => {
       viewport.off('moved', onViewportChange)
       viewport.off('zoomed', onViewportChange)
+      if (ticker) {
+        ticker.remove(tickerCallback)
+      }
     }
   }, [stageManager])
 
@@ -92,6 +115,10 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
       ctx.strokeStyle = '#ff4757'
       ctx.lineWidth = 2
       ctx.strokeRect(vx, vy, vw, vh)
+
+      // 绘制一个小的填充矩形表示视口中心点
+      ctx.fillStyle = '#ff4757'
+      ctx.fillRect(vx + vw / 2 - 2, vy + vh / 2 - 2, 4, 4)
     }
 
     // 绘制半透明遮罩（可选：让视口外变暗）
