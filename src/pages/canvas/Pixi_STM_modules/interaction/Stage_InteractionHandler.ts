@@ -173,24 +173,24 @@ export class StageInteractionHandler {
           totalDy = dragResult.dragDelta.dy
         }
 
-        // 核心优化：直接遍历选中的 Sprite 修改位置
-        state.selectedIds.forEach((id) => {
+        // 核心优化：直接遍历 initialStates 的所有 key
+        // 这样可以处理无限层级的嵌套（父组->子组->孙元素），只要它们在 initialStates 中
+        Object.keys(initialStates).forEach((id) => {
           const sprite = spriteMap.get(id)
           const initData = initialStates[id]
+          const element = state.elements[id]
 
-          if (sprite && initData) {
+          if (sprite && initData && element) {
+            // 计算新位置：初始位置 + 总位移
+            const newX = (initData.x || 0) + totalDx
+            const newY = (initData.y || 0) + totalDy
+
             // 检查元素是否有旋转
-            const element = state.elements[id]
-            if (element && element.rotation !== undefined && element.rotation !== 0) {
-              // 对于有旋转的元素，需要特殊处理位置
-              // 旋转元素的pivot设置在中心，position也是基于中心的
-              sprite.position.set(
-                (initData.x || 0) + totalDx + (element.width || 0) / 2,
-                (initData.y || 0) + totalDy + (element.height || 0) / 2,
-              )
+            // 对于有旋转的元素，Pixi Sprites 通常 pivot 在中心，需要补偿位置
+            if (element.rotation !== undefined && element.rotation !== 0) {
+              sprite.position.set(newX + (element.width || 0) / 2, newY + (element.height || 0) / 2)
             } else {
-              // 直接修改 Pixi 对象的 transform
-              sprite.position.set((initData.x || 0) + totalDx, (initData.y || 0) + totalDy)
+              sprite.position.set(newX, newY)
             }
           }
         })
@@ -386,12 +386,11 @@ export class StageInteractionHandler {
         // 批量更新 Store (触发 Yjs transaction)
         const updates: Record<string, Partial<CanvasElement>> = {}
 
-        state.selectedIds.forEach((id) => {
+        // 优化：直接遍历 dragInitialStates 的 key 来确定所有需要更新的元素
+        // 这确保了所有被移动的元素（包括深层嵌套的子元素）都被更新
+        Object.keys(dragInitialStates).forEach((id) => {
           const initData = dragInitialStates[id]
-          //const element = state.elements[id]
-
           if (initData) {
-            // 使用初始状态加上总位移来计算最终位置，避免累积误差
             updates[id] = {
               x: (initData.x || 0) + totalDx,
               y: (initData.y || 0) + totalDy,
