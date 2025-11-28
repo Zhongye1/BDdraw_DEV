@@ -23,6 +23,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Button } from '@arco-design/web-react'
 import { IconNotification as IconWarning } from '@arco-design/web-react/icon'
+import { StageManagerProvider } from '@/components/header/StageManagerContext'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -195,73 +196,75 @@ export default function PixiCanvas() {
       : { name: myName }
 
   return (
-    <div className="relative h-[92vh] w-auto overflow-hidden bg-blue-200" onPointerMove={handlePointerMove}>
-      {/* 登录提示横幅 */}
-      {showLoginPrompt && (
-        <div className="absolute  bottom-0 left-0 right-0 z-50 bg-orange-100 p-2 text-center text-sm">
-          <div className="flex items-center justify-center">
-            <IconWarning className="mr-2 text-orange-500" />
-            <span>当前处于离线模式，登录以启用多人协作</span>
-            <Button type="primary" size="small" className="ml-4" onClick={handleLoginRedirect}>
-              登录
-            </Button>
-            <Button type="text" size="small" className="ml-2" onClick={() => setShowLoginPrompt(false)}>
-              关闭
-            </Button>
+    <StageManagerProvider stageManager={stageManager}>
+      <div className="relative h-[92vh] w-auto overflow-hidden bg-blue-200" onPointerMove={handlePointerMove}>
+        {/* 登录提示横幅 */}
+        {showLoginPrompt && (
+          <div className="absolute  bottom-0 left-0 right-0 z-50 bg-orange-100 p-2 text-center text-sm">
+            <div className="flex items-center justify-center">
+              <IconWarning className="mr-2 text-orange-500" />
+              <span>当前处于离线模式，登录以启用多人协作</span>
+              <Button type="primary" size="small" className="ml-4" onClick={handleLoginRedirect}>
+                登录
+              </Button>
+              <Button type="text" size="small" className="ml-2" onClick={() => setShowLoginPrompt(false)}>
+                关闭
+              </Button>
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {/* 1. 悬浮工具栏 (内部已经配置了 fixed 定位) */}
-      <TopToolbar />
+        {/* 1. 悬浮工具栏 (内部已经配置了 fixed 定位) */}
+        <TopToolbar />
 
-      {/* 2. 主画布区域：完全占满屏幕，无 padding */}
-      <div
-        ref={containerRef}
-        className="absolute inset-0 h-full w-full touch-none overflow-hidden bg-white" // touch-none 防止移动端误触
-      />
+        {/* 2. 主画布区域：完全占满屏幕，无 padding */}
+        <div
+          ref={containerRef}
+          className="absolute inset-0 h-full w-full touch-none overflow-hidden bg-white" // touch-none 防止移动端误触
+        />
 
-      {/* 协作光标 */}
-      {awareness && stageManager && <CollaboratorCursors awareness={awareness} stageManager={stageManager} />}
+        {/* 协作光标 */}
+        {awareness && stageManager && <CollaboratorCursors awareness={awareness} stageManager={stageManager} />}
 
-      {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
-      <PropertyPanel />
+        {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
+        <PropertyPanel />
 
-      {/* 底部文本编辑器：自动根据选中状态显示/隐藏 */}
-      <BottomTextEditor />
+        {/* 底部文本编辑器：自动根据选中状态显示/隐藏 */}
+        <BottomTextEditor />
 
-      {/* 小地图组件 */}
-      <Minimap stageManager={stageManager} />
+        {/* 小地图组件 */}
+        <Minimap stageManager={stageManager} />
 
-      {/* 4. 画布信息面板 */}
-      <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-md bg-gray-100/80 p-3 text-xs text-gray-700">
-        <div className="grid grid-cols-1 gap-1">
-          <div>
-            <span className="font-medium">room:</span> {roomId || 'default'}
-          </div>
-          <div>
-            <span className="font-medium">elements:</span> {Object.keys(elements).length}
-          </div>
-          <div>
-            <span className="font-medium">user:</span> {currentUser.name}
-          </div>
-          <div>
-            <span className="font-medium">collaborators:</span>
-            <div className="mt-1 flex flex-wrap gap-1">
-              {[currentUser, ...userList].map((user: any, index: number) => (
-                <span
-                  key={index}
-                  className="inline-flex items-center rounded px-2 py-1 text-xs text-white"
-                  style={{ backgroundColor: user.color }}
-                >
-                  {user.name}
-                </span>
-              ))}
+        {/* 4. 画布信息面板 */}
+        <div className="pointer-events-none absolute bottom-4 left-4 z-10 rounded-md bg-gray-100/80 p-3 text-xs text-gray-700">
+          <div className="grid grid-cols-1 gap-1">
+            <div>
+              <span className="font-medium">room:</span> {roomId || 'default'}
+            </div>
+            <div>
+              <span className="font-medium">elements:</span> {Object.keys(elements).length}
+            </div>
+            <div>
+              <span className="font-medium">user:</span> {currentUser.name}
+            </div>
+            <div>
+              <span className="font-medium">collaborators:</span>
+              <div className="mt-1 flex flex-wrap gap-1">
+                {[currentUser, ...userList].map((user: any, index: number) => (
+                  <span
+                    key={index}
+                    className="inline-flex items-center rounded px-2 py-1 text-xs text-white"
+                    style={{ backgroundColor: user.color }}
+                  >
+                    {user.name}
+                  </span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </StageManagerProvider>
   )
 }
 

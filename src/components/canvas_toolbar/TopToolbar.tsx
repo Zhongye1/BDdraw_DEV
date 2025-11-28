@@ -19,10 +19,12 @@ import {
   LayoutGrid, // 用作最后的那个库图标
   RotateCcw,
   RotateCw,
-  FolderPlus,
-  FolderOpen,
+  Group,
+  Ungroup,
+  ImageDown,
 } from 'lucide-react'
 import ImageInsertModal from '@/components/image-insert-modal'
+import ExportCanvasModal from '@/components/header/ExportCanvasModal'
 
 // --- 类型定义 ---
 /*type ToolType =
@@ -74,6 +76,9 @@ export default function TopToolbar() {
   //const [locked, setLocked] = useState(false)
   const [imageModalVisible, setImageModalVisible] = useState(false)
 
+  // 添加导出相关的状态
+  const [exportModalVisible, setExportModalVisible] = useState(false)
+
   // 简单的 className 拼接函数（如果你没有引入 clsx/tailwind-merge）
   const cls = (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' ')
 
@@ -110,7 +115,7 @@ export default function TopToolbar() {
     {
       id: 'group',
       type: 'action',
-      icon: FolderPlus,
+      icon: Group,
       label: 'Group Elements (Ctrl+G)',
       onClick: () => {
         const state = useStore.getState()
@@ -128,7 +133,7 @@ export default function TopToolbar() {
     {
       id: 'ungroup',
       type: 'action',
-      icon: FolderOpen,
+      icon: Ungroup,
       label: 'Ungroup Elements (Ctrl+Shift+G)',
       onClick: () => {
         const state = useStore.getState()
@@ -148,6 +153,13 @@ export default function TopToolbar() {
       },
     },
     {
+      id: 'export',
+      type: 'action',
+      icon: ImageDown,
+      label: '导出画布',
+      onClick: () => setExportModalVisible(true),
+    },
+    {
       id: 'library',
       type: 'action',
       icon: LayoutGrid,
@@ -163,6 +175,8 @@ export default function TopToolbar() {
 
   return (
     <>
+      {/* 导出画布模态框 */}
+      <ExportCanvasModal visible={exportModalVisible} onClose={() => setExportModalVisible(false)} />
       <div className="fixed left-1/2 top-20 z-50 flex -translate-x-1/2 flex-col items-center gap-3">
         {/* 1. 药丸形状的主工具栏 */}
         <div className="flex items-center rounded-lg border border-gray-200/60 bg-white p-1 shadow-[0_0_6px_rgba(0,0,0,0.1)]">
