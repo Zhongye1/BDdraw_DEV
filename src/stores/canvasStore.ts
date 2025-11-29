@@ -89,7 +89,7 @@ interface CanvasState {
   setEditingId: (id: string | null) => void
   // 添加复制粘贴方法
   copyElements: (ids: string[]) => void
-  pasteElements: () => void
+  pasteElements: (x?: number, y?: number) => void
 
   // 添加批量更新元素方法，用于提高性能
   batchUpdateElements: (updates: Record<string, Partial<CanvasElement>>) => void
@@ -208,28 +208,11 @@ export const useStore = create<CanvasState>()(
           'selectedIds' in partial
 
         if (undoRedoManager.isLocked() || isToolChangeOnly || isSelectionChangeOnly) {
-          // 如果被锁定，或者只是工具切换，或者是选中操作，直接设置状态
-
-          /**
-          console.log(
-          '[CanvasStore] 状态更新被忽略，锁定状态:',
-          undoRedoManager.isLocked(),
-          '工具切换:',
-          isToolChangeOnly,
-          '选中变化:',
-          isSelectionChangeOnly,
-        )
-         * 
-         */
-
           return replace === true ? set(partial as CanvasState, true) : set(partial)
         }
 
-        // 获取当前状态，只克隆数据部分，不包括函数
         const currentState = (() => {
           const state = get()
-          // 克隆数据属性
-
           const {
             setTool,
             addElement,
@@ -246,71 +229,10 @@ export const useStore = create<CanvasState>()(
             resetStore,
             ...dataOnlyState
           } = state
-
-          // 使用 JSON 方法替代 structuredClone 以避免克隆函数的问题
           return JSON.parse(JSON.stringify(dataOnlyState))
         })()
 
-        // 设置新状态
         const result = replace === true ? set(partial as CanvasState, true) : set(partial)
-
-        // 获取更新后的状态
-        const newState = (() => {
-          const state = get()
-          // 只克隆数据属性，排除函数
-          const {
-            setTool,
-            addElement,
-            updateElement,
-            removeElements,
-            setSelected,
-            setEditingId,
-            copyElements,
-            pasteElements,
-            undo,
-            redo,
-            canUndo,
-            canRedo,
-            resetStore,
-            ...dataOnlyState
-          } = state
-
-          // 使用 JSON 方法替代 structuredClone 以避免克隆函数的问题
-          return JSON.parse(JSON.stringify(dataOnlyState))
-        })()
-
-        // ========== 撤销/重做机制核心部分 ==========
-        // 创建快照命令并执行
-        // 判断操作类型
-        // 兼容函数式更新
-        const partialObj = typeof partial === 'function' ? partial(get()) : partial
-
-        let operationType = '未知操作'
-        if (partialObj && typeof partialObj === 'object') {
-          if ('elements' in partialObj) {
-            // 比较元素数量变化
-            const prevCount = Object.keys(currentState.elements).length
-            const nextCount = Object.keys(newState.elements).length
-
-            if (nextCount > prevCount) {
-              operationType = '添加元素'
-            } else if (nextCount < prevCount) {
-              operationType = '删除元素'
-            } else {
-              operationType = '修改元素'
-            }
-          } else if ('tool' in partialObj) {
-            operationType = '切换工具'
-          } else if ('selectedIds' in partialObj) {
-            operationType = '选择元素'
-          }
-        }
-
-        //const command = new SnapshotCommand(currentState, newState, operationType || '状态变更')
-        //console.log('[CanvasStore] 创建并执行快照命令')
-        //undoRedoManager.executeCommand(command)
-        // ======================================
-
         return result
       }
 
@@ -377,19 +299,13 @@ export const useStore = create<CanvasState>()(
               .filter((el) => el !== undefined) as CanvasElement[]
             return { clipboard: elementsToCopy, pasteOffset: 0 }
           }),
-        pasteElements: () =>
+        pasteElements: (targetX?: number, targetY?: number) =>
           originalSet((state) => {
             // 检查粘贴锁，防止重复粘贴
             if ((window as any).pasteLock) {
               console.log('[Store] 粘贴操作被锁拦截')
               return state
             }
-
-            console.log('[Store] pasteElements 被调用', {
-              timestamp: Date.now(),
-              clipboard: state.clipboard?.length,
-              pasteOffset: state.pasteOffset,
-            })
 
             if (!state.clipboard || state.clipboard.length === 0) {
               console.log('[Store] 剪贴板为空，取消粘贴')
@@ -403,38 +319,67 @@ export const useStore = create<CanvasState>()(
             }
             ;(window as any).pasteLockTimeout = setTimeout(() => {
               ;(window as any).pasteLock = false
-            }, 300) // 300ms 内不允许重复粘贴
-
-            // 增加粘贴偏移量
-            const newOffset = state.pasteOffset + 1
-            console.log(`[Store] 粘贴偏移量: ${state.pasteOffset} -> ${newOffset}`)
+            }, 300)
 
             const newElements: Record<string, CanvasElement> = {}
             const newIds: string[] = []
 
+            // [新增] 如果指定了目标位置，先计算剪贴板内容的包围盒中心
+            let clipCenterX = 0
+            let clipCenterY = 0
+
+            if (targetX !== undefined && targetY !== undefined) {
+              let minX = Infinity
+              let minY = Infinity
+              let maxX = -Infinity
+              let maxY = -Infinity
+
+              state.clipboard.forEach((el) => {
+                minX = Math.min(minX, el.x)
+                minY = Math.min(minY, el.y)
+                maxX = Math.max(maxX, el.x + el.width)
+                maxY = Math.max(maxY, el.y + el.height)
+              })
+
+              clipCenterX = (minX + maxX) / 2
+              clipCenterY = (minY + maxY) / 2
+            }
+
             state.clipboard.forEach((element) => {
               const newId = nanoid()
-              const randomSign = Math.random() > 0.5 ? 1 : -1 // 随机选择正负
-              const randomOffset = 30 + Math.random() * 30 // 随机粘贴偏移量
+              let newX = element.x
+              let newY = element.y
+
+              if (targetX !== undefined && targetY !== undefined) {
+                // 1. 指定位置粘贴：保持相对位置，整体中心对齐到鼠标位置
+                const offsetX = element.x - clipCenterX
+                const offsetY = element.y - clipCenterY
+                newX = targetX + offsetX
+                newY = targetY + offsetY
+              } else {
+                // 2. 默认粘贴 (Ctrl+V)：在原位置附近添加随机偏移
+                const randomSign = Math.random() > 0.5 ? 1 : -1
+                const randomOffset = 30 + Math.random() * 30
+                // 每次粘贴都在前一次偏移的基础上继续偏移
+                const baseOffset = (state.pasteOffset + 1) * 20
+                // 这里的逻辑可以简化，目前保留原有风格但去掉累加器以防止无限飘远
+                newX = element.x + 30
+                newY = element.y + 30
+              }
 
               const newElement = {
                 ...element,
                 id: newId,
-                // 每次粘贴都在前一次的基础上继续偏移
-                x: element.x + randomOffset * randomSign,
-                y: element.y + randomOffset * randomSign,
+                x: newX,
+                y: newY,
               }
 
-              // 添加新元素到状态中
               newElements[newId] = newElement
               newIds.push(newId)
-
-              console.log(`[Store] 创建新元素: ${newId}`, {
-                type: newElement.type,
-                x: newElement.x,
-                y: newElement.y,
-              })
             })
+
+            // 增加粘贴偏移量（仅用于 Ctrl+V 连续粘贴计数）
+            const newOffset = state.pasteOffset + 1
 
             // 使用 transact 保证原子性
             currentYDoc?.transact(() => {
@@ -443,9 +388,10 @@ export const useStore = create<CanvasState>()(
               })
             })
 
-            console.log(`[Store] 粘贴完成，新增 ${newIds.length} 个元素`, {
-              newIds,
-              finalOffset: newOffset,
+            // 为每个新元素创建 AddElementCommand 并执行
+            Object.values(newElements).forEach((element) => {
+              const addCommand = new AddElementCommand({ element })
+              undoRedoManager.executeCommand(addCommand)
             })
 
             return {

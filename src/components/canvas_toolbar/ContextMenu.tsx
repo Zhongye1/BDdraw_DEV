@@ -17,7 +17,6 @@ import type { StageManager } from '@/pages/canvas/Pixi_stageManager'
 
 interface ContextMenuProps {
   stageManager: StageManager | null
-  // [新增] 直接接收容器元素，避免通过未初始化的 app.canvas 获取
   container: HTMLElement | null
 }
 
@@ -79,7 +78,6 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ stageManager, container }) =>
 
   // 监听右键事件
   useEffect(() => {
-    // [修复] 不再尝试访问 stageManager.app.canvas，直接使用传入的 container
     if (!container) return
 
     const handleContextMenu = (e: MouseEvent) => {
@@ -87,6 +85,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ stageManager, container }) =>
 
       // 只有点击在 canvas 容器内才触发
       if (e.target instanceof Node && container.contains(e.target)) {
+        // 记录鼠标在屏幕上的点击位置 (Client Coordinates)
         setPosition({ x: e.clientX, y: e.clientY })
         setVisible(true)
       }
@@ -97,7 +96,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ stageManager, container }) =>
     return () => {
       container.removeEventListener('contextmenu', handleContextMenu)
     }
-  }, [container]) // 依赖项改为 container
+  }, [container])
 
   // 边界检测
   useLayoutEffect(() => {
@@ -129,8 +128,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ stageManager, container }) =>
     setVisible(false)
   }
 
+  // [修改] 粘贴处理函数
   const handlePaste = () => {
-    useStore.getState().pasteElements()
+    if (stageManager && stageManager.viewport && stageManager.app.canvas) {
+      // 1. 获取 Canvas DOM 元素的矩形信息
+      const canvasRect = stageManager.app.canvas.getBoundingClientRect()
+
+      // 2. 计算鼠标相对于 Canvas 左上角的坐标
+      const localX = position.x - canvasRect.left
+      const localY = position.y - canvasRect.top
+
+      // 3. 将屏幕坐标转换为 Pixi 世界坐标 (考虑平移和缩放)
+      const worldPos = stageManager.viewport.toWorld(localX, localY)
+
+      // 4. 传递世界坐标给 Store
+      useStore.getState().pasteElements(worldPos.x, worldPos.y)
+    } else {
+      // 回退方案：如果不传坐标，Store 会执行默认的偏移粘贴
+      useStore.getState().pasteElements()
+    }
     setVisible(false)
   }
 
