@@ -4,7 +4,7 @@ import { useStore, type CanvasElement } from '@/stores/canvasStore'
 import type { HandleType, StageManagerState } from '../shared/types'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { getSelectionBounds, getAllDescendantIds } from '../utils/geometryUtils'
-import { executeResizeCommand, executeRotateCommand } from '../utils/commandUtils'
+import { executeResizeCommand, executeRotateCommand, executeMoveCommand } from '../utils/commandUtils'
 import { handlePointerDown, handleHandleDown } from '../utils/interactionUtils'
 import { calculateRotation, calculateGroupChildrenRotation } from '../utils/rotationUtils'
 import { calculateScaling } from '../utils/scaleUtils'
@@ -414,15 +414,16 @@ export class StageInteractionHandler {
           }
         })
 
-        // 批量更新元素
-        Object.keys(updates).forEach((id) => {
-          state.updateElement(id, updates[id])
-        })
+        // 使用 batchUpdateElements 替代循环调用 updateElement，性能更好
+        state.batchUpdateElements(updates)
 
-        // 执行命令 (Undo/Redo)
-        import('../utils/commandUtils').then(({ executeMoveCommand }) => {
-          executeMoveCommand(dragInitialStates, state)
-        })
+        // 关键修复！！！
+        // 此时 store 内部数据已更新，但顶部的 'state' 变量仍是旧快照。
+        // 我们必须重新获取最新的 state，才能让 diff 算法检测到位置变化。
+        const finalState = useStore.getState()
+
+        // 直接执行命令（移除 import().then 异步包裹）
+        executeMoveCommand(dragInitialStates, finalState)
       }
 
       // 重置选择框位置
