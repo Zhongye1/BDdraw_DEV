@@ -1,4 +1,4 @@
-import { Button, Space } from '@arco-design/web-react'
+import { Button, Space, Radio } from '@arco-design/web-react'
 import { useStore } from '@/stores/canvasStore'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { UpdateElementPropertyCommand } from '@/lib/UpdateElementPropertyCommand'
@@ -36,6 +36,14 @@ const PRESET_ALPHAS = [
 // 预设圆角
 const PRESET_RADIUS = [0, 5, 10, 20, 50]
 
+// 图片滤镜选项
+const IMAGE_FILTERS = [
+  { label: '无滤镜', value: 'none' },
+  { label: '模糊', value: 'blur' },
+  { label: '亮度增强', value: 'brightness' },
+  { label: '灰度', value: 'grayscale' },
+]
+
 const ColorButton = ({ color, onClick, active }: { color: string; onClick: () => void; active: boolean }) => (
   <button
     onClick={onClick}
@@ -53,9 +61,9 @@ const PropertyPanel = () => {
   const id = selectedIds[0]
   const element = elements[id]
 
-  // 如果元素不存在或者为图片/文本类型，不显示属性面板
+  // 如果元素不存在，不显示属性面板
   if (!element) return null
-  if (element.type === 'image') return null
+  // 文本类型元素不显示默认属性面板
   if (element.type === 'text') return null
 
   const handleChange = (key: string, val: any) => {
@@ -79,14 +87,33 @@ const PropertyPanel = () => {
   }
 
   // 定义哪些类型不需要填充色
-  const noFillTypes = ['line', 'arrow', 'pencil']
+  const noFillTypes = ['line', 'arrow', 'pencil', 'image']
   // 定义哪些类型不需要透明度
-  const noAlphaTypes = ['line', 'arrow', 'pencil']
+  const noAlphaTypes = ['line', 'arrow', 'pencil', 'image']
   // 定义哪些类型不需要边框色和边框宽度
-  const noStrokeTypes = ['select', 'hand', 'eraser']
+  const noStrokeTypes = ['select', 'hand', 'eraser', 'image']
 
   return (
     <div className="absolute right-4 top-4 w-60 rounded bg-white p-4 shadow-lg">
+      {element.type === 'image' && (
+        <>
+          <div className="mb-2 font-medium">图片滤镜</div>
+          <Radio.Group
+            onChange={(value) => handleChange('filter', value)}
+            value={element.filter || 'none'}
+            className="mb-3"
+          >
+            <Space direction="vertical">
+              {IMAGE_FILTERS.map((filter) => (
+                <Radio key={filter.value} value={filter.value}>
+                  {filter.label}
+                </Radio>
+              ))}
+            </Space>
+          </Radio.Group>
+        </>
+      )}
+
       {!noFillTypes.includes(element.type) && (
         <>
           <div className="mb-2 font-medium">填充色</div>
