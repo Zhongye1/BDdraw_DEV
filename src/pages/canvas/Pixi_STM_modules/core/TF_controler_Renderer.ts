@@ -129,8 +129,13 @@ export class TransformerRenderer {
             // 最佳实践：相信 Store 中的 width/height，或者 updateElement 时确保 store 是准的。
             // 这里为了修复错位，暂时回退到使用 Store 的数据，因为 Store 是 Source of Truth。
             const localBounds = sprite.getLocalBounds()
+
+            // 宽度：优先使用 Store 中的 width，因为对于文本框，width 通常是用户设定的约束宽度（Wrap Width）
             elW = el.width || localBounds.width || 0
-            elH = el.height || localBounds.height || 0
+
+            // 高度：【关键修改】直接使用 localBounds.height (实际渲染高度)
+            // 文本的高度是由内容和宽度决定的，Store 里的 height 往往不准确，必须以实际渲染为准
+            elH = localBounds.height
           }
         }
 
@@ -164,8 +169,21 @@ export class TransformerRenderer {
       })
 
       // 2.3 组装最终数据
-      const width = maxLx - minLx
-      const height = maxLy - minLy
+      let width = maxLx - minLx
+      let height = maxLy - minLy
+
+      // 为文本元素设置最小宽度和高度，确保用户可以轻松选中和编辑
+      const hasTextElement = validSelectedIds.some((id) => elements[id]?.type === 'text')
+      if (hasTextElement) {
+        // 设置最小宽度为50像素，确保有足够的空间进行编辑
+        if (width < 50) {
+          width = 50
+        }
+        // 设置最小高度为30像素，确保至少能显示一行文本
+        if (height < 30) {
+          height = 30
+        }
+      }
 
       // 中心点在组局部坐标系的位置
       const cxLocal = minLx + width / 2

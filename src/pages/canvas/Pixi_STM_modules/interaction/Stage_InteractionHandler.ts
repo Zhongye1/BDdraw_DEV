@@ -190,7 +190,12 @@ export class StageInteractionHandler {
             if (element.rotation !== undefined && element.rotation !== 0) {
               sprite.position.set(newX + (element.width || 0) / 2, newY + (element.height || 0) / 2)
             } else {
-              sprite.position.set(newX, newY)
+              // 处理文本元素，pivot设置在中心
+              if (element.type === 'text') {
+                sprite.position.set(newX + (element.width || 0) / 2, newY + (element.height || 0) / 2)
+              } else {
+                sprite.position.set(newX, newY)
+              }
             }
           }
         })
@@ -391,9 +396,20 @@ export class StageInteractionHandler {
         Object.keys(dragInitialStates).forEach((id) => {
           const initData = dragInitialStates[id]
           if (initData) {
-            updates[id] = {
-              x: (initData.x || 0) + totalDx,
-              y: (initData.y || 0) + totalDy,
+            const element = state.elements[id]
+            // 对于文本元素和旋转元素，需要特殊处理位置
+            // 因为它们的pivot在中心，而在拖拽过程中我们已经做了位置补偿
+            // 所以这里只需要简单加上位移即可
+            if (element && ((element.rotation !== undefined && element.rotation !== 0) || element.type === 'text')) {
+              updates[id] = {
+                x: (initData.x || 0) + totalDx,
+                y: (initData.y || 0) + totalDy,
+              }
+            } else {
+              updates[id] = {
+                x: (initData.x || 0) + totalDx,
+                y: (initData.y || 0) + totalDy,
+              }
             }
           }
         })

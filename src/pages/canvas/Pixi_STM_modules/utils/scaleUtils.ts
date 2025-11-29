@@ -188,10 +188,16 @@ export function calculateScaling(
     const newBL = transformPoint(vBL.x, vBL.y)
 
     // 4.3 反解属性
-    // 新宽度 = TL 到 TR 的距离
-    const newWidth = Math.sqrt(Math.pow(newTR.x - newTL.x, 2) + Math.pow(newTR.y - newTL.y, 2))
-    // 新高度 = TL 到 BL 的距离
-    const newHeight = Math.sqrt(Math.pow(newBL.x - newTL.x, 2) + Math.pow(newBL.y - newTL.y, 2))
+    let newWidth = Math.sqrt(Math.pow(newTR.x - newTL.x, 2) + Math.pow(newTR.y - newTL.y, 2))
+    let newHeight = Math.sqrt(Math.pow(newBL.x - newTL.x, 2) + Math.pow(newBL.y - newTL.y, 2))
+
+    // 对于文本元素，设置最小宽度和高度
+    if (initEl.type === 'text') {
+      // 增加最小宽度到50像素，这样更容易编辑文本
+      newWidth = Math.max(newWidth, 50)
+      // 设置最小高度为30像素，确保至少能显示一行文本
+      newHeight = Math.max(newHeight, 30)
+    }
 
     // 新中心 = (TL + TR + BL + BR)/2 => (TL + BR)/2
     // 利用矩形对角线性质：Mid(TL, BR) = Mid(TR, BL)
