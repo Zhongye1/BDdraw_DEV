@@ -181,22 +181,48 @@ export class StageInteractionHandler {
           const element = state.elements[id]
 
           if (sprite && initData && element) {
-            // 计算新位置：初始位置 + 总位移
+            // 1. 计算逻辑上的左上角坐标 (Store 中的 x, y)
             const newX = (initData.x || 0) + totalDx
             const newY = (initData.y || 0) + totalDy
 
-            // 检查元素是否有旋转
-            // 对于有旋转的元素，Pixi Sprites 通常 pivot 在中心，需要补偿位置
-            if (element.rotation !== undefined && element.rotation !== 0) {
-              sprite.position.set(newX + (element.width || 0) / 2, newY + (element.height || 0) / 2)
-            } else {
-              // 处理文本元素，pivot设置在中心
-              if (element.type === 'text') {
-                sprite.position.set(newX + (element.width || 0) / 2, newY + (element.height || 0) / 2)
-              } else {
-                sprite.position.set(newX, newY)
+            // 2. 计算视觉补偿偏移量
+            // 我们需要知道 Pixi 对象是基于哪个点来定位的
+            let offsetX = 0
+            let offsetY = 0
+
+            // 情况 A: 也就是 Sprite 或 Text，使用 anchor (归一化 0-1)
+            if ('anchor' in sprite && (sprite as any).anchor) {
+              offsetX = (sprite as any).anchor.x * (element.width || 0)
+              offsetY = (sprite as any).anchor.y * (element.height || 0)
+            }
+            // 情况 B: Container 或 Graphics，使用 pivot (像素值)
+            // 很多时候即使没有旋转，渲染器也会设置 pivot 为中心以便于后续操作
+            else if (sprite.pivot) {
+              // pivot 是局部坐标系下的像素偏移
+              // 注意：如果你的渲染器在缩放时调整了 scale 而不是 width/height，这里可能需要考虑 scale
+              // 但通常 canvas 编辑器直接操作 width/height，所以直接取 pivot 即可
+              offsetX = sprite.pivot.x
+              offsetY = sprite.pivot.y
+            }
+
+            // 3. 兜底策略 (为了兼容某些还没设置 pivot 但逻辑上需要中心旋转的情况)
+            // 只有当 pivot 为 0 且真的发生了旋转时，才手动计算中心
+            if (offsetX === 0 && offsetY === 0) {
+              const EPSILON = 0.001
+              if (element.rotation && Math.abs(element.rotation) > EPSILON) {
+                offsetX = (element.width || 0) / 2
+                offsetY = (element.height || 0) / 2
+              }
+              // 特别处理文本元素 - 即使没有旋转，文本元素也可能使用中心点作为锚点
+              else if (element.type === 'text') {
+                offsetX = (element.width || 0) / 2
+                offsetY = (element.height || 0) / 2
               }
             }
+
+            // 4. 应用最终坐标
+            // 视觉坐标 = 逻辑左上角 + 原点偏移量
+            sprite.position.set(newX + offsetX, newY + offsetY)
           }
         })
 
