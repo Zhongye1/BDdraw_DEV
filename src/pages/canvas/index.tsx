@@ -10,6 +10,7 @@ import { Minimap } from '@/components/minimap/Minimap'
 import { getDefaultLayout } from '@/components/layout'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { CollaboratorCursors } from '@/components/collaboration/CollaboratorCursors'
+import ContextMenu from '@/components/canvas_toolbar/ContextMenu'
 import {
   initWsProvider,
   getAwareness,
@@ -225,6 +226,9 @@ export default function PixiCanvas() {
 
         {/* 协作光标 */}
         {awareness && stageManager && <CollaboratorCursors awareness={awareness} stageManager={stageManager} />}
+
+        {/* 右键菜单 - [修改] 传递 container 属性 */}
+        <ContextMenu stageManager={stageManager} container={containerRef.current} />
 
         {/* 3. 右侧属性面板 (保持原样，它是 fixed 或 absolute right-0) */}
         <PropertyPanel />

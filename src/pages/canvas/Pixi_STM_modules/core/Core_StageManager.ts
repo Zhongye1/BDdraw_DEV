@@ -393,10 +393,14 @@ export class StageManagerCore {
     updateCursor(this.app.canvas, tool, this.state.isSpacePressed)
   }
 
+  /**
+   * 销毁整个 StageManager 实例，清理所有资源
+   */
   public destroy() {
+    console.log('[StageManager] 开始销毁...')
     this.state.destroyed = true
 
-    // 移除全局监听器，防止内存泄漏和幽灵调用
+    // 移除辅助线事件监听
     window.removeEventListener('drawGuidelines', this._boundDrawGuidelines)
     window.removeEventListener('clearGuidelines', this._boundClearGuidelines)
 
@@ -416,7 +420,7 @@ export class StageManagerCore {
     }
 
     // 销毁应用，确保 app 存在且未被销毁
-    if (this.app && !this.app.renderer?.destroy) {
+    if (this.app) {
       // 确保 viewport 存在再尝试销毁
       if (this.viewport) {
         // 移除可能的事件监听器
@@ -427,7 +431,23 @@ export class StageManagerCore {
         }
       }
 
-      this.app.destroy(true, { children: true, texture: true })
+      // 在销毁前检查 renderer 是否存在
+      if (this.app.renderer) {
+        this.app.destroy(true, { children: true, texture: true })
+      } else {
+        // 如果 renderer 不存在，尝试移除 canvas 元素
+        try {
+          // 检查 app.canvas 是否存在再访问其 parentNode
+          if (this.app.canvas && this.app.canvas.parentNode) {
+            this.app.canvas.parentNode.removeChild(this.app.canvas)
+          }
+        } catch (e) {
+          // 忽略 DOM 操作错误
+          console.warn('[StageManager] 清理 canvas 元素时出错:', e)
+        }
+      }
     }
+
+    console.log('[StageManager] 销毁完成')
   }
 }
