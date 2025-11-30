@@ -1,6 +1,6 @@
 # BDdraw_DEV
 
-基于 React 18 + TypeScript 5 + Vite 3 + Tailwind CSS 3 + Zustand + PixiJS v8 的 2D 画布应用
+现代 2D 画布应用 · React 18 + TypeScript + Vite + TailwindCSS + Zustand + PixiJS v8
 
 #### 技术栈 · Tech Stack
 

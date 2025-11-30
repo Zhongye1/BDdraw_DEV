@@ -34,7 +34,14 @@ const router = createBrowserRouter(
   [
     {
       path: '/',
-      element: <Navigate to="/canvas" replace />,
+      element: (
+        <>
+          <Header />
+          <div className="pt-16">
+            <Home />
+          </div>
+        </>
+      ),
     },
     {
       path: '/canvas',
