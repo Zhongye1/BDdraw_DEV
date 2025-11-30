@@ -245,7 +245,7 @@ export const useStore = create<CanvasState>()(
         pasteOffset: 0,
         status: 'loading', // 初始状态为 loading
         currentStyle: {
-          fill: '#fbfbfdd2', // 默认文字颜色
+          fill: '#ffffff00', // 默认填充颜色
           stroke: '#000000',
           strokeWidth: 2,
           alpha: 1,

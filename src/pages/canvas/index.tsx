@@ -7,9 +7,9 @@ import TopToolbar from '@/components/canvas_toolbar/TopToolbar'
 import BottomTextEditor from '@/components/Richtext_editor/BottomTextEditor'
 import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
 import { Minimap } from '@/components/minimap/Minimap'
-import { getDefaultLayout } from '@/components/layout'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { CollaboratorCursors } from '@/components/collaboration/CollaboratorCursors'
+import { RemoteSelectionLayer } from '@/components/collaboration/RemoteSelectionLayer'
 import ContextMenu from '@/components/canvas_toolbar/ContextMenu'
 import {
   initWsProvider,
@@ -35,7 +35,7 @@ export default function PixiCanvas() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
 
-  // 生成随机颜色和名字用于演示
+  // 生成随机颜色用于演示
   const myColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
   const myName = 'User ' + Math.floor(Math.random() * 100)
 
@@ -88,9 +88,23 @@ export default function PixiCanvas() {
 
     // 初始化自己的信息
     if (currentAwareness) {
-      currentAwareness.setLocalStateField('user', {
-        name: myName,
-        color: myColor,
+      // 异步获取真实用户名，如果未登录则使用默认名称
+      Promise.resolve().then(() => {
+        let actualUserName = myName
+        try {
+          const userStr = localStorage.getItem('user')
+          if (userStr) {
+            const userObj = JSON.parse(userStr)
+            actualUserName = userObj.username || myName
+          }
+        } catch (e) {
+          console.warn('Failed to parse user info from localStorage', e)
+        }
+
+        currentAwareness.setLocalStateField('user', {
+          name: actualUserName,
+          color: myColor,
+        })
       })
     }
 
@@ -179,6 +193,34 @@ export default function PixiCanvas() {
     }
   }
 
+  // 广播自己的选中状态
+  useEffect(() => {
+    if (!awareness) return
+
+    // 获取当前选中的元素ID
+    const { selectedIds } = useStore.getState()
+
+    // 广播初始选中状态
+    awareness.setLocalStateField('selection', selectedIds)
+
+    // 监听 Zustand store 中的 selectedIds 变化
+    const unsubscribe = useStore.subscribe(
+      (state) => state.selectedIds,
+      (selectedIds) => {
+        // 将选中的 ID 列表更新到 Awareness
+        awareness.setLocalStateField('selection', selectedIds)
+      },
+    )
+
+    return () => {
+      unsubscribe()
+      // 清除选中状态
+      if (awareness) {
+        awareness.setLocalStateField('selection', [])
+      }
+    }
+  }, [awareness])
+
   // 使用自定义hook管理快捷键
   useCanvasShortcuts()
 
@@ -261,6 +303,9 @@ export default function PixiCanvas() {
         {/* 协作光标 */}
         {awareness && stageManager && <CollaboratorCursors awareness={awareness} stageManager={stageManager} />}
 
+        {/* 远程用户选中元素的可视化 */}
+        {awareness && stageManager && <RemoteSelectionLayer awareness={awareness} stageManager={stageManager} />}
+
         {/* 右键菜单 - [修改] 传递 container 属性 */}
         <ContextMenu stageManager={stageManager} container={containerRef.current} />
 
@@ -305,5 +350,3 @@ export default function PixiCanvas() {
     </StageManagerProvider>
   )
 }
-
-PixiCanvas.getLayout = getDefaultLayout

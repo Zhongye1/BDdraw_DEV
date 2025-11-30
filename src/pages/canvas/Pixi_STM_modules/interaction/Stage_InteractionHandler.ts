@@ -422,20 +422,10 @@ export class StageInteractionHandler {
         Object.keys(dragInitialStates).forEach((id) => {
           const initData = dragInitialStates[id]
           if (initData) {
-            const element = state.elements[id]
-            // 对于文本元素和旋转元素，需要特殊处理位置
-            // 因为它们的pivot在中心，而在拖拽过程中我们已经做了位置补偿
-            // 所以这里只需要简单加上位移即可
-            if (element && ((element.rotation !== undefined && element.rotation !== 0) || element.type === 'text')) {
-              updates[id] = {
-                x: (initData.x || 0) + totalDx,
-                y: (initData.y || 0) + totalDy,
-              }
-            } else {
-              updates[id] = {
-                x: (initData.x || 0) + totalDx,
-                y: (initData.y || 0) + totalDy,
-              }
+            // 所有元素统一使用相同的坐标更新逻辑
+            updates[id] = {
+              x: (initData.x || 0) + totalDx,
+              y: (initData.y || 0) + totalDy,
             }
           }
         })

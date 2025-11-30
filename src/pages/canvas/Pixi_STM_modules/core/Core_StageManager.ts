@@ -16,14 +16,14 @@ export class StageManagerCore {
   public viewport!: Viewport
 
   private elementLayer: PIXI.Container = new PIXI.Container()
-  private uiLayer: PIXI.Container = new PIXI.Container()
+  public uiLayer: PIXI.Container = new PIXI.Container()
   private guidelineLayer!: PIXI.Graphics // 辅助线图层
 
   // 显式定义事件处理函数引用
   private _boundDrawGuidelines: (e: Event) => void
   private _boundClearGuidelines: () => void
 
-  private elementRenderer = new ElementRenderer()
+  public elementRenderer = new ElementRenderer()
   private transformerRenderer = new TransformerRenderer()
 
   private interactionHandler!: InteractionHandler
