@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Helmet } from 'react-helmet-async'
 import { Grid } from '@arco-design/web-react'
 import { IconGithub } from '@arco-design/web-react/icon'
+import { useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 
 // Swiper 核心
@@ -248,6 +249,7 @@ const TerminalDemo = ({ isActive }: { isActive: boolean }) => {
 
 export default function Home() {
   const [activeIndex, setActiveIndex] = useState(0)
+  const navigate = useNavigate()
 
   return (
     <>
@@ -255,7 +257,7 @@ export default function Home() {
         <title>BDdraw_DEV - Development</title>
       </Helmet>
 
-      <div className="relative h-[calc(100vh-4rem)] overflow-hidden bg-[#000000f3] p-6 text-white">
+      <div className="relative h-screen overflow-hidden bg-[#000000f3] p-6 pt-16 text-white">
         {/* 背景层 */}
         <div
           className="duration-[1200ms] absolute inset-0 z-0 bg-cover bg-center opacity-20 transition-transform ease-out"
@@ -295,7 +297,7 @@ export default function Home() {
                     <button
                       onClick={() => {
                         // 跳转到登录页
-                        window.location.href = '/BDdraw_DEV/login'
+                        navigate('/rooms')
                       }}
                       className="group flex items-center gap-2 bg-white px-8 py-4 text-sm font-bold text-black transition-all hover:bg-blue-500 hover:text-white"
                     >

@@ -8,6 +8,7 @@ import Register from '@/pages/auth/Register'
 import RoomManagement from '@/pages/room/RoomManagement'
 import ErrorPage from '@/components/error-page'
 import { Header } from '@/components/header'
+import AnimatedRoutes from '@/components/AnimatedRoutes'
 
 // 自定义组件，用于处理默认画布路由
 const DefaultCanvasRoute: React.FC = () => {
@@ -30,89 +31,60 @@ const DefaultCanvasRoute: React.FC = () => {
   }
 }
 
+// 布局组件，包含公共的头部和页面容器
+const Layout = ({ children }: { children: React.ReactNode }) => (
+  <>
+    <Header />
+    <div className="pt-16">{children}</div>
+  </>
+)
+
+// 主布局组件，包含动画和公共布局
+const MainLayout = () => (
+  <Layout>
+    <AnimatedRoutes />
+  </Layout>
+)
+
 const router = createBrowserRouter(
   [
     {
-      path: '/',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <Home />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/canvas',
-      element: <DefaultCanvasRoute />,
-    },
-    {
-      path: '/canvas/:roomId',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <CanvasPage />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/intro',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <IntroPage />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/login',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <Login />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/register',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <Register />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/rooms',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <RoomManagement />
-          </div>
-        </>
-      ),
-    },
-    {
-      path: '/home',
-      element: (
-        <>
-          <Header />
-          <div className="pt-16">
-            <Home />
-          </div>
-        </>
-      ),
-      errorElement: <ErrorPage />,
+      element: <MainLayout />,
+      children: [
+        {
+          path: '/',
+          element: <Home />,
+        },
+        {
+          path: '/canvas',
+          element: <DefaultCanvasRoute />,
+        },
+        {
+          path: '/canvas/:roomId',
+          element: <CanvasPage />,
+        },
+        {
+          path: '/intro',
+          element: <IntroPage />,
+        },
+        {
+          path: '/login',
+          element: <Login />,
+        },
+        {
+          path: '/register',
+          element: <Register />,
+        },
+        {
+          path: '/rooms',
+          element: <RoomManagement />,
+        },
+        {
+          path: '/home',
+          element: <Home />,
+          errorElement: <ErrorPage />,
+        },
+      ],
     },
   ],
   {

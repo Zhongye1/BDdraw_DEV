@@ -30,12 +30,41 @@ export function Header(props: IProps) {
     } else {
       setIsLoggedIn(false)
     }
+
+    // 监听登录状态变更事件
+    const handleLoginStatusChange = (event: CustomEvent) => {
+      if (event.detail.isLoggedIn) {
+        // 用户已登录，从localStorage获取用户信息
+        const userStr = localStorage.getItem('user')
+        if (userStr) {
+          try {
+            const user = JSON.parse(userStr)
+            setUsername(user.username)
+            setIsLoggedIn(true)
+          } catch (e) {
+            console.error('解析用户信息失败:', e)
+          }
+        }
+      } else {
+        // 用户已登出
+        setIsLoggedIn(false)
+        setUsername('')
+      }
+    }
+
+    window.addEventListener('user-login-status-changed', handleLoginStatusChange as EventListener)
+
+    return () => {
+      window.removeEventListener('user-login-status-changed', handleLoginStatusChange as EventListener)
+    }
   }, [])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setIsLoggedIn(false)
+    // 发送自定义事件通知其他组件更新登录状态
+    window.dispatchEvent(new CustomEvent('user-login-status-changed', { detail: { isLoggedIn: false } }))
     Notification.success({
       title: '退出成功',
       content: '您已安全退出系统',

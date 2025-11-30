@@ -19,7 +19,9 @@ const Login: React.FC = () => {
         title: '登录成功',
         content: '欢迎回来！',
       })
-      navigate('/')
+      // 发送自定义事件通知Header组件更新登录状态
+      window.dispatchEvent(new CustomEvent('user-login-status-changed', { detail: { isLoggedIn: true } }))
+      navigate('/rooms')
     } catch (error: any) {
       Notification.error({
         title: '登录失败',
@@ -39,7 +41,7 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="flex  h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
+    <div className="mt-16  flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
       <ParallaxBackground
         className="hidden w-[60vw] bg-gray-900 lg:block"
         imageUrl="https://images.unsplash.com/photo-1497294815431-9365093b7331?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"

@@ -295,9 +295,9 @@ const RoomManagement: React.FC = () => {
   )
 
   return (
-    <div className="h-[calc(100vh-4rem)] overflow-hidden bg-gray-100 p-6">
+    <div className="mt-16 h-[calc(100vh-4rem)] overflow-hidden bg-gray-100 p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="min-h-[700px] rounded-lg bg-white p-6 shadow-sm">
+        <div className="h-[600px] rounded-lg bg-white p-6 shadow-sm">
           <div className="mb-6 flex justify-between bg-white p-4 pb-1 pt-1">
             <Title heading={4}>房间管理</Title>
 

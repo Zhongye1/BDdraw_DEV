@@ -16,9 +16,15 @@ const Register: React.FC = () => {
       localStorage.setItem('token', response.token)
       localStorage.setItem('user', JSON.stringify(response.user))
       Notification.success({
-        title: '欢迎',
-        content: '注册成功',
+        title: '注册成功',
+        content: '账户创建完成，欢迎使用！',
       })
+      // 发送自定义事件通知其他组件更新登录状态
+      window.dispatchEvent(
+        new CustomEvent('user-login-status-changed', {
+          detail: { isLoggedIn: true },
+        }),
+      )
       navigate('/')
     } catch (error: any) {
       Notification.error({
@@ -30,21 +36,17 @@ const Register: React.FC = () => {
     }
   }
 
-  const onLogin = () => {
+  const onBackToLogin = () => {
     navigate('/login')
   }
 
-  const onOfflineMode = () => {
-    navigate('/canvas')
-  }
-
   return (
-    <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
+    <div className="mt-16 flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
       <ParallaxBackground
         className="hidden w-[60vw] bg-gray-900 lg:block"
-        imageUrl="https://images.unsplash.com/photo-1517048676732-d65bc937f952?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
-        title="加入我们"
-        description="创建账号，探索无限可能。"
+        imageUrl="https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
+        title="开始使用"
+        description="创建您的专属账户"
       />
 
       {/* 右侧表单区域 */}
@@ -69,6 +71,7 @@ const Register: React.FC = () => {
               rules={[
                 { required: true, message: '请输入用户名' },
                 { minLength: 3, message: '用户名至少3个字符' },
+                { maxLength: 20, message: '用户名最多20个字符' },
               ]}
             >
               <Input placeholder="请输入用户名" />
@@ -83,6 +86,24 @@ const Register: React.FC = () => {
             >
               <Input.Password placeholder="请输入密码" autoComplete="new-password" />
             </Form.Item>
+            <Form.Item
+              label="确认密码"
+              field="confirmPassword"
+              dependencies={['password']}
+              rules={[
+                { required: true, message: '请确认密码' },
+                {
+                  validator: (_, value) => {
+                    if (!value || form.getFieldValue('password') === value) {
+                      return Promise.resolve()
+                    }
+                    return Promise.reject(new Error('两次输入的密码不一致'))
+                  },
+                },
+              ]}
+            >
+              <Input.Password placeholder="请再次输入密码" />
+            </Form.Item>
 
             <Form.Item className="pt-4">
               <Button type="primary" htmlType="submit" loading={loading} long className="h-10 text-base">
@@ -91,19 +112,13 @@ const Register: React.FC = () => {
             </Form.Item>
           </Form>
 
-          <div className="mt-4 flex flex-col gap-2">
-            <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
-              离线模式
-            </Button>
-
-            <div className="text-center">
-              <p className="text-gray-600">
-                已有账号？{' '}
-                <Button type="text" onClick={onLogin} className="px-0 font-semibold hover:bg-transparent">
-                  立即登录
-                </Button>
-              </p>
-            </div>
+          <div className="mt-6 text-center">
+            <p className="text-gray-600">
+              已有账户？{' '}
+              <Button type="text" onClick={onBackToLogin} className="px-0 font-semibold hover:bg-transparent">
+                立即登录
+              </Button>
+            </p>
           </div>
         </div>
       </div>

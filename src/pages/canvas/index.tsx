@@ -42,6 +42,21 @@ export default function PixiCanvas() {
   const [awareness, setAwareness] = useState<any>(null)
   const [showLoginPrompt, setShowLoginPrompt] = useState(false)
   const [collaborators, setCollaborators] = useState<Map<number, any>>(new Map())
+  const [isOnline, setIsOnline] = useState(navigator.onLine)
+
+  // 监听网络状态变化
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true)
+    const handleOffline = () => setIsOnline(false)
+
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
 
   // 初始化 WebSocket 连接
   useEffect(() => {
@@ -87,13 +102,18 @@ export default function PixiCanvas() {
     // 这会触发 Store 内部的重置和重新绑定
     setYjsData(ydoc, yElements, provider)
 
+    // 检查是否需要显示登录提示（基于网络状态和token）
+    if (!isOnline || !token) {
+      setShowLoginPrompt(true)
+    }
+
     return () => {
       // 组件卸载或 roomId 变化时的清理
       destroyRoomResources(targetRoomId)
       // 可选：清理 store，防止下次加载前显示旧数据
       useStore.getState().resetStore()
     }
-  }, [roomId, navigate, setYjsData])
+  }, [roomId, navigate, setYjsData, isOnline])
 
   // 监听协作用户变化
   useEffect(() => {
@@ -113,6 +133,17 @@ export default function PixiCanvas() {
       awareness.off('change', handleAwarenessChange)
     }
   }, [awareness])
+
+  // 监听网络状态变化并更新登录提示
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (!isOnline || !token) {
+      setShowLoginPrompt(true)
+    } else {
+      // 网络连接正常且有token时不自动隐藏提示
+      // 用户需要手动关闭提示
+    }
+  }, [isOnline])
 
   const handleLoginRedirect = () => {
     navigate('/login')
@@ -198,13 +229,16 @@ export default function PixiCanvas() {
 
   return (
     <StageManagerProvider stageManager={stageManager}>
-      <div className="relative h-[92vh] w-auto overflow-hidden bg-blue-200" onPointerMove={handlePointerMove}>
+      <div
+        className="relative mt-16 h-[calc(100vh-64px)] w-auto overflow-hidden bg-blue-200"
+        onPointerMove={handlePointerMove}
+      >
         {/* 登录提示横幅 */}
         {showLoginPrompt && (
           <div className="absolute  bottom-0 left-0 right-0 z-50 bg-orange-100 p-2 text-center text-sm">
             <div className="flex items-center justify-center">
               <IconWarning className="mr-2 text-orange-500" />
-              <span>当前处于离线模式，登录以启用多人协作</span>
+              <span>{!isOnline ? '网络连接已断开，' : ''}当前处于离线模式，登录以启用多人协作</span>
               <Button type="primary" size="small" className="ml-4" onClick={handleLoginRedirect}>
                 登录
               </Button>
