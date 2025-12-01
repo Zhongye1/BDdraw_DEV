@@ -1,119 +1,10 @@
 # BDdraw_DEV
 
-现代 2D 画布应用 · React 18 + TypeScript + Vite + TailwindCSS + Zustand + PixiJS v8
+现代协同 2D 画布编辑器 · React 18 + TypeScript + Vite + TailwindCSS + Zustand + PixiJS v8
 
 #### 技术栈 · Tech Stack
 
-核心框架 | Core
-
-<img src="https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white" alt="React 18"/> <img src="https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white" alt="TypeScript"/> <img src="https://img.shields.io/badge/Vite-5-646CFF?logo=vite&logoColor=white" alt="Vite"/> <img src="https://img.shields.io/badge/React%20Router%20DOM-6-CA4245?logo=reactrouter&logoColor=white" alt="React Router"/>
-
-构建与样式 | Build & Styling
-
-<img src="https://img.shields.io/badge/Tailwind%20CSS-3-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/> <img src="https://img.shields.io/badge/Less-3-1D365D?logo=less&logoColor=white" alt="Less"/> <img src="https://img.shields.io/badge/PostCSS-DD3A0A?logo=postcss&logoColor=white" alt="PostCSS"/> <img src="https://img.shields.io/badge/SVGR-1.5-DA2C4D?logo=svg&logoColor=white" alt="SVGR"/>
-
-UI 组件库 | UI Library
-
-<img src="https://img.shields.io/badge/shadcn%2Fui-latest-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui"/> <img src="https://img.shields.io/badge/Arco%20Design-2-006AFF?logo=arco-design&logoColor=white" alt="Arco Design"/>
-<img src="https://img.shields.io/badge/shadcn%2Fui-latest-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui"/> <img src="https://img.shields.io/badge/Arco%20Design-2-006AFF?logo=arco-design&logoColor=white" alt="Arco Design"/>
-
-数据请求与缓存 | Data Fetching
-
-<img src="https://img.shields.io/badge/react--query-v5-FF4154.svg?style=flat&logo=react-query&logoColor=white" alt="React Query"/> <img src="https://img.shields.io/badge/React%20Query%20Devtools-FF4154?logo=reactquery&logoColor=white" alt="React Query Devtools"/>
-
-状态管理 | State Management
-
-<img src="https://img.shields.io/badge/Zustand-4-443333?logo=zustand&logoColor=white" alt="Zustand"/>
-
-图形渲染 | Graphics & Canvas
-
-<img src="https://img.shields.io/badge/PixiJS-8-CC0066?logo=pixijs&logoColor=white" alt="PixiJS v8"/> <img src="https://img.shields.io/badge/pixi--viewport-latest-CC0066?logo=pixijs&logoColor=white" alt="pixi-viewport"/>
-
-富文本编辑 | Rich Text Editor
-
-<img src="https://img.shields.io/badge/WangEditor-latest-1F1F1F?logo=tiptap&logoColor=white" alt="Tiptap"/>
-
-图标 | Icons
-
-<img src="https://img.shields.io/badge/Lucide%20React-1.5-000000?logo=lucide&logoColor=white" alt="Lucide React"/>
-
-工具库 | Utilities
-
-<img src="https://img.shields.io/badge/nanoid-3-000000" alt="nanoid"/> <img src="https://img.shields.io/badge/Immer-10-00E0C8?logo=immer&logoColor=white" alt="Immer"/>
-
-代码质量 | Code Quality
-
-<img src="https://img.shields.io/badge/ESLint-8-4B32C3?logo=eslint&logoColor=white" alt="ESLint"/> <img src="https://img.shields.io/badge/Stylelint-5-000000?logo=stylelint&logoColor=white" alt="Stylelint"/> <img src="https://img.shields.io/badge/Prettier-3-F7B93E?logo=prettier&logoColor=white" alt="Prettier"/> <img src="https://img.shields.io/badge/Husky-latest-7711A4?logoColor=white" alt="Husky"/> <img src="https://img.shields.io/badge/lint--staged-latest-7711A4?logoColor=white" alt="lint-staged"/> <img src="https://img.shields.io/badge/commitlint-latest-00C853?logo=commitlint&logoColor=white" alt="commitlint"/> <img src="https://img.shields.io/badge/EditorConfig-latest-FFFFFF?logo=editorconfig&logoColor=black" alt="EditorConfig"/>
-
-#### 项目架构树
-
-```sh
-BDdraw_DEV/
-├── .husky/                     # Git hooks 配置
-├── .vscode/                    # VSCode 配置
-├── docs/                       # 文档目录
-├── public/                     # 静态资源目录
-├── src/                        # 源代码主目录
-│   ├── api/                    # API 接口定义
-│   ├── assets/                 # 静态资源文件
-│   ├── components/             # 公共组件
-│   │   ├── Richtext_editor/    # 富文本编辑器组件
-│   │   ├── canvas_toolbar/     # 画布工具栏组件
-│   │   ├── console/            # 控制台组件
-│   │   ├── error-page/         # 错误页面组件
-│   │   ├── header/             # 头部组件
-│   │   ├── image-insert-modal/ # 图像插入模态框组件
-│   │   ├── layout/             # 布局组件
-│   │   ├── property-panel/     # 属性面板组件
-│   │   └── ui/                 # 基础UI组件
-│   ├── hooks/                  # 自定义 React Hooks
-│   ├── lib/                    # 工具库和核心功能模块
-│   │   ├── ResizeCommand.ts    # 调整大小命令
-│   │   ├── UndoRedoManager.ts  # 撤销重做管理器
-│   │   ├── UpdateElementCommand.ts # 更新元素命令
-│   │   ├── constants.ts        # 常量定义
-│   │   ├── env.ts              # 环境配置
-│   │   └── utils.ts            # 工具函数
-│   ├── pages/                  # 页面组件
-│   │   ├── about/              # 关于页面
-│   │   ├── canvas/             # 画布页面
-│   │   │   ├── Pixi_STM_modules
-│   │   │   │   ├── core/        # 核心类和初始化逻辑
-│   │   │   │   ├── element-rendering/  # 元素渲染模块
-│   │   │   │   ├── transformer-rendering/  # 变换控制器渲染模块
-│   │   │   │   ├── interaction/ # 交互处理模块
-│   │   │   │   ├── utils/       # 工具函数
-│   │   │   │   └── STM_modules.md  # 模块说明文档
-│   │   │   ├── Pixi_stageManager.ts # Pixi舞台管理器入口
-│   │   │   └── index.tsx       # 画布页面入口
-│   │   └── home/               # 主页
-│   │       └── index.tsx       # 主页入口
-│   ├── router/                 # 路由配置
-│   │   └── router.tsx          # 路由定义
-│   ├── stores/                 # 状态管理
-│   │   └── canvasStore.ts      # 画布状态管理
-│   ├── styles/                 # 样式文件
-│   ├── app.tsx                 # 应用入口组件
-│   ├── main.tsx                # 主入口文件
-│   └── vite-env.d.ts           # Vite 环境声明文件
-├── .editorconfig               # 编辑器配置
-├── .eslintrc                  # ESLint 配置
-├── .gitignore                 # Git 忽略文件配置
-├── .prettierrc.js             # Prettier 配置
-├── .stylelintrc.json          # Stylelint 配置
-├── commitlint.config.cjs      # Commitlint 配置
-├── components.json            # 组件配置
-├── index.html                 # HTML 入口
-├── lint-staged.config.js      # Lint-staged 配置
-├── package.json               # 项目依赖和脚本配置
-├── postcss.config.js          # PostCSS 配置
-├── tailwind.config.js         # Tailwind CSS 配置
-├── transmart.config.ts        # Transmart 配置
-├── tsconfig.json              # TypeScript 配置
-├── tsconfig.node.json         # Node.js TypeScript 配置
-├── vite.config.ts             # Vite 配置
-└── README.md                  # 项目说明文档
-```
+<img src="https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react&logoColor=white" alt="React 18"/> <img src="https://img.shields.io/badge/TypeScript-5.3.3-3178C6?logo=typescript&logoColor=white" alt="TypeScript 5"/> <img src="https://img.shields.io/badge/Vite-7.2.4-646CFF?logo=vite&logoColor=white" alt="Vite 7"/> <img src="https://img.shields.io/badge/React_Router-6-CA4245?logo=reactrouter&logoColor=white" alt="React Router 6"/> <img src="https://img.shields.io/badge/Tailwind_CSS-3.3.1-06B6D4?logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/> <img src="https://img.shields.io/badge/tailwindcss--animate-1.0.7-06B6D4" alt="animate"/> <img src="https://img.shields.io/badge/Less-4.1.3-1D365D?logo=less&logoColor=white" alt="Less"/> <img src="https://img.shields.io/badge/Arco_Design-2.66.8-006AFF?logo=arco-design&logoColor=white" alt="Arco Design"/> <img src="https://img.shields.io/badge/shadcn/ui-latest-000000?logo=shadcnui&logoColor=white" alt="shadcn/ui"/> <img src="https://img.shields.io/badge/Lucide_React-0.554.0-000000?logo=lucide&logoColor=white" alt="Lucide"/> <img src="https://img.shields.io/badge/Zustand-5.0.8-443333?logo=zustand&logoColor=white" alt="Zustand"/> <img src="https://img.shields.io/badge/Immer-10.2.0-00E0C8?logo=immer&logoColor=white" alt="Immer"/> <img src="https://img.shields.io/badge/React_Query-v4.29-FF4154?logo=reactquery&logoColor=white" alt="React Query v4"/> <img src="https://img.shields.io/badge/PixiJS-8.14.3-CC0066?logo=pixijs&logoColor=white" alt="PixiJS v8"/> <img src="https://img.shields.io/badge/pixi--viewport-6.0.3-CC0066" alt="pixi-viewport"/> <img src="https://img.shields.io/badge/Tiptap-3.11.0-1F1F1F?logo=tiptap&logoColor=white" alt="Tiptap v3"/> <img src="https://img.shields.io/badge/Yjs-13.6.27-00D1FF?logo=yjs&logoColor=white" alt="Yjs"/> <img src="https://img.shields.io/badge/Framer_Motion-12.23.24-9D5CFF?logo=framer&logoColor=white" alt="Framer Motion 12"/> <img src="https://img.shields.io/badge/axios-1.13.2-5A29E4" alt="axios"/> <img src="https://img.shields.io/badge/nanoid-5.1.6-000000" alt="nanoid"/> <img src="https://img.shields.io/badge/swiper-12.0.3-00D1FF" alt="swiper"/> <img src="https://img.shields.io/badge/ESLint-8.38.0-4B32C3?logo=eslint&logoColor=white" alt="ESLint"/> <img src="https://img.shields.io/badge/Prettier-2.8.8-F7B93E?logo=prettier&logoColor=white" alt="Prettier"/> <img src="https://img.shields.io/badge/Husky-8.0.3-7711A4" alt="Husky"/> <img src="https://img.shields.io/badge/commitlint-20.1.0-00C853?logo=commitlint&logoColor=white" alt="commitlint"/> <img src="https://img.shields.io/badge/Deploy-GitHub_Pages-222222?logo=githubpages&logoColor=white" alt="GitHub Pages"/>
 
 #### 运行项目
 
@@ -127,19 +18,38 @@ bun install (安装依赖包)
 bun start (启动服务)
 ```
 
-也可以用 npm 和 yarn，个人更推荐使用 bun 包管理器，见个人博客
-
-[关于前端包管理器 npm,pnpm,yarn 和 bun 以及我为何选择后者](https://zhongye1.github.io/Arknight-notes/posts/15722.html)
-
 **backend**
 
 ```bash
-cd ALD_Backend/
-
+cd BDdraw_DEV/ALD_Backend/
 bun install #安装依赖
-
 bun index.ts  #启动后端服务
 ```
+
+推荐使用 bun 包管理器，见个人博客
+
+[关于包管理器 npm,pnpm,yarn 和 bun 以及我为何选择后者](https://zhongye1.github.io/Arknight-notes/posts/15722.html)
+
+#### Docker 部署
+
+项目支持通过 Docker 进行容器化部署，使用 Node 22 和 Bun 包管理器。
+
+**开发环境部署：**
+
+```bash
+docker-compose up -d
+```
+
+**生产环境部署：**
+
+```bash
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+部署完成后，可以通过以下地址访问：
+
+- 前端应用: http://localhost
+- 后端 API 文档: http://localhost:3000/swagger-ui
 
 #### 整体架构设计
 
@@ -226,6 +136,165 @@ bun index.ts  #启动后端服务
 **【实时协同】**【技术方案：Y.js + y-websocket（或自己写 CRDT）+ Operation Transform 合并策略实现无冲突的实时协同编辑，通过 y-websocket 插件实现服务端同步（问的 AI），有个思路是把操作打给时间 tag，然后然后按时间合并】
 
 ---
+
+#### 项目架构树
+
+```sh
+BDdraw_DEV/
+├── ALD_Backend/                    # 后端服务目录
+│   ├── src/                        # 后端源代码
+│   │   ├── api/                    # API接口目录
+│   │   │   ├── Room_management/    # 房间管理相关API
+│   │   │   │   ├── types/          # 房间管理相关类型定义
+│   │   │   │   │   ├── Room_CRUD_types.ts  # 房间增删改查类型定义
+│   │   │   │   │   ├── Room_List_types.ts  # 房间列表类型定义
+│   │   │   │   │   ├── Room_users_types.ts # 房间用户类型定义
+│   │   │   │   │   └── index.ts            # 类型索引文件
+│   │   │   │   ├── CORE.ts         # 核心房间管理逻辑
+│   │   │   │   ├── Room_CRUD.ts    # 房间增删改查操作实现
+│   │   │   │   ├── Room_List.ts    # 房间列表管理实现
+│   │   │   │   └── Room_users.ts   # 房间用户管理实现
+│   │   │   ├── USER_management/    # 用户管理相关API
+│   │   │   │   ├── auth_API.ts     # 用户认证API实现
+│   │   │   │   └── auth_API_types.ts  # 用户认证类型定义
+│   │   │   └── index.ts            # API索引文件
+│   │   ├── auth.ts                 # 认证模块实现
+│   │   ├── collab.ts               # 协作功能模块实现
+│   │   └── db.ts                   # 数据库连接和操作实现
+│   ├── ARCHITECTURE.md             # 后端架构说明文档
+│   ├── README.md                   # 后端说明文档
+│   ├── index.ts                    # 后端服务入口文件
+│   ├── package.json                # 后端依赖配置文件
+│   └── tsconfig.json               # 后端TypeScript配置
+├── src/                            # 前端源代码目录
+│   ├── api/                        # 前端API客户端
+│   │   ├── types/                  # API类型定义
+│   │   │   ├── Room_management/    # 房间管理相关类型定义
+│   │   │   │   ├── Room_CRUD_types.ts  # 房间增删改查类型定义
+│   │   │   │   ├── Room_List_types.ts  # 房间列表类型定义
+│   │   │   │   ├── Room_users_types.ts # 房间用户类型定义
+│   │   │   │   └── index.ts            # 类型索引文件
+│   │   │   ├── auth_API_types.ts   # 认证相关类型定义
+│   │   │   └── index.ts            # API类型索引文件
+│   │   ├── utils/                  # API工具函数
+│   │   │   └── apiClient.ts        # API客户端工具
+│   │   ├── apiService.ts           # API服务封装实现
+│   │   └── index.ts                # API索引文件
+│   ├── components/                 # React组件目录
+│   │   ├── Richtext_editor/        # 富文本编辑器组件
+│   │   │   ├── BottomTextEditor.tsx    # 底部文本编辑器实现
+│   │   │   └── Richtext_editor.tsx     # 富文本编辑器主组件
+│   │   ├── canvas_toolbar/         # 画布工具栏组件
+│   │   │   ├── ContextMenu.tsx     # 上下文菜单实现
+│   │   │   └── TopToolbar.tsx      # 顶部工具栏实现
+│   │   ├── collaboration/          # 协作功能组件
+│   │   │   ├── CollaboratorCursors.tsx # 协作者光标显示组件
+│   │   │   └── RemoteSelectionLayer.tsx # 远程选择层组件
+│   │   ├── error-page/             # 错误页面组件
+│   │   │   └── index.tsx           # 错误页面实现
+│   │   ├── header/                 # 页面头部组件
+│   │   │   ├── contents/           # 头部内容组件
+│   │   │   │   ├── ExportCanvasModal.tsx   # 导出画布模态框
+│   │   │   │   └── StageManagerContext.tsx # 舞台管理上下文
+│   │   │   └── index.tsx           # 头部组件入口
+│   │   ├── image-insert-modal/     # 图片插入模态框组件
+│   │   │   └── index.tsx           # 图片插入模态框实现
+│   │   ├── layout/                 # 布局组件
+│   │   │   └── index.tsx           # 布局组件实现
+│   │   ├── minimap/                # 小地图组件
+│   │   │   └── Minimap.tsx         # 小地图实现
+│   │   ├── property-panel/         # 属性面板组件
+│   │   │   └── index.tsx           # 属性面板实现
+│   │   ├── settings/               # 设置组件
+│   │   │   └── setting.tsx         # 设置组件实现
+│   │   ├── ui/                     # 基础UI组件
+│   │   │   ├── blackwhitebutton.tsx    # 黑白按钮组件
+│   │   │   ├── button.tsx          # 按钮组件
+│   │   │   ├── icon-circle.tsx     # 圆形图标组件
+│   │   │   ├── icon-clear.tsx      # 清除图标组件
+│   │   │   ├── icon-rect.tsx       # 矩形图标组件
+│   │   │   ├── icon-select.tsx     # 选择图标组件
+│   │   │   └── icon-triangle.tsx   # 三角形图标组件
+│   │   ├── AnimatedRoutes.tsx      # 动画路由组件
+│   │   ├── ParallaxBackground.tsx  # 视差背景组件
+│   │   └── WipeTransition.tsx      # 擦除过渡动画组件
+│   ├── hooks/                      # 自定义React Hooks
+│   │   ├── use-localstorage-state.ts   # localStorage状态管理Hook
+│   │   └── use_React_hotkeys_management.ts # 快捷键管理Hook
+│   ├── lib/                        # 工具库和核心功能模块
+│   │   ├── AddElementCommand.ts    # 添加元素命令实现
+│   │   ├── RemoveElementCommand.ts # 删除元素命令实现
+│   │   ├── UndoRedoManager.ts      # 撤销重做管理器实现
+│   │   ├── UpdateElementCommand.ts # 更新元素命令实现
+│   │   ├── UpdateElementPropertyCommand.ts # 更新元素属性命令实现
+│   │   ├── constants.ts            # 常量定义文件
+│   │   ├── env.ts                  # 环境变量配置
+│   │   ├── minimapUtils.ts         # 小地图工具函数
+│   │   └── utils.ts                # 通用工具函数
+│   ├── pages/                      # 页面组件目录
+│   │   ├── auth/                   # 认证相关页面
+│   │   │   ├── Login.tsx           # 登录页面实现
+│   │   │   └── Register.tsx        # 注册页面实现
+│   │   ├── canvas/                 # 画布主页面
+│   │   │   ├── Pixi_STM_modules/   # Pixi.js状态管理模块
+│   │   │   │   ├── core/           # 核心类和初始化逻辑
+│   │   │   │   │   ├── Core_StageManager.ts    # 核心舞台管理器
+│   │   │   │   │   ├── ElementRender.ts        # 元素渲染器
+│   │   │   │   │   ├── TF_controler_Renderer.ts # 变换控制器渲染器
+│   │   │   │   │   └── types.ts                # 核心类型定义
+│   │   │   │   ├── interaction/    # 交互处理模块
+│   │   │   │   │   ├── Base_InteractionHandler.ts   # 基础交互处理器
+│   │   │   │   │   └── Stage_InteractionHandler.ts  # 舞台交互处理器
+│   │   │   │   ├── shared/         # 共享类型定义
+│   │   │   │   │   └── types.ts    # 共享类型定义文件
+│   │   │   │   ├── utils/          # 工具函数目录
+│   │   │   │   │   ├── commandUtils.ts      # 命令工具函数
+│   │   │   │   │   ├── cursorUtils.ts       # 光标工具函数
+│   │   │   │   │   ├── destroyUtils.ts      # 销毁工具函数
+│   │   │   │   │   ├── dragUtils.ts         # 拖拽工具函数
+│   │   │   │   │   ├── drawingUtils.ts      # 绘图工具函数
+│   │   │   │   │   ├── eraserUtils.ts       # 橡皮擦工具函数
+│   │   │   │   │   ├── geometryUtils.ts     # 几何工具函数
+│   │   │   │   │   ├── guidelineUtils.ts    # 辅助线工具函数
+│   │   │   │   │   ├── interactionUtils.ts  # 交互工具函数
+│   │   │   │   │   ├── renderUtils.ts       # 渲染工具函数
+│   │   │   │   │   ├── resizeUtils.ts       # 调整大小工具函数
+│   │   │   │   │   ├── rotationUtils.ts     # 旋转工具函数
+│   │   │   │   │   ├── scaleUtils.ts        # 缩放工具函数
+│   │   │   │   │   ├── selectionUtils.ts    # 选择工具函数
+│   │   │   │   │   └── stateUtils.ts        # 状态工具函数
+│   │   │   │   └── STM_modules.md  # 状态管理模块说明文档
+│   │   │   ├── Pixi_stageManager.ts    # Pixi舞台管理器入口
+│   │   │   └── index.tsx           # 画布页面入口文件
+│   │   ├── home/                   # 主页
+│   │   │   ├── contents/           # 主页内容组件
+│   │   │   │   └── AKN.tsx         # AKN内容组件
+│   │   │   └── index.tsx           # 主页入口文件
+│   │   ├── intro/                  # 介绍页面
+│   │   │   └── index.tsx           # 介绍页面实现
+│   │   └── room/                   # 房间管理页面
+│   │       └── RoomManagement.tsx  # 房间管理页面实现
+│   ├── router/                     # 路由配置目录
+│   │   └── router.tsx              # 路由配置实现
+│   ├── stores/                     # 状态存储目录(Zustand)
+│   │   ├── canvasStore.ts          # 画布状态存储
+│   │   ├── persistenceStore.ts     # 持久化状态存储
+│   │   └── themeStore.ts           # 主题状态存储
+│   ├── app.tsx                     # 应用根组件
+│   ├── main.tsx                    # 应用入口文件
+│   └── vite-env.d.ts               # Vite环境声明文件
+├── README.md                       # 项目说明文档
+├── components.json                 # 组件配置文件
+├── index.html                      # HTML入口文件
+├── lint-staged.config.js           # Lint-staged配置
+├── package.json                    # 项目依赖和脚本配置
+├── postcss.config.js               # PostCSS配置
+├── tailwind.config.js              # Tailwind CSS配置
+├── transmart.config.ts             # Transmart配置
+├── tsconfig.json                   # TypeScript配置
+├── tsconfig.node.json              # Node.js TypeScript配置
+└── vite.config.ts                  # Vite构建配置
+```
 
 ### 项目架构设计
 
@@ -436,7 +505,6 @@ Zustand 状态变化同时触发数据持久化：
 
 部署地址：https://zhongye1.github.io/BDdraw_DEV/
 
-
 ![image-20251122221056789](./assets/image-20251122221056789.png)
 
 ![image-20251122221138270](./assets/image-20251122221138270.png)
@@ -537,7 +605,7 @@ Zustand 状态变化同时触发数据持久化：
 - ~~支持对选中元素（单个或多个）缩放~~
 - ~~支持对选中元素（单个或多个）旋转~~
 - ~~支持对多个元素进行组合操作，组合可以嵌套~~
-- ~~支持对多个元素进行打组、解组~~~~(组操作bug复现了，目前在修)~~（已修复）
+- ~~支持对多个元素进行打组、解组~~~~(组操作 bug 复现了，目前在修)~~（已修复）
 
 #### ~~【P0】性能优化~~
 
