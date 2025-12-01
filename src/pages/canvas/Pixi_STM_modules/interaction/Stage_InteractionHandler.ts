@@ -248,9 +248,8 @@ export class StageInteractionHandler {
       const state = useStore.getState()
       const selectedIds = state.selectedIds
       const handle = this.state.activeHandle
-      const initGroupBounds = this.state.initialGroupBounds
 
-      // 1. 特殊处理：线段/箭头的端点拖拽 (逻辑保持不变，因为它们是基于点的)
+      // === 修复开始：特殊处理线段/箭头的端点拖拽 ===
       const singleId = selectedIds[0]
       const singleEl = this.state.initialElementsMap[singleId]
       if (
@@ -259,33 +258,76 @@ export class StageInteractionHandler {
         (singleEl.type === 'line' || singleEl.type === 'arrow') &&
         (handle === 'p0' || handle === 'p1')
       ) {
+        // 1. 获取初始状态
         const initX = singleEl.x ?? 0
         const initY = singleEl.y ?? 0
+        const initW = singleEl.width ?? 0
+        const initH = singleEl.height ?? 0
+        const initRotation = singleEl.rotation ?? 0
         const points = singleEl.points || [
           [0, 0],
           [0, 0],
         ]
-        const p0Abs = { x: initX + points[0][0], y: initY + points[0][1] }
-        const p1Abs = { x: initX + points[1][0], y: initY + points[1][1] }
+
+        // 2. 辅助函数：绕中心旋转点
+        const rotatePoint = (x: number, y: number, cx: number, cy: number, angle: number) => {
+          const cos = Math.cos(angle)
+          const sin = Math.sin(angle)
+          const dx = x - cx
+          const dy = y - cy
+          return {
+            x: cx + dx * cos - dy * sin,
+            y: cy + dx * sin + dy * cos,
+          }
+        }
+
+        // 3. 计算旋转中心 (初始 BoundingBox 中心)
+        const cx = initX + initW / 2
+        const cy = initY + initH / 2
+
+        // 4. 计算两个端点在世界坐标系中的真实位置 (考虑了旋转)
+        // 注意：points 是相对于 (x, y) 的，未旋转时的绝对位置是 (initX + px, initY + py)
+        const p0Raw = { x: initX + points[0][0], y: initY + points[0][1] }
+        const p1Raw = { x: initX + points[1][0], y: initY + points[1][1] }
+
+        const p0World = rotatePoint(p0Raw.x, p0Raw.y, cx, cy, initRotation)
+        const p1World = rotatePoint(p1Raw.x, p1Raw.y, cx, cy, initRotation)
+
+        // 5. 确定新的两个端点位置
+        let newP0 = { ...p0World }
+        let newP1 = { ...p1World }
 
         if (handle === 'p0') {
-          p0Abs.x = currentPos.x
-          p0Abs.y = currentPos.y
+          newP0 = { x: currentPos.x, y: currentPos.y }
         } else {
-          p1Abs.x = currentPos.x
-          p1Abs.y = currentPos.y
+          newP1 = { x: currentPos.x, y: currentPos.y }
         }
-        const newX = Math.min(p0Abs.x, p1Abs.x)
-        const newY = Math.min(p0Abs.y, p1Abs.y)
-        const newW = Math.abs(p0Abs.x - p1Abs.x)
-        const newH = Math.abs(p0Abs.y - p1Abs.y)
+
+        // 6. 计算新的 Bounding Box (AABB)
+        const newX = Math.min(newP0.x, newP1.x)
+        const newY = Math.min(newP0.y, newP1.y)
+        const newW = Math.abs(newP0.x - newP1.x)
+        const newH = Math.abs(newP0.y - newP1.y)
+
+        // 7. 计算新的相对坐标 (此时旋转已重置为0，所以相对坐标 = 世界坐标 - 新TopLeft)
         const newPoints = [
-          [p0Abs.x - newX, p0Abs.y - newY],
-          [p1Abs.x - newX, p1Abs.y - newY],
+          [newP0.x - newX, newP0.y - newY],
+          [newP1.x - newX, newP1.y - newY],
         ]
-        state.updateElement(singleId, { x: newX, y: newY, width: newW, height: newH, points: newPoints })
+
+        // 8. 更新元素，并强制重置 rotation 为 0
+        // 重置旋转非常重要，因为通过拖动端点重新定义直线后，之前的旋转角度就不再需要了，否则会叠加导致错位
+        state.updateElement(singleId, {
+          x: newX,
+          y: newY,
+          width: newW,
+          height: newH,
+          points: newPoints,
+          rotation: 0,
+        })
         return
       }
+      // === 修复结束 ===
 
       // 使用分离的计算逻辑计算缩放结果
       const scaledElements = calculateScaling(

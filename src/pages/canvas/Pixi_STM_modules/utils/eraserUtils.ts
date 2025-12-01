@@ -25,10 +25,8 @@ export function handleErasingMove(
       undoRedoManager.executeCommand(removeCommand)
     }
   } else {
-    const eraserSize = 20
-    const parent = e.target?.parent
-    if (!parent) return
-    const worldPos = e.getLocalPosition(parent)
+    const eraserSize = 15
+    const worldPos = e.getLocalPosition(e.currentTarget as PIXI.Container)
 
     eraserGraphic.clear()
     eraserGraphic.circle(worldPos.x, worldPos.y, eraserSize)
