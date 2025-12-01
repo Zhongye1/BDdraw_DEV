@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useState } from 'react'
+import React, { useRef, useEffect } from 'react'
 import { useStore } from '@/stores/canvasStore'
 import { getContentBounds, getMinimapScale } from '@/lib/minimapUtils'
 import type { StageManager } from '@/pages/canvas/Pixi_stageManager'
@@ -11,121 +11,213 @@ interface MinimapProps {
 
 export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, height = 160 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
+
+  // =================================================================================
+  // 1. 数据同步层 (Data Synchronization)
+  // =================================================================================
+  // 我们使用 Ref 来存储最新的 elements 和选中状态。
+  // 这样 Pixi 的 Ticker 在运行时可以直接读取 Ref，而不需要依赖 React 的组件重绘。
   const elements = useStore((state) => state.elements)
   const selectedIds = useStore((state) => state.selectedIds)
-  const [triggerRender, setTriggerRender] = useState(0)
 
-  // 状态记录，用于拖拽逻辑
+  const dataRef = useRef({ elements, selectedIds })
+
+  // 当 React Store 更新时，悄悄更新 Ref，不触发组件重渲染
+  useEffect(() => {
+    dataRef.current = { elements, selectedIds }
+  }, [elements, selectedIds])
+
+  // 用于拖拽状态
   const isDragging = useRef(false)
 
-  // 1. 监听 Pixi Viewport 变化，强制重绘小地图
+  // 用于跟踪是否已经完成初始化绘制
+  const initialized = useRef(false)
+
+  // =================================================================================
+  // 2. 核心渲染循环 (Render Loop) - 完全脱离 React State
+  // =================================================================================
   useEffect(() => {
-    if (!stageManager || !stageManager.viewport) return
+    let retryCount = 0
+    const maxRetries = 50 // 最多重试50次
+    let retryTimeout: NodeJS.Timeout | null = null
 
-    const viewport = stageManager.viewport
+    // 重试函数
+    const tryInitialize = () => {
+      // 检查 stageManager 是否已准备好
+      if (!stageManager || !stageManager.app || !stageManager.viewport) {
+        if (retryCount < maxRetries) {
+          retryCount++
+          retryTimeout = setTimeout(tryInitialize, 100) // 100ms后重试
+        }
+        return
+      }
 
-    // 使用 ticker 实现更流畅的更新
-    const onViewportChange = () => {
-      // 使用 requestAnimationFrame 避免高频重绘
-      requestAnimationFrame(() => setTriggerRender((prev) => prev + 1))
+      // 如果 stageManager 已经准备好，则继续执行初始化逻辑
+      initializeMinimap()
     }
 
-    // 同时监听多个事件确保实时更新
-    viewport.on('moved', onViewportChange)
-    viewport.on('zoomed', onViewportChange)
+    // 初始化函数
+    const initializeMinimap = () => {
+      const app = stageManager!.app
+      const viewport = stageManager!.viewport
 
-    // 添加额外的更新机制 - 使用 PIXI Ticker 实现持续检测
-    let lastUpdate = 0
-    const tickerCallback = () => {
-      const now = Date.now()
-      // 限制更新频率，最多每16ms更新一次（约60fps）
-      if (now - lastUpdate > 16) {
-        // 检查视口是否真的发生了变化
-        onViewportChange()
-        lastUpdate = now
+      // --- 绘制函数 (每秒执行60次) ---
+      const draw = () => {
+        const canvas = canvasRef.current
+        if (!canvas) return
+        const ctx = canvas.getContext('2d')
+        if (!ctx) return
+
+        // [核心修复]：主动布局同步
+        // 初次加载时，Pixi Viewport 的 screenWidth 可能是 0。
+        // 我们不在乎 React 的 resize 事件有没有触发，每一帧都检查一次。
+        // 一旦发现 Viewport 认为自己宽是 0，但 DOM 有宽度，立即强制修正。
+        if (viewport.screenWidth <= 0 || viewport.screenHeight <= 0) {
+          if (app.canvas) {
+            const domRect = app.canvas.getBoundingClientRect()
+            if (domRect.width > 0) {
+              // console.log('[Minimap] 强制同步视口尺寸', domRect.width, domRect.height)
+              viewport.resize(domRect.width, domRect.height)
+            }
+          }
+        }
+
+        // 1. 清空画布
+        ctx.clearRect(0, 0, width, height)
+        ctx.fillStyle = '#f5f5f5' // 背景色
+        ctx.fillRect(0, 0, width, height)
+
+        // 2. 读取最新数据
+        const currentElements = dataRef.current.elements
+        const currentSelectedIds = dataRef.current.selectedIds
+        const hasElements = Object.keys(currentElements).length > 0
+
+        // 3. 计算边界和缩放 (数学防御逻辑)
+        let bounds
+        if (hasElements) {
+          bounds = getContentBounds(currentElements)
+          // 防止除以0错误：如果宽高极小，强制给一个最小值
+          bounds.width = Math.max(bounds.width, 1)
+          bounds.height = Math.max(bounds.height, 1)
+        } else {
+          // 空状态默认值
+          bounds = { x: 0, y: 0, width: 1000, height: 1000 }
+        }
+
+        // 计算缩放比例
+        let scale = getMinimapScale(bounds, { width, height })
+        // 防御 NaN 或 Infinity
+        if (!Number.isFinite(scale) || scale <= 0) scale = 0.05
+
+        // 计算居中偏移量
+        const offsetX = (width - bounds.width * scale) / 2
+        const offsetY = (height - bounds.height * scale) / 2
+
+        // 4. 绘制所有元素
+        if (hasElements) {
+          Object.values(currentElements).forEach((el) => {
+            ctx.fillStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : '#cccccc'
+
+            const mx = (el.x - bounds.x) * scale + offsetX
+            const my = (el.y - bounds.y) * scale + offsetY
+            const mw = el.width * scale
+            const mh = el.height * scale
+
+            ctx.fillRect(mx, my, mw, mh)
+          })
+        }
+
+        // 5. 绘制视口红框 (Viewport Frame)
+        const view = viewport.getVisibleBounds()
+
+        // 只有当视口数据合法时才绘制
+        if (view.width > 0 && view.width !== Infinity) {
+          // 如果没有元素，我们假设 bounds 原点对齐视口中心，保证红框在中间显示
+          // 这里简化逻辑：如果有元素，基于元素定位；无元素，基于 (0,0)
+
+          const vx = (view.x - bounds.x) * scale + offsetX
+          const vy = (view.y - bounds.y) * scale + offsetY
+          const vw = view.width * scale
+          const vh = view.height * scale
+
+          // 绘制半透明遮罩 (反向思维：画四条边填充)
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.15)'
+
+          // 限制绘制区域，防止负值 bug
+          const safeVx = vx
+          const safeVy = vy
+          // 上
+          ctx.fillRect(0, 0, width, Math.max(0, safeVy))
+          // 下
+          ctx.fillRect(0, safeVy + vh, width, Math.max(0, height - (safeVy + vh)))
+          // 左
+          ctx.fillRect(0, safeVy, Math.max(0, safeVx), vh)
+          // 右
+          ctx.fillRect(safeVx + vw, safeVy, Math.max(0, width - (safeVx + vw)), vh)
+
+          // 绘制红框边框
+          ctx.strokeStyle = '#ff4757'
+          ctx.lineWidth = 2
+          ctx.strokeRect(vx, vy, vw, vh)
+
+          // 绘制视口中心点
+          const centerX = vx + vw / 2
+          const centerY = vy + vh / 2
+          ctx.fillStyle = '#ff4757'
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, 4, 0, Math.PI * 2)
+          ctx.fill()
+
+          // 添加中心点的高亮轮廓
+          ctx.strokeStyle = '#ffffff'
+          ctx.lineWidth = 2
+          ctx.beginPath()
+          ctx.arc(centerX, centerY, 4, 0, Math.PI * 2)
+          ctx.stroke()
+        }
+
+        // 标记已完成初始化绘制
+        if (!initialized.current) {
+          initialized.current = true
+        }
+      }
+
+      // --- 注册 Ticker ---
+      // 这是关键：只要 Pixi 在运行，每一帧都会调用 draw。
+      // 这比 React 的 useEffect 重绘要稳定得多，也快得多。
+      app.ticker.add(draw)
+
+      // [核心修复] 强制触发一次初始绘制，确保小地图不会空白
+      setTimeout(() => {
+        draw()
+      }, 0)
+
+      console.log('[Minimap] Ticker mounted')
+
+      // 清理函数
+      return () => {
+        console.log('[Minimap] Ticker unmounted')
+        app.ticker.remove(draw)
+        if (retryTimeout) {
+          clearTimeout(retryTimeout)
+        }
       }
     }
 
-    // 尝试使用 PIXI Ticker 如果可用
-    const ticker = stageManager.app.ticker
-    if (ticker) {
-      ticker.add(tickerCallback)
-    }
+    // 开始尝试初始化
+    tryInitialize()
 
+    // 清理函数
     return () => {
-      viewport.off('moved', onViewportChange)
-      viewport.off('zoomed', onViewportChange)
-      if (ticker) {
-        ticker.remove(tickerCallback)
+      if (retryTimeout) {
+        clearTimeout(retryTimeout)
       }
     }
-  }, [stageManager])
+  }, [stageManager, width, height]) // 仅在 stageManager 变化时重建，几乎只执行一次
 
-  // 2. 绘制逻辑
-  useEffect(() => {
-    const canvas = canvasRef.current
-    if (!canvas || !stageManager) return
-    const ctx = canvas.getContext('2d')
-    if (!ctx) return
-
-    // 清空画布
-    ctx.clearRect(0, 0, width, height)
-
-    // 背景色
-    ctx.fillStyle = '#f5f5f5'
-    ctx.fillRect(0, 0, width, height)
-
-    // --- A. 计算比例 ---
-    const contentBounds = getContentBounds(elements)
-    const scale = getMinimapScale(contentBounds, { width, height })
-
-    // 计算内容在小地图中的偏移量（居中显示）
-    const offsetX = (width - contentBounds.width * scale) / 2
-    const offsetY = (height - contentBounds.height * scale) / 2
-
-    // --- B. 绘制所有元素（简化版） ---
-    Object.values(elements).forEach((el) => {
-      // 区分选中元素和普通元素的颜色
-      if (selectedIds.includes(el.id)) {
-        ctx.fillStyle = '#8888ff' // 选中元素用蓝色
-      } else {
-        ctx.fillStyle = '#cccccc' // 普通元素用灰色
-      }
-
-      // 将世界坐标转换为小地图坐标
-      const mx = (el.x - contentBounds.x) * scale + offsetX
-      const my = (el.y - contentBounds.y) * scale + offsetY
-      const mw = el.width * scale
-      const mh = el.height * scale
-
-      ctx.fillRect(mx, my, mw, mh)
-    })
-
-    // --- C. 绘制视口框 (Viewport Viewfinder) ---
-    if (stageManager && stageManager.viewport) {
-      const viewport = stageManager.viewport
-      // 获取视口在世界坐标系中的可视区域
-      const viewBounds = viewport.getVisibleBounds()
-
-      const vx = (viewBounds.x - contentBounds.x) * scale + offsetX
-      const vy = (viewBounds.y - contentBounds.y) * scale + offsetY
-      const vw = viewBounds.width * scale
-      const vh = viewBounds.height * scale
-
-      ctx.strokeStyle = '#ff4757'
-      ctx.lineWidth = 2
-      ctx.strokeRect(vx, vy, vw, vh)
-
-      // 绘制一个小的填充矩形表示视口中心点
-      ctx.fillStyle = '#ff4757'
-      ctx.fillRect(vx + vw / 2 - 2, vy + vh / 2 - 2, 4, 4)
-    }
-
-    // 绘制半透明遮罩（可选：让视口外变暗）
-    // 这个稍微复杂点，需要反向剪裁，这里暂略
-  }, [elements, selectedIds, width, height, stageManager, triggerRender])
-
-  // 3. 交互逻辑：点击或拖拽小地图移动视口
+  // =================================================================================
+  // 3. 交互逻辑 (Interaction)
+  // =================================================================================
   const handlePointer = (e: React.PointerEvent) => {
     if (!stageManager || !stageManager.viewport || !canvasRef.current) return
 
@@ -134,20 +226,30 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
     const x = e.clientX - rect.left
     const y = e.clientY - rect.top
 
-    // 反向计算：从小地图坐标 -> 世界坐标
-    const contentBounds = getContentBounds(elements)
-    const scale = getMinimapScale(contentBounds, { width, height })
-    const offsetX = (width - contentBounds.width * scale) / 2
-    const offsetY = (height - contentBounds.height * scale) / 2
+    // 必须重新计算一遍当前的坐标系参数，逻辑与 draw 中一致
+    const currentElements = dataRef.current.elements
+    const hasElements = Object.keys(currentElements).length > 0
 
-    // 公式推导：mx = (wx - cx) * scale + ox  ==>  wx = (mx - ox) / scale + cx
-    const worldX = (x - offsetX) / scale + contentBounds.x
-    const worldY = (y - offsetY) / scale + contentBounds.y
+    let bounds
+    if (hasElements) {
+      bounds = getContentBounds(currentElements)
+      bounds.width = Math.max(bounds.width, 1)
+      bounds.height = Math.max(bounds.height, 1)
+    } else {
+      bounds = { x: 0, y: 0, width: 1000, height: 1000 }
+    }
 
-    // 移动 Pixi Viewport 中心点
+    let scale = getMinimapScale(bounds, { width, height })
+    if (!Number.isFinite(scale) || scale <= 0) scale = 0.05
+
+    const offsetX = (width - bounds.width * scale) / 2
+    const offsetY = (height - bounds.height * scale) / 2
+
+    // 逆向映射：屏幕坐标 -> 世界坐标
+    const worldX = (x - offsetX) / scale + bounds.x
+    const worldY = (y - offsetY) / scale + bounds.y
+
     stageManager.viewport.moveCenter(worldX, worldY)
-    // 强制触发重绘
-    setTriggerRender((p) => p + 1)
   }
 
   return (
@@ -156,17 +258,20 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
         position: 'absolute',
         bottom: 20,
         right: 20,
+        width: width,
+        height: height,
+        backgroundColor: 'white',
         boxShadow: '0 0 10px rgba(0,0,0,0.2)',
         borderRadius: 4,
         overflow: 'hidden',
-        background: 'white',
-        cursor: 'pointer',
+        zIndex: 100,
       }}
     >
       <canvas
         ref={canvasRef}
         width={width}
         height={height}
+        style={{ display: 'block', cursor: 'pointer' }}
         onPointerDown={(e) => {
           isDragging.current = true
           canvasRef.current?.setPointerCapture(e.pointerId)
