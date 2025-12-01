@@ -24,7 +24,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 
 import { Button } from '@arco-design/web-react'
 import { IconNotification as IconWarning } from '@arco-design/web-react/icon'
-import { StageManagerProvider } from '@/components/header/StageManagerContext'
+import { StageManagerProvider } from '@/components/header/contents/StageManagerContext'
 
 export default function PixiCanvas() {
   const containerRef = useRef<HTMLDivElement>(null)

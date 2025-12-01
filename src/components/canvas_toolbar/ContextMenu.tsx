@@ -12,7 +12,7 @@ import {
   IconArrowRight as IconLayers,
   IconBgColors,
 } from '@arco-design/web-react/icon'
-import ExportCanvasModal from '../header/ExportCanvasModal'
+import ExportCanvasModal from '../header/contents/ExportCanvasModal'
 import type { StageManager } from '@/pages/canvas/Pixi_stageManager'
 
 interface ContextMenuProps {

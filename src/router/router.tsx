@@ -9,6 +9,7 @@ import RoomManagement from '@/pages/room/RoomManagement'
 import ErrorPage from '@/components/error-page'
 import { Header } from '@/components/header'
 import AnimatedRoutes from '@/components/AnimatedRoutes'
+import Settings from '@/components/settings/setting'
 
 // 自定义组件，用于处理默认画布路由
 const DefaultCanvasRoute: React.FC = () => {
@@ -83,6 +84,10 @@ const router = createBrowserRouter(
           path: '/home',
           element: <Home />,
           errorElement: <ErrorPage />,
+        },
+        {
+          path: '/settings',
+          element: <Settings />,
         },
       ],
     },

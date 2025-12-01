@@ -1,5 +1,5 @@
 // src/components/TopToolbar.tsx
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Notification } from '@arco-design/web-react'
 import { useStore } from '@/stores/canvasStore'
 import {
@@ -24,30 +24,62 @@ import {
   ImageDown,
 } from 'lucide-react'
 import ImageInsertModal from '@/components/image-insert-modal'
-import ExportCanvasModal from '@/components/header/ExportCanvasModal'
+import ExportCanvasModal from '@/components/header/contents/ExportCanvasModal'
 
-// --- 类型定义 ---
-/*type ToolType =
-  | 'select'
-  | 'hand'
-  | 'rect'
-  | 'diamond'
-  | 'circle'
-  | 'arrow'
-  | 'line'
-  | 'pencil'
-  | 'text'
-  | 'image'
-  | 'eraser'
+// 默认快捷键配置
+const DEFAULT_SHORTCUTS = {
+  undo: 'ctrl+z',
+  redo: 'ctrl+y, ctrl+shift+z',
+  delete: 'delete, backspace',
+  copy: 'ctrl+c',
+  paste: 'ctrl+v',
+  group: 'ctrl+g',
+  ungroup: 'ctrl+shift+g',
+  selectTool: 'shift+1',
+  rectTool: 'shift+2',
+  diamondTool: 'shift+3',
+  circleTool: 'shift+4',
+  arrowTool: 'shift+5',
+  lineTool: 'shift+6',
+  pencilTool: 'shift+7',
+  textTool: 'shift+8',
+  imageTool: 'shift+9',
+  eraserTool: 'shift+0',
+}
 
-interface ToolItemConfig {
-  type: ToolType | 'action' // action 代表锁、库等非绘图工具
-  icon: React.ElementType
-  label: string // 用于 tooltip
-  value?: string // store 中的 tool 值
-  shortcut?: string // 右下角快捷键提示
-  isSeparator?: boolean // 是否是分隔符
-}*/
+// 从localStorage获取用户自定义快捷键配置
+const getUserShortcuts = () => {
+  try {
+    const saved = localStorage.getItem('customShortcuts')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      // 合并默认配置和用户配置，防止缺少某些键
+      return { ...DEFAULT_SHORTCUTS, ...parsed }
+    }
+  } catch (e) {
+    console.warn('Failed to parse custom shortcuts from localStorage', e)
+  }
+  return DEFAULT_SHORTCUTS
+}
+
+// 格式化快捷键显示
+const formatShortcut = (shortcut: string): string => {
+  if (!shortcut) return ''
+
+  // 获取第一个快捷键组合（如果有多个用逗号分隔）
+  const firstCombo = shortcut.split(',')[0].trim()
+
+  // 提取最后一个按键作为显示（例如从 'shift+1' 提取 '1'）
+  const parts = firstCombo.split('+')
+  const lastPart = parts[parts.length - 1]
+
+  // 特殊处理数字键
+  if (lastPart.startsWith('digit')) {
+    return lastPart.replace('digit', '')
+  }
+
+  return lastPart
+}
 
 // 添加分组功能函数
 const groupElements = (elementIds: string[]) => {
@@ -79,6 +111,9 @@ export default function TopToolbar() {
   // 添加导出相关的状态
   const [exportModalVisible, setExportModalVisible] = useState(false)
 
+  // 获取当前快捷键配置
+  const shortcuts = useMemo(() => getUserShortcuts(), [])
+
   // 简单的 className 拼接函数（如果你没有引入 clsx/tailwind-merge）
   const cls = (...classes: (string | undefined | boolean)[]) => classes.filter(Boolean).join(' ')
 
@@ -93,24 +128,84 @@ export default function TopToolbar() {
       onClick: () => setLocked(!locked),
     },*/
     { isSeparator: true },
-    { id: 'hand', value: 'hand', icon: Hand, label: 'Hand tool (H)', shortcut: '' },
-    { id: 'select', value: 'select', icon: MousePointer2, label: 'Selection (V)', shortcut: '1' },
-    { id: 'rect', value: 'rect', icon: Square, label: 'Rectangle (R)', shortcut: '2' },
-    { id: 'diamond', value: 'diamond', icon: Diamond, label: 'Diamond (D)', shortcut: '3' },
-    { id: 'circle', value: 'circle', icon: Circle, label: 'Ellipse (E)', shortcut: '4' },
-    { id: 'arrow', value: 'arrow', icon: ArrowRight, label: 'Arrow (A)', shortcut: '5' },
-    { id: 'line', value: 'line', icon: Minus, label: 'Line (L)', shortcut: '6' },
-    { id: 'pencil', value: 'pencil', icon: Pencil, label: 'Draw (P)', shortcut: '7' },
-    { id: 'text', value: 'text', icon: Type, label: 'Text (T)', shortcut: '8' },
+    {
+      id: 'hand',
+      value: 'hand',
+      icon: Hand,
+      label: 'Hand tool (H)',
+      shortcut: '',
+    },
+    {
+      id: 'select',
+      value: 'select',
+      icon: MousePointer2,
+      label: 'Selection (V)',
+      shortcut: formatShortcut(shortcuts.selectTool),
+    },
+    {
+      id: 'rect',
+      value: 'rect',
+      icon: Square,
+      label: 'Rectangle (R)',
+      shortcut: formatShortcut(shortcuts.rectTool),
+    },
+    {
+      id: 'diamond',
+      value: 'diamond',
+      icon: Diamond,
+      label: 'Diamond (D)',
+      shortcut: formatShortcut(shortcuts.diamondTool),
+    },
+    {
+      id: 'circle',
+      value: 'circle',
+      icon: Circle,
+      label: 'Ellipse (E)',
+      shortcut: formatShortcut(shortcuts.circleTool),
+    },
+    {
+      id: 'arrow',
+      value: 'arrow',
+      icon: ArrowRight,
+      label: 'Arrow (A)',
+      shortcut: formatShortcut(shortcuts.arrowTool),
+    },
+    {
+      id: 'line',
+      value: 'line',
+      icon: Minus,
+      label: 'Line (L)',
+      shortcut: formatShortcut(shortcuts.lineTool),
+    },
+    {
+      id: 'pencil',
+      value: 'pencil',
+      icon: Pencil,
+      label: 'Draw (P)',
+      shortcut: formatShortcut(shortcuts.pencilTool),
+    },
+    {
+      id: 'text',
+      value: 'text',
+      icon: Type,
+      label: 'Text (T)',
+      shortcut: formatShortcut(shortcuts.textTool),
+    },
     {
       id: 'image',
       value: 'image',
       icon: ImageIcon,
       label: 'Insert image',
-      shortcut: '9',
+      shortcut: formatShortcut(shortcuts.imageTool),
       onClick: () => setImageModalVisible(true),
     },
-    { id: 'eraser', value: 'eraser', icon: Eraser, label: 'Eraser (E)', shortcut: '0' },
+    {
+      id: 'eraser',
+      value: 'eraser',
+      icon: Eraser,
+      label: 'Eraser (E)',
+      shortcut: formatShortcut(shortcuts.eraserTool),
+    },
     { isSeparator: true },
     {
       id: 'group',

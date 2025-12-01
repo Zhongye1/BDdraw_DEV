@@ -251,10 +251,7 @@ function Header() {
                   : 'text-[#5f6368] hover:bg-gray-100 hover:text-[#202124]'
               }`}
               onClick={() => {
-                Notification.info({
-                  title: '功能提示',
-                  content: '设置功能暂未实现',
-                })
+                navigate('/settings')
               }}
             >
               <IconSettings className="text-xl" />

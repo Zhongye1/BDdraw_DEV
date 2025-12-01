@@ -5,9 +5,48 @@ import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { useRef } from 'react'
 
+// 默认快捷键配置
+const DEFAULT_SHORTCUTS = {
+  undo: 'ctrl+z',
+  redo: 'ctrl+y, ctrl+shift+z',
+  delete: 'delete, backspace',
+  copy: 'ctrl+c',
+  paste: 'ctrl+v',
+  group: 'ctrl+g',
+  ungroup: 'ctrl+shift+g',
+  selectTool: 'shift+1',
+  rectTool: 'shift+2',
+  diamondTool: 'shift+3',
+  circleTool: 'shift+4',
+  arrowTool: 'shift+5',
+  lineTool: 'shift+6',
+  pencilTool: 'shift+7',
+  textTool: 'shift+8',
+  imageTool: 'shift+9',
+  eraserTool: 'shift+0',
+}
+
+// 从localStorage获取用户自定义快捷键配置
+const getUserShortcuts = () => {
+  try {
+    const saved = localStorage.getItem('customShortcuts')
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      // 合并默认配置和用户配置，防止缺少某些键
+      return { ...DEFAULT_SHORTCUTS, ...parsed }
+    }
+  } catch (e) {
+    console.warn('Failed to parse custom shortcuts from localStorage', e)
+  }
+  return DEFAULT_SHORTCUTS
+}
+
 export const useCanvasShortcuts = () => {
   const { setTool, undo, redo, copyElements, pasteElements, selectedIds, elements, groupElements, ungroupElements } =
     useStore()
+
+  // 获取当前快捷键配置
+  const shortcuts = getUserShortcuts()
 
   // 使用 Ref 创建一个操作锁，防止短时间内重复触发（解决开发环境双重触发 + 防止按键过快）
   const lockRef = useRef(false)
@@ -35,7 +74,7 @@ export const useCanvasShortcuts = () => {
 
   // Ctrl+Z 撤销
   useHotkeys(
-    'ctrl+z',
+    shortcuts.undo,
     (event) => {
       event.preventDefault()
       // 如果是长按产生的重复事件，直接忽略
@@ -52,7 +91,7 @@ export const useCanvasShortcuts = () => {
 
   // Ctrl+Shift+Z 或 Ctrl+Y 重做
   useHotkeys(
-    'ctrl+y, ctrl+shift+z',
+    shortcuts.redo,
     (event) => {
       event.preventDefault()
       if (event.repeat) return
@@ -67,7 +106,7 @@ export const useCanvasShortcuts = () => {
 
   // Delete 删除元素
   useHotkeys(
-    'delete, backspace',
+    shortcuts.delete,
     (event) => {
       // 只有在没有锁定的情况下才阻止默认行为（防止在输入框中无法删除）
       if (!lockRef.current) {
@@ -102,7 +141,7 @@ export const useCanvasShortcuts = () => {
 
   // Ctrl+C 复制
   useHotkeys(
-    'ctrl+c',
+    shortcuts.copy,
     (event) => {
       event.preventDefault()
       if (event.repeat) return // 忽略长按
@@ -132,7 +171,7 @@ export const useCanvasShortcuts = () => {
 
   // Ctrl+V 粘贴
   useHotkeys(
-    'ctrl+v',
+    shortcuts.paste,
     (event) => {
       event.preventDefault()
       if (event.repeat) {
@@ -161,20 +200,20 @@ export const useCanvasShortcuts = () => {
   )
 
   // 切换工具 (不需要加锁，因为切换多次状态也是一样的)
-  useHotkeys('shift+1', () => setTool('select'), {}, [setTool])
-  useHotkeys('shift+2', () => setTool('rect'), {}, [setTool])
-  useHotkeys('shift+3', () => setTool('diamond'), {}, [setTool])
-  useHotkeys('shift+4', () => setTool('circle'), {}, [setTool])
-  useHotkeys('shift+5', () => setTool('arrow'), {}, [setTool])
-  useHotkeys('shift+6', () => setTool('line'), {}, [setTool])
-  useHotkeys('shift+7', () => setTool('pencil'), {}, [setTool])
-  useHotkeys('shift+8', () => setTool('text'), {}, [setTool])
-  useHotkeys('shift+9', () => setTool('image'), {}, [setTool])
-  useHotkeys('shift+0', () => setTool('eraser'), {}, [setTool])
+  useHotkeys(shortcuts.selectTool, () => setTool('select'), {}, [setTool])
+  useHotkeys(shortcuts.rectTool, () => setTool('rect'), {}, [setTool])
+  useHotkeys(shortcuts.diamondTool, () => setTool('diamond'), {}, [setTool])
+  useHotkeys(shortcuts.circleTool, () => setTool('circle'), {}, [setTool])
+  useHotkeys(shortcuts.arrowTool, () => setTool('arrow'), {}, [setTool])
+  useHotkeys(shortcuts.lineTool, () => setTool('line'), {}, [setTool])
+  useHotkeys(shortcuts.pencilTool, () => setTool('pencil'), {}, [setTool])
+  useHotkeys(shortcuts.textTool, () => setTool('text'), {}, [setTool])
+  useHotkeys(shortcuts.imageTool, () => setTool('image'), {}, [setTool])
+  useHotkeys(shortcuts.eraserTool, () => setTool('eraser'), {}, [setTool])
 
   // Ctrl+G 分组
   useHotkeys(
-    'ctrl+g',
+    shortcuts.group,
     (event) => {
       event.preventDefault()
       if (event.repeat) return
@@ -202,7 +241,7 @@ export const useCanvasShortcuts = () => {
 
   // Ctrl+Shift+G 取消分组
   useHotkeys(
-    'ctrl+shift+g',
+    shortcuts.ungroup,
     (event) => {
       event.preventDefault()
       if (event.repeat) return
