@@ -36,7 +36,11 @@ export default function PixiCanvas() {
   const navigate = useNavigate()
 
   // 生成随机颜色用于演示
-  const myColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+  const myColor =
+    '#' +
+    Math.floor(Math.random() * 16777215)
+      .toString(16)
+      .padStart(6, '0')
   const myName = 'User ' + Math.floor(Math.random() * 100)
 
   const [awareness, setAwareness] = useState<any>(null)
