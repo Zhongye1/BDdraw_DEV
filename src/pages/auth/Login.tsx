@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { Button, Form, Input, Notification } from '@arco-design/web-react'
 import { loginUser } from '@/api/apiService'
 import ParallaxBackground from '@/components/ParallaxBackground'
+import { useTheme } from '@/stores/themeStore'
 
 const Login: React.FC = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { theme } = useTheme()
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true)
@@ -41,7 +43,11 @@ const Login: React.FC = () => {
   }
 
   return (
-    <div className="mt-16  flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
+    <div
+      className={`mt-16 flex h-[calc(100vh-4rem)] w-full overflow-hidden ${
+        theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+      }`}
+    >
       <ParallaxBackground
         className="hidden w-[60vw] bg-gray-900 lg:block"
         imageUrl="https://images.unsplash.com/photo-1497294815431-9365093b7331?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
@@ -53,8 +59,8 @@ const Login: React.FC = () => {
       <div className="flex w-full flex-col justify-center px-8 sm:px-12 lg:w-1/2 xl:px-24">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-10">
-            <h1 className="text-3xl font-extrabold text-gray-900">用户登录</h1>
-            <p className="mt-2 text-gray-600">输入账号信息以继续</p>
+            <h1 className={`text-3xl font-extrabold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>用户登录</h1>
+            <p className={`mt-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>输入账号信息以继续</p>
           </div>
 
           <Form
@@ -65,11 +71,26 @@ const Login: React.FC = () => {
             className="space-y-4"
             requiredSymbol={false}
           >
-            <Form.Item label="用户名" field="username" rules={[{ required: true, message: '请输入用户名' }]}>
-              <Input placeholder="请输入用户名" />
+            <Form.Item
+              label={<span className={theme === 'dark' ? 'text-white' : ''}>用户名</span>}
+              field="username"
+              rules={[{ required: true, message: '请输入用户名' }]}
+            >
+              <Input
+                placeholder="请输入用户名"
+                className={theme === 'dark' ? '!border-gray-700 !bg-gray-800 !text-white' : ''}
+              />
             </Form.Item>
-            <Form.Item label="密码" field="password" rules={[{ required: true, message: '请输入密码' }]}>
-              <Input.Password placeholder="请输入密码" autoComplete="current-password" />
+            <Form.Item
+              label={<span className={theme === 'dark' ? 'text-white' : ''}>密码</span>}
+              field="password"
+              rules={[{ required: true, message: '请输入密码' }]}
+            >
+              <Input.Password
+                placeholder="请输入密码"
+                autoComplete="current-password"
+                className={theme === 'dark' ? '!border-gray-700 !bg-gray-800 !text-white' : ''}
+              />
             </Form.Item>
 
             <Form.Item className="pt-4">
@@ -85,7 +106,7 @@ const Login: React.FC = () => {
             </Button>
 
             <div className="text-center">
-              <p className="text-gray-600">
+              <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
                 还没有账号？{' '}
                 <Button type="text" onClick={onRegister} className="px-0 font-semibold hover:bg-transparent">
                   立即注册

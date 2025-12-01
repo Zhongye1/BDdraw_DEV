@@ -2,14 +2,17 @@ import React, { ReactNode, useState, useEffect } from 'react'
 import { Notification, Dropdown, Menu, Avatar } from '@arco-design/web-react'
 import { IconGithub, IconUser, IconExport, IconLanguage, IconSettings } from '@arco-design/web-react/icon'
 import { useNavigate, useLocation } from 'react-router-dom'
+import ThemeButton from '../ui/blackwhitebutton'
+import { useTheme } from '@/stores/themeStore'
 
 interface IProps {
   leftNode?: ReactNode
 }
 
-export function Header(props: IProps) {
+function Header() {
   const navigate = useNavigate()
   const location = useLocation()
+  const { theme, toggleTheme } = useTheme()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [username, setUsername] = useState('')
 
@@ -112,7 +115,9 @@ export function Header(props: IProps) {
         ${
           active || location.pathname === path
             ? 'border-b-2 border-[#1a73e8] text-[#1a73e8]' // 选中态：安卓蓝
-            : 'border-b-2 border-transparent text-[#5f6368] hover:text-[#202124]' // 默认态：深灰
+            : `border-b-2 border-transparent ${
+                theme === 'dark' ? 'text-gray-300 hover:text-white' : 'text-[#5f6368] hover:text-[#202124]'
+              }` // 默认态：深灰
         }
       `}
     >
@@ -127,7 +132,11 @@ export function Header(props: IProps) {
   }
 
   return (
-    <header className="fixed left-0 top-0 z-50 w-full border-b border-gray-200 bg-white">
+    <header
+      className={`fixed left-0 top-0 z-50 w-full border-b ${
+        theme === 'dark' ? 'border-gray-700 bg-gray-900' : 'border-gray-200 bg-white'
+      }`}
+    >
       <div className="mx-auto flex h-16 max-w-[1440px] items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* Logo + 导航 */}
         <div className="flex items-center gap-8">
@@ -138,8 +147,13 @@ export function Header(props: IProps) {
                 <circle cx="12" cy="12" r="3" />
               </svg>
             </div>
-            <span className="text-[20px] font-medium tracking-tight text-[#202124]">
-              BDdraw<span className="ml-1 text-base font-normal text-gray-500">_DEV</span>
+            <span
+              className={`text-[20px] font-medium tracking-tight ${theme === 'dark' ? 'text-white' : 'text-[#202124]'}`}
+            >
+              BDdraw
+              <span className={`ml-1 text-base font-normal ${theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
+                _DEV
+              </span>
             </span>
           </div>
 
@@ -189,26 +203,38 @@ export function Header(props: IProps) {
           ) : (
             <button
               onClick={() => navigate('/login')}
-              className="ml-2 rounded-md bg-[#1a73e8] px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-[#1557b0]"
+              className={`ml-2 rounded-md px-5 py-2 text-sm font-medium shadow-sm transition-colors ${
+                theme === 'dark'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  : 'bg-[#1a73e8] text-white hover:bg-[#1557b0]'
+              }`}
             >
               登录
             </button>
           )}
 
-          <div className="hidden h-6 w-[1px] bg-gray-300 sm:block"></div>
+          <div className={`hidden h-6 w-[1px] ${theme === 'dark' ? 'bg-gray-700' : 'bg-gray-300'} sm:block`}></div>
 
           {/* 功能图标区 */}
           <div className="flex items-center space-x-1">
             <button
               onClick={() => window.open('https://github.com/Zhongye1/BDdraw_DEV', '_blank')}
-              className="hidden rounded-full p-2 text-[#5f6368] transition-all hover:bg-gray-100 hover:text-[#202124] sm:flex"
+              className={`hidden rounded-full p-2 transition-all sm:flex ${
+                theme === 'dark'
+                  ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  : 'text-[#5f6368] hover:bg-gray-100 hover:text-[#202124]'
+              }`}
               title="GitHub"
             >
               <IconGithub className="text-xl" />
             </button>
 
             <button
-              className="hidden rounded-full p-2 text-[#5f6368] transition-all hover:bg-gray-100 hover:text-[#202124] sm:flex"
+              className={`hidden rounded-full p-2 transition-all sm:flex ${
+                theme === 'dark'
+                  ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  : 'text-[#5f6368] hover:bg-gray-100 hover:text-[#202124]'
+              }`}
               onClick={() => {
                 Notification.info({
                   title: '功能提示',
@@ -219,7 +245,11 @@ export function Header(props: IProps) {
               <IconLanguage className="text-xl" />
             </button>
             <button
-              className="hidden rounded-full p-2 text-[#5f6368] transition-all hover:bg-gray-100 hover:text-[#202124] sm:flex"
+              className={`hidden rounded-full p-2 transition-all sm:flex ${
+                theme === 'dark'
+                  ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                  : 'text-[#5f6368] hover:bg-gray-100 hover:text-[#202124]'
+              }`}
               onClick={() => {
                 Notification.info({
                   title: '功能提示',
@@ -229,9 +259,13 @@ export function Header(props: IProps) {
             >
               <IconSettings className="text-xl" />
             </button>
+            <ThemeButton theme={theme} size={4} onChange={toggleTheme} />
           </div>
         </div>
       </div>
     </header>
   )
 }
+
+export default Header
+export { Header }

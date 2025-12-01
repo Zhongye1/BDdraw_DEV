@@ -3,11 +3,13 @@ import { useNavigate } from 'react-router-dom'
 import { Button, Form, Input, Notification } from '@arco-design/web-react'
 import { registerUser } from '@/api/apiService'
 import ParallaxBackground from '@/components/ParallaxBackground'
+import { useTheme } from '@/stores/themeStore'
 
 const Register: React.FC = () => {
   const [form] = Form.useForm()
   const [loading, setLoading] = useState(false)
   const navigate = useNavigate()
+  const { theme } = useTheme()
 
   const onFinish = async (values: { username: string; password: string }) => {
     setLoading(true)
@@ -36,12 +38,20 @@ const Register: React.FC = () => {
     }
   }
 
+  const onOfflineMode = () => {
+    navigate('/canvas')
+  }
+
   const onBackToLogin = () => {
     navigate('/login')
   }
 
   return (
-    <div className="mt-16 flex h-[calc(100vh-4rem)] w-full overflow-hidden bg-white">
+    <div
+      className={`mt-16 flex h-[calc(100vh-4rem)] w-full overflow-hidden ${
+        theme === 'dark' ? 'bg-gray-900' : 'bg-white'
+      }`}
+    >
       <ParallaxBackground
         className="hidden w-[60vw] bg-gray-900 lg:block"
         imageUrl="https://images.unsplash.com/photo-1504805572947-34fad45aed93?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80"
@@ -53,8 +63,8 @@ const Register: React.FC = () => {
       <div className="flex w-full flex-col justify-center px-8 sm:px-12 lg:w-1/2 xl:px-24">
         <div className="mx-auto w-full max-w-md">
           <div className="mb-10">
-            <h1 className="text-3xl font-extrabold text-gray-900">用户注册</h1>
-            <p className="mt-2 text-gray-600">创建您的新账号</p>
+            <h1 className={`text-3xl font-extrabold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>用户注册</h1>
+            <p className={`mt-2 ${theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}`}>创建您的新账号</p>
           </div>
 
           <Form
@@ -66,7 +76,7 @@ const Register: React.FC = () => {
             requiredSymbol={false}
           >
             <Form.Item
-              label="用户名"
+              label={<span className={theme === 'dark' ? 'text-white' : ''}>用户名</span>}
               field="username"
               rules={[
                 { required: true, message: '请输入用户名' },
@@ -74,35 +84,24 @@ const Register: React.FC = () => {
                 { maxLength: 20, message: '用户名最多20个字符' },
               ]}
             >
-              <Input placeholder="请输入用户名" />
+              <Input
+                placeholder="请输入用户名"
+                className={theme === 'dark' ? '!border-gray-700 !bg-gray-800 !text-white' : ''}
+              />
             </Form.Item>
             <Form.Item
-              label="密码"
+              label={<span className={theme === 'dark' ? 'text-white' : ''}>密码</span>}
               field="password"
               rules={[
                 { required: true, message: '请输入密码' },
                 { minLength: 6, message: '密码至少6个字符' },
               ]}
             >
-              <Input.Password placeholder="请输入密码" autoComplete="new-password" />
-            </Form.Item>
-            <Form.Item
-              label="确认密码"
-              field="confirmPassword"
-              dependencies={['password']}
-              rules={[
-                { required: true, message: '请确认密码' },
-                {
-                  validator: (_, value) => {
-                    if (!value || form.getFieldValue('password') === value) {
-                      return Promise.resolve()
-                    }
-                    return Promise.reject(new Error('两次输入的密码不一致'))
-                  },
-                },
-              ]}
-            >
-              <Input.Password placeholder="请再次输入密码" />
+              <Input.Password
+                placeholder="请输入密码"
+                autoComplete="new-password"
+                className={theme === 'dark' ? '!border-gray-700 !bg-gray-800 !text-white' : ''}
+              />
             </Form.Item>
 
             <Form.Item className="pt-4">
@@ -112,8 +111,11 @@ const Register: React.FC = () => {
             </Form.Item>
           </Form>
 
-          <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <div className="mt-4 text-center">
+            <Button type="dashed" onClick={onOfflineMode} long className="h-10 text-base">
+              离线模式
+            </Button>
+            <p className={theme === 'dark' ? 'text-gray-300' : 'text-gray-600'}>
               已有账户？{' '}
               <Button type="text" onClick={onBackToLogin} className="px-0 font-semibold hover:bg-transparent">
                 立即登录

@@ -67,7 +67,7 @@ export default function WipeTransition({ children, variant = 'default' }: WipeTr
         backgroundColor: 'inherit',
       }}
     >
-      {/* 可选：添加分隔线 */}
+      {/* 添加分隔线 
       {showLine && (
         <motion.div
           className="pointer-events-none"
@@ -81,12 +81,12 @@ export default function WipeTransition({ children, variant = 'default' }: WipeTr
             width: '100%',
             height: '100%',
             backgroundSize: '200% 100%',
-            mixBlendMode: 'screen',
+            mixBlendMode: 'normal', // 修改混合模式为normal以避免暗黑模式下的蓝条问题
             opacity: 0.6,
             ...getLineStyle(),
           }}
         />
-      )}
+      )}*/}
 
       {children}
     </motion.div>

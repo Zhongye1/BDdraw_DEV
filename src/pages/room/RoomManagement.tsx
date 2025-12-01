@@ -19,6 +19,7 @@ import {
   Descriptions,
   List,
   Popconfirm,
+  Message,
 } from '@arco-design/web-react'
 import { IconPlus, IconUser, IconUserGroup, IconDelete, IconClockCircle } from '@arco-design/web-react/icon'
 import {
@@ -94,6 +95,7 @@ const RoomManagement: React.FC = () => {
     try {
       const response = await listRooms(token)
       setRooms(response)
+      Message.info('已成功刷新')
     } catch (error: any) {
       handleError('获取房间列表失败', error)
     } finally {
@@ -106,6 +108,7 @@ const RoomManagement: React.FC = () => {
     try {
       const response = await browseRooms(token)
       setAllRooms(response.rooms)
+      Message.info('已成功刷新')
     } catch (error: any) {
       handleError('获取所有房间失败', error)
     } finally {
@@ -241,7 +244,7 @@ const RoomManagement: React.FC = () => {
     <Col xs={24} sm={12} md={8} lg={6} xl={6} key={room.id}>
       <Card
         hoverable
-        className="flex h-full cursor-pointer flex-col transition-all hover:shadow-lg"
+        className="flex h-full cursor-pointer flex-col rounded-lg border-[1.5px] border-gray-300 transition-all hover:shadow-lg"
         onClick={() => handleOpenDetail(room)}
       >
         <div className="mb-4 flex items-center">
@@ -273,7 +276,7 @@ const RoomManagement: React.FC = () => {
           {room.created_at ? new Date(room.created_at).toLocaleDateString() : '-'}
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex h-[32px] items-center justify-end">
           {activeTab === 'myRooms' || room.creator_id === currentUser.id ? (
             <Popconfirm
               title="确定删除该房间吗？"
@@ -295,14 +298,15 @@ const RoomManagement: React.FC = () => {
   )
 
   return (
-    <div className="mt-16 h-[calc(100vh-4rem)] overflow-hidden bg-gray-100 p-6">
+    <div className="mt-16 h-[calc(100vh-4rem)] overflow-hidden bg-custom-color p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="h-[600px] rounded-lg bg-white p-6 shadow-sm">
-          <div className="mb-6 flex justify-between bg-white p-4 pb-1 pt-1">
+        <div className="h-[600px] rounded-lg border-[1.5px] border-gray-300 bg-[var(--color-bg-2)] p-6 shadow-sm">
+          <div className="mb-6 flex justify-between bg-[var(--color-bg-2)] p-4 pb-1 pt-1">
             <Title heading={4}>房间管理</Title>
 
             <Space size="large">
               <Input.Search
+                className="border-[1.5px] border-gray-500"
                 allowClear
                 placeholder="搜索房间名称..."
                 style={{ width: 300 }}
@@ -310,7 +314,12 @@ const RoomManagement: React.FC = () => {
                 onSearch={handleSearch}
                 loading={loading && activeTab === 'searchResults'}
               />
-              <Button type="primary" icon={<IconPlus />} onClick={() => setIsCreateModalVisible(true)}>
+              <Button
+                type="primary"
+                className="border-[1.5px] border-gray-500"
+                icon={<IconPlus />}
+                onClick={() => setIsCreateModalVisible(true)}
+              >
                 创建新房间
               </Button>
             </Space>
@@ -321,7 +330,7 @@ const RoomManagement: React.FC = () => {
             type="line"
             size="large"
             extra={
-              <Button type="secondary" size="small" onClick={() => fetchDataByTab(activeTab)}>
+              <Button type="secondary" onClick={() => fetchDataByTab(activeTab)}>
                 刷新列表
               </Button>
             }

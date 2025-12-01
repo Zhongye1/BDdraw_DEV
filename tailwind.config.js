@@ -45,6 +45,7 @@ module.exports = {
           DEFAULT: 'hsl(var(--card))',
           foreground: 'hsl(var(--card-foreground))',
         },
+        'custom-color': 'var(--custom-color)',
       },
       borderRadius: {
         lg: 'var(--radius)',
@@ -68,4 +69,4 @@ module.exports = {
     },
   },
   plugins: [require('tailwindcss-animate')],
-} 
+}
