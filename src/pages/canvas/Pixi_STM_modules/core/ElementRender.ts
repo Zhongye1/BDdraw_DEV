@@ -20,8 +20,8 @@ export class ElementRenderer {
 
       // === 处理 Image 类型 ===
       if (data.type === 'image' && data.imageUrl) {
-        // 如果之前的 sprite 不是 Sprite，销毁重建
-        if (graphic && !(graphic instanceof PIXI.Sprite)) {
+        // 如果之前的 sprite 不是 Sprite 且不是 Graphics(占位符)，销毁重建
+        if (graphic && !(graphic instanceof PIXI.Sprite) && !(graphic instanceof PIXI.Graphics)) {
           elementLayer.removeChild(graphic)
           graphic.destroy()
           graphic = undefined
@@ -44,10 +44,11 @@ export class ElementRenderer {
                 this.loadingSet.delete(data.imageUrl ?? '')
 
                 // *** 立即更新图形显示 ***
-                // 纹理加载完成后立即更新图形，不再等待定时检查
                 const graphic = this.spriteMap.get(id)
-                if (graphic && !(graphic instanceof PIXI.Sprite)) {
-                  // 替换占位符为真实图像
+
+                // 只要该元素还存在，就进行替换
+                if (graphic) {
+                  // 移除旧图形（无论是占位符还是旧 Sprite）
                   elementLayer.removeChild(graphic)
                   graphic.destroy()
 
@@ -56,9 +57,16 @@ export class ElementRenderer {
                   sprite.label = id
                   sprite.eventMode = 'static'
                   sprite.cursor = 'move'
-                  sprite.position.set(data.x, data.y)
+
+                  // 设置宽高
                   sprite.width = data.width
                   sprite.height = data.height
+
+                  // === 修复点 1：异步加载完成后，使用 anchor 处理 Sprite ===
+                  // Sprite 使用 anchor(0.5) 来确保缩放时中心点不会偏移
+                  sprite.anchor.set(0.5)
+                  sprite.position.set(data.x + data.width / 2, data.y + data.height / 2)
+                  sprite.rotation = data.rotation || 0
 
                   elementLayer.addChild(sprite)
                   this.spriteMap.set(id, sprite)
@@ -89,25 +97,11 @@ export class ElementRenderer {
                     clearInterval(this.imageUpdateTimers.get(id))
                     this.imageUpdateTimers.delete(id)
                   }
-                } else if (graphic && graphic instanceof PIXI.Sprite) {
-                  // 如果已经是Sprite，直接更新纹理
-                  graphic.texture = loadedTexture
-                  graphic.width = data.width
-                  graphic.height = data.height
-                  graphic.position.set(data.x, data.y)
-
-                  // 停止定时检查
-                  if (this.imageUpdateTimers.has(id)) {
-                    clearInterval(this.imageUpdateTimers.get(id))
-                    this.imageUpdateTimers.delete(id)
-                  }
                 }
               })
               .catch((err) => {
                 console.error('Failed to load asset:', err)
                 this.loadingSet.delete(data.imageUrl ?? '')
-
-                // 加载失败也停止定时检查
                 if (this.imageUpdateTimers.has(id)) {
                   clearInterval(this.imageUpdateTimers.get(id))
                   this.imageUpdateTimers.delete(id)
@@ -125,73 +119,95 @@ export class ElementRenderer {
             graphic.rect(0, 0, data.width, data.height)
             graphic.fill({ color: 0xdddddd })
             graphic.stroke({ width: 1, color: 0x999999 })
-            graphic.position.set(data.x, data.y)
+
             elementLayer.addChild(graphic)
             this.spriteMap.set(id, graphic)
           }
-
-          return
         }
-
         // 如果纹理已存在（缓存中有），正常创建/更新 Sprite
-        if (!graphic || !(graphic instanceof PIXI.Sprite)) {
-          // 如果存在旧图形，先移除
-          if (graphic) {
-            elementLayer.removeChild(graphic)
-            ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
+        else {
+          if (!graphic || !(graphic instanceof PIXI.Sprite)) {
+            // 如果存在旧图形（如占位符），先移除
+            if (graphic) {
+              elementLayer.removeChild(graphic)
+              ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
+            }
+
+            const sprite = new PIXI.Sprite(texture)
+            sprite.label = id
+            sprite.eventMode = 'static'
+            sprite.cursor = 'move'
+
+            elementLayer.addChild(sprite)
+            this.spriteMap.set(id, sprite)
+
+            graphic = sprite
+          } else {
+            const sprite = graphic as PIXI.Sprite
+            if (sprite.texture !== texture) {
+              sprite.texture = texture
+            }
           }
 
-          const sprite = new PIXI.Sprite(texture)
-          sprite.label = id
-          sprite.eventMode = 'static'
-          sprite.cursor = 'move'
-          sprite.position.set(data.x, data.y)
-          sprite.width = data.width
-          sprite.height = data.height
-
-          elementLayer.addChild(sprite)
-          this.spriteMap.set(id, sprite)
-
-          graphic = sprite
-        } else {
-          const sprite = graphic as PIXI.Sprite
-          sprite.texture = texture // 此时 texture 一定是 valid 的
-          sprite.position.set(data.x, data.y)
-          sprite.width = data.width
-          sprite.height = data.height
-        }
-
-        // 应用滤镜
-        const filters: PIXI.Filter[] = []
-        switch (data.filter) {
-          case 'blur':
-            filters.push(new PIXI.BlurFilter())
-            break
-          case 'brightness': {
-            const brightnessFilter = new PIXI.ColorMatrixFilter()
-            brightnessFilter.brightness(1.5, false)
-            filters.push(brightnessFilter)
-            break
-          }
-          case 'grayscale': {
-            const grayscaleFilter = new PIXI.ColorMatrixFilter()
-            grayscaleFilter.grayscale(1, false)
-            filters.push(grayscaleFilter)
-            break
+          // 纹理已存在，停止定时检查
+          if (this.imageUpdateTimers.has(id)) {
+            clearInterval(this.imageUpdateTimers.get(id))
+            this.imageUpdateTimers.delete(id)
           }
         }
-        graphic.filters = filters
 
-        // 纹理已存在，停止定时检查
-        if (this.imageUpdateTimers.has(id)) {
-          clearInterval(this.imageUpdateTimers.get(id))
-          this.imageUpdateTimers.delete(id)
+        // === 通用属性设置 (适用于 占位符Graphics 和 正式Sprite) ===
+        // 这里处理的是同步更新逻辑
+        if (graphic) {
+          graphic.width = data.width
+          graphic.height = data.height
+
+          // === 修复点 2：同步更新时区分 Sprite 和 Graphics 处理中心点 ===
+          if (graphic instanceof PIXI.Sprite) {
+            // 修复：对于图片(Sprite)，使用 anchor 代替 pivot
+            // anchor 是相对值(0-1)，不受 texture 尺寸和 scale 影响，完美解决缩放错位问题
+            graphic.anchor.set(0.5)
+            graphic.position.set(data.x + data.width / 2, data.y + data.height / 2)
+            graphic.rotation = data.rotation || 0
+          } else {
+            // 对于占位符(Graphics)，它没有 anchor，只能用 pivot
+            // Graphics 是按 width/height 绘制的，所以 pivot 设置为中心像素值是正确的
+            if (data.rotation !== undefined) {
+              graphic.pivot.set(data.width / 2, data.height / 2)
+              graphic.position.set(data.x + data.width / 2, data.y + data.height / 2)
+              graphic.rotation = data.rotation
+            } else {
+              graphic.pivot.set(0, 0)
+              graphic.position.set(data.x, data.y)
+              graphic.rotation = 0
+            }
+          }
+
+          // 应用滤镜
+          const filters: PIXI.Filter[] = []
+          switch (data.filter) {
+            case 'blur':
+              filters.push(new PIXI.BlurFilter())
+              break
+            case 'brightness': {
+              const brightnessFilter = new PIXI.ColorMatrixFilter()
+              brightnessFilter.brightness(1.5, false)
+              filters.push(brightnessFilter)
+              break
+            }
+            case 'grayscale': {
+              const grayscaleFilter = new PIXI.ColorMatrixFilter()
+              grayscaleFilter.grayscale(1, false)
+              filters.push(grayscaleFilter)
+              break
+            }
+          }
+          graphic.filters = filters
         }
       }
 
       // === 处理 Text 类型 (HTMLText) ===
       else if (data.type === 'text') {
-        // 如果之前的 sprite 不是 HTMLText，销毁重建
         if (graphic && !(graphic instanceof HTMLText)) {
           elementLayer.removeChild(graphic)
           ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
@@ -199,12 +215,10 @@ export class ElementRenderer {
         }
 
         if (!graphic) {
-          // 创建 HTMLText
           graphic = new HTMLText({
             text: '',
-            // 定义基础样式，具体的颜色/加粗由 HTML 字符串内的 style 决定
             style: {
-              wordWrap: true, // 开启换行
+              wordWrap: true,
               breakWords: true,
             },
           })
@@ -216,42 +230,35 @@ export class ElementRenderer {
         }
 
         const textObj = graphic as HTMLText
-
-        // 直接赋值 HTML 字符串
-        // HTMLText 会自动解析 span, strong, style 等标签
         const htmlContent = data.text || '<span style="color:#cccccc">请输入文本</span>'
 
         if (textObj.text !== htmlContent) {
           textObj.text = htmlContent
         }
 
-        // 更新样式配置 (主要是宽高限制和默认字体)
-        // 注意：HTMLText 的 style 实际上是生成 CSS 注入到 foreignObject 中
         textObj.style = {
           wordWrap: true,
-          wordWrapWidth: data.width || 400, // 宽度受控于 Store
-          fontSize: data.fontSize || 20, // 默认字体大小 (会被 HTML 内联样式覆盖)
+          wordWrapWidth: data.width || 400,
+          fontSize: data.fontSize || 20,
           fontFamily: data.fontFamily || 'Arial',
-          fill: data.fill || '#000000', // 默认颜色 (会被 HTML 内联样式覆盖)
+          fill: data.fill || '#000000',
           align: data.textAlign || ('left' as 'left' | 'center' | 'right'),
-          // CSS 重置，消除 p 标签自带的 margin
           cssOverrides: ['p { margin: 0; padding: 0; }', 'span { display: inline; }'],
         }
 
-        textObj.position.set(data.x, data.y)
-
-        // 应用旋转
         if (data.rotation !== undefined) {
-          // 设置旋转中心为元素中心
           textObj.pivot.set(data.width / 2, data.height / 2)
           textObj.position.set(data.x + data.width / 2, data.y + data.height / 2)
           textObj.rotation = data.rotation
+        } else {
+          textObj.pivot.set(0, 0)
+          textObj.position.set(data.x, data.y)
+          textObj.rotation = 0
         }
       }
 
       // === 处理其他类型 (Rect/Circle/Triangle/Diamond/Line/Arrow/Pencil/Group) ===
       else {
-        // 如果之前的 sprite 不是 Graphics，销毁重建
         if (graphic && !(graphic instanceof PIXI.Graphics)) {
           elementLayer.removeChild(graphic)
           ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
@@ -270,7 +277,6 @@ export class ElementRenderer {
         const g = graphic as PIXI.Graphics
         g.clear()
 
-        // 样式属性
         const strokeWidth = data.strokeWidth ?? 2
         const strokeColor = new PIXI.Color(data.stroke)
         const fillColor = new PIXI.Color(data.fill)
@@ -281,7 +287,6 @@ export class ElementRenderer {
         }
 
         if (data.type === 'rect') {
-          // 添加圆角支持
           if (data.radius && data.radius > 0) {
             g.roundRect(0, 0, data.width, data.height, data.radius)
             if (strokeWidth > 0) {
@@ -314,7 +319,6 @@ export class ElementRenderer {
           }
           g.fill({ color: fillColor, alpha })
         } else if (data.type === 'group') {
-          // 组元素只需绘制一个边界框表示组的存在
           g.rect(0, 0, data.width, data.height)
           g.stroke({ width: 1, color: 0x0099ff, alpha: 0.7 })
           g.fill({ color: 0x0099ff, alpha: 0.1 })
@@ -350,13 +354,17 @@ export class ElementRenderer {
             g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
           }
         }
+
+        // 初始位置设置，如果 rotation 存在会被覆盖，但如果 rotation 为 undefined 则生效
         g.position.set(data.x, data.y)
-        // 应用旋转
+
         if (data.rotation !== undefined) {
-          // 设置旋转中心为元素中心
           g.pivot.set(data.width / 2, data.height / 2)
           g.position.set(data.x + data.width / 2, data.y + data.height / 2)
           g.rotation = data.rotation
+        } else {
+          g.pivot.set(0, 0)
+          g.rotation = 0
         }
       }
     })
@@ -367,12 +375,10 @@ export class ElementRenderer {
         ;(graphic as PIXI.Graphics | HTMLText | PIXI.Sprite).destroy({ children: true })
         this.spriteMap.delete(id)
 
-        // 清理不再使用的纹理
         const element = elements[id]
         if (element && element.type === 'image' && element.imageUrl) {
           const texture = this.textureCache.get(element.imageUrl)
           if (texture && texture !== PIXI.Texture.EMPTY) {
-            // 检查是否还有其他元素使用这个纹理
             const stillUsed = Object.values(elements).some(
               (el) => el.type === 'image' && el.imageUrl === element.imageUrl && el.id !== id,
             )
@@ -384,7 +390,6 @@ export class ElementRenderer {
           }
         }
 
-        // 清理定时器
         if (this.imageUpdateTimers.has(id)) {
           clearInterval(this.imageUpdateTimers.get(id) ?? '')
           this.imageUpdateTimers.delete(id)
@@ -403,7 +408,6 @@ export class ElementRenderer {
     })
     this.spriteMap.clear()
 
-    // 清理纹理缓存
     this.textureCache.forEach((texture) => {
       if (texture !== PIXI.Texture.EMPTY) {
         texture.destroy()
@@ -411,7 +415,6 @@ export class ElementRenderer {
     })
     this.textureCache.clear()
 
-    // 清理所有定时器
     this.imageUpdateTimers.forEach((timer) => {
       clearInterval(timer)
     })
