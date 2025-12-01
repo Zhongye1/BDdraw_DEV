@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # 前端服务
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  # 后端服务 - 使用 Node 22 和 Bun 包管理器
+  backend:
+    build:
+      context: ./ALD_Backend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./ALD_Backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    # 确保 ALD_Backend/Dockerfile 使用 node:22-bullseye 或更高版本并安装 bun
+    networks:
+      - app-network
+
+  # 数据库服务（如果需要的话）
+  # db:
+  #   image: postgres:13
+  #   environment:
+  #     POSTGRES_USER: postgres
+  #     POSTGRES_PASSWORD: postgres
+  #     POSTGRES_DB: ald_db
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - app-network
+
+# 定义网络
+networks:
+  app-network:
+    driver: bridge
+
+# 定义数据卷
+# volumes:
+#   postgres_data:
