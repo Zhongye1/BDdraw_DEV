@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Button, Card, Typography, Modal, Table, Tag, Space, Message, Tooltip } from '@arco-design/web-react'
-import { IconEdit, IconAlignLeft as IconKeyboard, IconCloseCircle } from '@arco-design/web-react/icon'
+import { IconEdit, IconAlignLeft as IconKeyboard, IconCloseCircle, IconRefresh } from '@arco-design/web-react/icon'
 import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
 
 const { Title, Text } = Typography
@@ -303,6 +303,13 @@ const Settings: React.FC = () => {
     }
   }, [])
 
+  // 重置所有快捷键为默认值
+  const handleResetAll = () => {
+    setShortcuts(DEFAULT_SHORTCUTS)
+    saveShortcutsToStorage(DEFAULT_SHORTCUTS)
+    Message.success('所有快捷键已恢复为默认设置')
+  }
+
   return (
     <div className="mx-auto mt-16 h-[calc(100vh-4rem)] overflow-auto bg-custom-color p-6">
       <div className="mb-6 flex items-center justify-between">
@@ -312,6 +319,9 @@ const Settings: React.FC = () => {
           </Title>
           <Text type="secondary">自定义画布操作的快捷键以提高工作效率</Text>
         </div>
+        <Button type="primary" icon={<IconRefresh />} onClick={handleResetAll}>
+          恢复所有为默认
+        </Button>
       </div>
 
       <Card className="shadow-sm">
