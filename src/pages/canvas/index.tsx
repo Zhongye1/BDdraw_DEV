@@ -276,7 +276,7 @@ export default function PixiCanvas() {
   return (
     <StageManagerProvider stageManager={stageManager}>
       <div
-        className="relative mt-16 h-[calc(100vh-64px)] w-auto overflow-hidden bg-blue-200"
+        className="relative mt-16 h-[calc(100vh-4rem)] w-auto overflow-hidden bg-blue-200"
         onPointerMove={handlePointerMove}
       >
         {/* 登录提示横幅 */}

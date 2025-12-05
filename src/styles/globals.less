@@ -50,4 +50,22 @@
     --ring: 240 5% 83%;
     --custom-color: #1a1919;
   }
+
+  // 全局禁用文本选择
+  body {
+    user-select: none;
+    user-select: none;
+    user-select: none;
+    user-select: none;
+
+    // 但允许在输入框和文本域中选择文本
+    input,
+    textarea,
+    [contenteditable] {
+      user-select: auto;
+      user-select: auto;
+      user-select: auto;
+      user-select: auto;
+    }
+  }
 }
