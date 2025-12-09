@@ -1,5 +1,5 @@
 import { Link, useRouteError } from 'react-router-dom'
-import { Button } from '../ui/button'
+import { Button } from '@arco-design/web-react'
 
 export default function ErrorPage() {
   const error = useRouteError() as any
@@ -12,7 +12,7 @@ export default function ErrorPage() {
         <span className="mr-2">{error?.status}</span>
         <i>{error?.statusText || error?.message}</i>
       </p>
-      <Button asChild>
+      <Button>
         <Link to="/">Back to home page</Link>
       </Button>
     </div>

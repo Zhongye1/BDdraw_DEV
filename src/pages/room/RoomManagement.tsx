@@ -26,7 +26,6 @@ import {
   createRoom,
   listRooms,
   getRoomDetails,
-  inviteUserToRoom,
   getRoomMembers,
   deleteRoom,
   searchRooms,
@@ -172,23 +171,23 @@ const RoomManagement: React.FC = () => {
     }
   }
 
-  const handleInviteUser = async () => {
-    if (!selectedRoom) return
-    try {
-      const values = await inviteForm.validate()
-      setActionLoading(true)
-      await inviteUserToRoom(selectedRoom.id, values.username, token)
-      Notification.success({ title: '邀请成功', content: `用户 "${values.username}" 已被邀请` })
-      inviteForm.resetFields()
-      // 刷新成员
-      const members = await getRoomMembers(selectedRoom.id, token)
-      setRoomMembers(members)
-    } catch (error: any) {
-      handleError('邀请用户失败', error)
-    } finally {
-      setActionLoading(false)
-    }
-  }
+  // const handleInviteUser = async () => {
+  //   if (!selectedRoom) return
+  //   try {
+  //     const values = await inviteForm.validate()
+  //     setActionLoading(true)
+  //     await inviteUserToRoom(selectedRoom.id, values.username, token)
+  //     Notification.success({ title: '邀请成功', content: `用户 "${values.username}" 已被邀请` })
+  //     inviteForm.resetFields()
+  //     // 刷新成员
+  //     const members = await getRoomMembers(selectedRoom.id, token)
+  //     setRoomMembers(members)
+  //   } catch (error: any) {
+  //     handleError('邀请用户失败', error)
+  //   } finally {
+  //     setActionLoading(false)
+  //   }
+  // }
 
   const handleDeleteRoom = async (e: React.MouseEvent | any, roomId: string) => {
     // 防止事件冒泡
@@ -300,7 +299,7 @@ const RoomManagement: React.FC = () => {
   return (
     <div className="mt-16 h-[calc(100vh-4rem)] overflow-hidden bg-custom-color p-6">
       <div className="mx-auto max-w-7xl">
-        <div className="h-[600px] rounded-lg border-[1.5px] border-gray-300 bg-[var(--color-bg-2)] p-6 shadow-sm">
+        <div className="h-auto min-h-[80vh] rounded-lg border-[1.5px] border-gray-300 bg-[var(--color-bg-2)] p-6 shadow-sm">
           <div className="mb-6 flex justify-between bg-[var(--color-bg-2)] p-4 pb-1 pt-1">
             <Title heading={4}>房间管理</Title>
 
@@ -415,7 +414,7 @@ const RoomManagement: React.FC = () => {
                 <Descriptions
                   column={1}
                   data={[
-                    { label: '创建者', value: selectedRoom.creator_name || selectedRoom.creator_id },
+                    { label: '创建者', value: selectedRoom.name },
                     {
                       label: '创建时间',
                       value: selectedRoom.created_at ? new Date(selectedRoom.created_at).toLocaleString() : '-',
@@ -429,19 +428,6 @@ const RoomManagement: React.FC = () => {
               </TabPane>
 
               <TabPane key="members" title="成员管理">
-                <div className="mb-4 rounded bg-gray-50 p-3">
-                  <Form form={inviteForm} layout="vertical" onSubmit={handleInviteUser}>
-                    <div className="flex gap-2">
-                      <Form.Item field="username" noStyle rules={[{ required: true }]}>
-                        <Input placeholder="输入用户名邀请..." />
-                      </Form.Item>
-                      <Button type="primary" htmlType="submit" loading={actionLoading}>
-                        邀请
-                      </Button>
-                    </div>
-                  </Form>
-                </div>
-
                 <div className="flex-1 overflow-y-auto" style={{ maxHeight: '400px' }}>
                   <List
                     dataSource={roomMembers}

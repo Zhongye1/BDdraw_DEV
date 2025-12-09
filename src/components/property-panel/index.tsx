@@ -2,6 +2,7 @@ import { Button, Space, Radio } from '@arco-design/web-react'
 import { useStore } from '@/stores/canvasStore'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { UpdateElementPropertyCommand } from '@/lib/UpdateElementPropertyCommand'
+import Title from '@arco-design/web-react/es/Typography/title'
 
 // 预设填充色选项
 const PRESET_FILL_COLORS = [
@@ -94,10 +95,10 @@ const PropertyPanel = () => {
   const noStrokeTypes = ['select', 'hand', 'eraser', 'image']
 
   return (
-    <div className="absolute right-4 top-4 w-60 rounded bg-white p-4 shadow-lg">
+    <div className="absolute right-4 top-4 w-60 rounded bg-[var(--color-bg-2)] p-4 shadow-lg ">
       {element.type === 'image' && (
         <>
-          <div className="mb-2 font-medium">图片滤镜</div>
+          <title>图片滤镜</title>
           <Radio.Group
             onChange={(value) => handleChange('filter', value)}
             value={element.filter || 'none'}
@@ -116,7 +117,7 @@ const PropertyPanel = () => {
 
       {!noFillTypes.includes(element.type) && (
         <>
-          <div className="mb-2 font-medium">填充色</div>
+          <Title heading={6}>填充色</Title>
           <div className="mb-3 flex flex-wrap gap-1">
             {PRESET_FILL_COLORS.map((color) => (
               <ColorButton
@@ -132,7 +133,7 @@ const PropertyPanel = () => {
 
       {!noStrokeTypes.includes(element.type) && (
         <>
-          <div className="mb-2 font-medium">边框色</div>
+          <Title heading={6}>边框色</Title>
           <div className="mb-3 flex flex-wrap gap-1">
             {PRESET_STROKE_COLORS.map((color) => (
               <ColorButton
@@ -144,7 +145,7 @@ const PropertyPanel = () => {
             ))}
           </div>
 
-          <div className="mb-2 font-medium">边框宽度 </div>
+          <Title heading={6}>边框宽度 </Title>
           <Space wrap size="small" className="mb-3">
             {PRESET_STROKE_WIDTHS.map((width) => (
               <Button
@@ -162,7 +163,7 @@ const PropertyPanel = () => {
 
       {!noAlphaTypes.includes(element.type) && (
         <>
-          <div className="mb-2 font-medium">透明度</div>
+          <Title heading={6}>透明度</Title>
           <Space wrap size="small" className="mb-3">
             {PRESET_ALPHAS.map((alpha) => (
               <Button
@@ -180,7 +181,7 @@ const PropertyPanel = () => {
 
       {element.type === 'rect' && (
         <>
-          <div className="mb-2 font-medium">圆角</div>
+          <Title heading={6}>圆角</Title>
           <Space wrap size="small">
             {PRESET_RADIUS.map((radius) => (
               <Button

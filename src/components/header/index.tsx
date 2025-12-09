@@ -1,13 +1,13 @@
-import React, { ReactNode, useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Notification, Dropdown, Menu, Avatar } from '@arco-design/web-react'
-import { IconGithub, IconUser, IconExport, IconLanguage, IconSettings } from '@arco-design/web-react/icon'
+import { IconGithub, IconUser, IconExport, IconSettings } from '@arco-design/web-react/icon'
 import { useNavigate, useLocation } from 'react-router-dom'
 import ThemeButton from '../ui/blackwhitebutton'
 import { useTheme } from '@/stores/themeStore'
 
-interface IProps {
-  leftNode?: ReactNode
-}
+// interface IProps {
+//   leftNode?: ReactNode
+// }
 
 function Header() {
   const navigate = useNavigate()
@@ -229,7 +229,7 @@ function Header() {
               <IconGithub className="text-xl" />
             </button>
 
-            <button
+            {/* <button
               className={`hidden rounded-full p-2 transition-all sm:flex ${
                 theme === 'dark'
                   ? 'text-gray-300 hover:bg-gray-700 hover:text-white'
@@ -243,7 +243,7 @@ function Header() {
               }}
             >
               <IconLanguage className="text-xl" />
-            </button>
+            </button> */}
             <button
               className={`hidden rounded-full p-2 transition-all sm:flex ${
                 theme === 'dark'
