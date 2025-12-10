@@ -1,6 +1,7 @@
 import * as PIXI from 'pixi.js'
 import type { CanvasElement } from '@/stores/canvasStore'
 import type { HandleType } from '../shared/types'
+import { getAllDescendantIds } from '../utils/geometryUtils'
 
 // 辅助函数：旋转点
 function rotatePoint(x: number, y: number, cx: number, cy: number, angle: number) {
@@ -32,7 +33,6 @@ export class TransformerRenderer {
 
     // 2. 彻底销毁旧的子元素 (HitZones 和 Text)
     // 仅仅 removeChildren 是不够的，必须调用 destroy 释放内存和纹理引用
-    // 特别是 Text 对象，每一帧创建新的 Text 而不销毁旧的会导致严重的性能问题和渲染残留
     const children = this.transformerGraphic.removeChildren()
     children.forEach((child) => {
       child.destroy({ children: true, texture: true })
@@ -90,119 +90,125 @@ export class TransformerRenderer {
       finalBounds = overrideBounds
       finalRotation = overrideRotation
     } else {
-      // 2. 否则，执行与 Handler 完全一致的几何计算逻辑
+      // 2. 否则，执行与 Handler 及 ElementRenderer 一致的几何计算逻辑
 
       // 2.1 确定组的旋转角度 (Group Angle)
       // 逻辑：如果是单选，或者多选但所有元素旋转角度一致，则使用该角度。否则为0。
       let groupAngle = 0
-      const firstRotation = elements[validSelectedIds[0]]?.rotation || 0
-      const isUniform = validSelectedIds.every((id) => Math.abs((elements[id]?.rotation || 0) - firstRotation) < 0.001)
-      if (isUniform) {
-        groupAngle = firstRotation
-      }
 
-      // 2.2 计算 Local OBB (局部有向包围盒)
-      // 我们需要找到一组 minX/Y/W/H，使得它们构成的矩形，旋转 groupAngle 后，能包住所有元素
-      let minLx = Infinity,
-        maxLx = -Infinity,
-        minLy = Infinity,
-        maxLy = -Infinity
-
-      validSelectedIds.forEach((id) => {
-        const el = elements[id]
-        if (!el) return
-
-        // 获取元素未旋转时的宽高
-        // 针对 Text 特殊处理：优先读取 sprite 尺寸（因为 Store 里的可能滞后），但要除以 scale
-        let elW = el.width
-        let elH = el.height
-        if (el.type === 'text') {
-          const sprite = spriteMap.get(id)
-          if (sprite) {
-            // 简单的近似，假设 Text 内部没有缩放。如果 Text 有 scale 属性这里需要调整
-            elW = sprite.width
-            elH = sprite.height
-            // sprite.width 是 AABB 宽度。
-            // 严谨的做法应该获取 text 的 localBounds。
-            // 这里假设 store 中的 width/height 对于非 Text 元素是准确的。
-            // 如果 Text 旋转了，sprite.width 也是旋转后的 AABB，这会导致双重计算。
-            // 最佳实践：相信 Store 中的 width/height，或者 updateElement 时确保 store 是准的。
-            // 这里为了修复错位，暂时回退到使用 Store 的数据，因为 Store 是 Source of Truth。
-            const localBounds = sprite.getLocalBounds()
-
-            // 宽度：优先使用 Store 中的 width，因为对于文本框，width 通常是用户设定的约束宽度（Wrap Width）
-            elW = el.width || localBounds.width || 0
-
-            // 高度：【关键修改】直接使用 localBounds.height (实际渲染高度)
-            // 文本的高度是由内容和宽度决定的，Store 里的 height 往往不准确，必须以实际渲染为准
-            elH = localBounds.height
-          }
+      // 如果选中了单个组，直接使用组的属性，不再递归计算
+      if (validSelectedIds.length === 1 && firstEl.type === 'group') {
+        groupAngle = firstEl.rotation || 0
+        finalBounds = {
+          x: firstEl.x,
+          y: firstEl.y,
+          width: firstEl.width,
+          height: firstEl.height,
+        }
+        finalRotation = groupAngle
+      } else {
+        const firstRotation = elements[validSelectedIds[0]]?.rotation || 0
+        const isUniform = validSelectedIds.every(
+          (id) => Math.abs((elements[id]?.rotation || 0) - firstRotation) < 0.001,
+        )
+        if (isUniform) {
+          groupAngle = firstRotation
         }
 
-        const elCx = el.x + elW / 2
-        const elCy = el.y + elH / 2
-        const elRot = el.rotation || 0
+        // 2.2 计算 Local OBB (局部有向包围盒)
+        let minLx = Infinity,
+          maxLx = -Infinity,
+          minLy = Infinity,
+          maxLy = -Infinity
 
-        // 计算元素四个角点在世界坐标的位置
-        const halfW = elW / 2
-        const halfH = elH / 2
+        // 遍历所有选中的根元素
+        validSelectedIds.forEach((id) => {
+          const rootEl = elements[id]
+          if (!rootEl) return
 
-        const corners = [
-          { x: -halfW, y: -halfH },
-          { x: halfW, y: -halfH },
-          { x: halfW, y: halfH },
-          { x: -halfW, y: halfH },
-        ].map((p) => {
-          // 1. 元素局部 -> 世界 (考虑元素自身旋转)
-          const pWorld = rotatePoint(elCx + p.x, elCy + p.y, elCx, elCy, elRot)
-          // 2. 世界 -> 组局部 (逆向旋转 groupAngle，对齐到组轴)
-          // 这里的旋转中心选 (0,0) 即可，算出的 min/max 是相对原点的，最后算出 width/height 无影响
-          return rotatePoint(pWorld.x, pWorld.y, 0, 0, -groupAngle)
+          // 如果选中了组，需要展开计算其所有后代，以保证选中框贴合子元素边缘
+          // 这样可以确保 Transformer 的框与 ElementRenderer 绘制的蓝色框完全一致
+          const idsToProcess = rootEl.type === 'group' ? getAllDescendantIds(id, elements) : [id]
+
+          idsToProcess.forEach((subId) => {
+            const el = elements[subId]
+            if (!el) return
+
+            // 获取元素未旋转时的宽高
+            let elW = el.width
+            let elH = el.height
+            if (el.type === 'text') {
+              const sprite = spriteMap.get(subId)
+              if (sprite) {
+                // 文本的高度必须以实际渲染为准
+                const localBounds = sprite.getLocalBounds()
+                elW = el.width || localBounds.width || 0
+                elH = localBounds.height
+              }
+            }
+
+            const elCx = el.x + elW / 2
+            const elCy = el.y + elH / 2
+            const elRot = el.rotation || 0
+
+            // 计算元素四个角点在世界坐标的位置
+            const halfW = elW / 2
+            const halfH = elH / 2
+
+            const corners = [
+              { x: -halfW, y: -halfH },
+              { x: halfW, y: -halfH },
+              { x: halfW, y: halfH },
+              { x: -halfW, y: halfH },
+            ].map((p) => {
+              // 1. 元素局部 -> 世界 (考虑元素自身旋转)
+              const pWorld = rotatePoint(elCx + p.x, elCy + p.y, elCx, elCy, elRot)
+              // 2. 世界 -> 组局部 (逆向旋转 groupAngle，对齐到组轴)
+              return rotatePoint(pWorld.x, pWorld.y, 0, 0, -groupAngle)
+            })
+
+            corners.forEach((p) => {
+              minLx = Math.min(minLx, p.x)
+              maxLx = Math.max(maxLx, p.x)
+              minLy = Math.min(minLy, p.y)
+              maxLy = Math.max(maxLy, p.y)
+            })
+          })
         })
 
-        corners.forEach((p) => {
-          minLx = Math.min(minLx, p.x)
-          maxLx = Math.max(maxLx, p.x)
-          minLy = Math.min(minLy, p.y)
-          maxLy = Math.max(maxLy, p.y)
-        })
-      })
+        // 2.3 组装最终数据
+        let width = maxLx - minLx
+        let height = maxLy - minLy
 
-      // 2.3 组装最终数据
-      let width = maxLx - minLx
-      let height = maxLy - minLy
+        // 为文本元素设置最小宽度和高度，确保用户可以轻松选中和编辑
+        const hasTextElement =
+          validSelectedIds.some((id) => elements[id]?.type === 'text') ||
+          validSelectedIds.some(
+            (id) =>
+              elements[id].type === 'group' &&
+              getAllDescendantIds(id, elements).some((did) => elements[did]?.type === 'text'),
+          )
 
-      // 为文本元素设置最小宽度和高度，确保用户可以轻松选中和编辑
-      const hasTextElement = validSelectedIds.some((id) => elements[id]?.type === 'text')
-      if (hasTextElement) {
-        // 设置最小宽度为50像素，确保有足够的空间进行编辑
-        if (width < 50) {
-          width = 50
+        if (hasTextElement) {
+          if (width < 50) width = 50
+          if (height < 30) height = 30
         }
-        // 设置最小高度为30像素，确保至少能显示一行文本
-        if (height < 30) {
-          height = 30
+
+        // 中心点在组局部坐标系的位置
+        const cxLocal = minLx + width / 2
+        const cyLocal = minLy + height / 2
+
+        // 将中心点旋转回世界坐标
+        const centerWorld = rotatePoint(cxLocal, cyLocal, 0, 0, groupAngle)
+
+        finalBounds = {
+          x: centerWorld.x - width / 2,
+          y: centerWorld.y - height / 2,
+          width: width,
+          height: height,
         }
+        finalRotation = groupAngle
       }
-
-      // 中心点在组局部坐标系的位置
-      const cxLocal = minLx + width / 2
-      const cyLocal = minLy + height / 2
-
-      // 将中心点旋转回世界坐标
-      const centerWorld = rotatePoint(cxLocal, cyLocal, 0, 0, groupAngle)
-
-      // 算出左上角 (注意：这里的 bounds x,y 指的是未旋转状态下的左上角，或者理解为 DrawRotatedBounds 需要的基准)
-      // drawRotatedBounds 接收的是 bounds 和 rotation。
-      // 它内部会基于 bounds 中心旋转。
-      // 所以我们传递的 bounds 应该是：中心点正确，宽高正确，且假设无旋转时的 x,y
-      finalBounds = {
-        x: centerWorld.x - width / 2,
-        y: centerWorld.y - height / 2,
-        width: width,
-        height: height,
-      }
-      finalRotation = groupAngle
     }
 
     // 3. 统一绘制
@@ -273,7 +279,7 @@ export class TransformerRenderer {
       hitZone.rect(rotatedX - handleSize, rotatedY - handleSize, handleSize * 2, handleSize * 2)
       hitZone.fill({ color: 0x000000, alpha: 0.0001 })
       hitZone.eventMode = 'static'
-      // 计算光标方向：需要加上旋转角度，否则光标指示方向不对
+      // 计算光标方向
       hitZone.cursor = this.getCursorForHandle(type as HandleType, rotation)
       hitZone.label = `handle:${type}`
 
@@ -318,14 +324,14 @@ export class TransformerRenderer {
     if (isGroupSelected) {
       const groupName = `Group ${selectedIds[0].substring(0, 4)}`
       const textStyle = new PIXI.TextStyle({
-        fontSize: 20 / viewportScale,
+        fontSize: 10 / viewportScale,
         fill: 0x0099ff,
         fontWeight: 'bold',
       })
       const text = new PIXI.Text(groupName, textStyle)
       // 简单定位到旋转手柄附近
-      text.x = rotHandleX + 20 / viewportScale
-      text.y = rotHandleY - 20 / viewportScale
+      text.x = rotHandleX + 15 / viewportScale
+      text.y = rotHandleY - 15 / viewportScale
       this.transformerGraphic.addChild(text)
     }
   }
@@ -334,28 +340,7 @@ export class TransformerRenderer {
     if (handle === 'p0' || handle === 'p1') return 'move'
     if (handle === 'rotate') return 'grab'
 
-    // 根据旋转角度动态调整光标方向
-    // 将角度标准化到 0-360
-    /** 
-    const deg = (rotation * 180) / Math.PI
-
-    // 基础光标映射 (未旋转时)
-    const cursorMap = {
-      tl: 0,
-      t: 45,
-      tr: 90,
-      r: 135,
-      br: 180,
-      b: 225,
-      bl: 270,
-      l: 315,
-    }
-*/
     // 这里简化处理，实际上应该根据 handle + rotation 计算出一个 0-180 的角度，然后映射到对应的 css cursor
-    // PIXI 或浏览器会自动处理简单的 ns-resize 旋转吗？通常不会。
-    // 为了完美体验，需要根据角度返回 'nwse-resize', 'ns-resize' 等。
-    // 这是一个简化版本，暂时保持原样，如果需要完美光标跟随旋转，需要复杂的查找表。
-
     switch (handle) {
       case 'tl':
       case 'br':

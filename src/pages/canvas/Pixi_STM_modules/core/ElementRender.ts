@@ -2,6 +2,16 @@ import * as PIXI from 'pixi.js'
 import { HTMLText } from 'pixi.js'
 import type { CanvasElement } from '@/stores/canvasStore'
 
+// 辅助函数：旋转点
+function rotatePoint(x: number, y: number, cx: number, cy: number, angle: number) {
+  const cos = Math.cos(angle)
+  const sin = Math.sin(angle)
+  return {
+    x: (x - cx) * cos - (y - cy) * sin + cx,
+    y: (x - cx) * sin + (y - cy) * cos + cy,
+  }
+}
+
 export class ElementRenderer {
   private spriteMap: Map<string, PIXI.Graphics | HTMLText | PIXI.Sprite> = new Map()
   private textureCache: Map<string, PIXI.Texture> = new Map()
@@ -62,7 +72,6 @@ export class ElementRenderer {
                   sprite.width = data.width
                   sprite.height = data.height
 
-                  // === 修复点 1：异步加载完成后，使用 anchor 处理 Sprite ===
                   // Sprite 使用 anchor(0.5) 来确保缩放时中心点不会偏移
                   sprite.anchor.set(0.5)
                   sprite.position.set(data.x + data.width / 2, data.y + data.height / 2)
@@ -73,22 +82,15 @@ export class ElementRenderer {
 
                   // 应用滤镜
                   const filters: PIXI.Filter[] = []
-                  switch (data.filter) {
-                    case 'blur':
-                      filters.push(new PIXI.BlurFilter())
-                      break
-                    case 'brightness': {
-                      const brightnessFilter = new PIXI.ColorMatrixFilter()
-                      brightnessFilter.brightness(1.5, false)
-                      filters.push(brightnessFilter)
-                      break
-                    }
-                    case 'grayscale': {
-                      const grayscaleFilter = new PIXI.ColorMatrixFilter()
-                      grayscaleFilter.grayscale(1, false)
-                      filters.push(grayscaleFilter)
-                      break
-                    }
+                  if (data.filter === 'blur') filters.push(new PIXI.BlurFilter())
+                  else if (data.filter === 'brightness') {
+                    const f = new PIXI.ColorMatrixFilter()
+                    f.brightness(1.5, false)
+                    filters.push(f)
+                  } else if (data.filter === 'grayscale') {
+                    const f = new PIXI.ColorMatrixFilter()
+                    f.grayscale(1, false)
+                    filters.push(f)
                   }
                   sprite.filters = filters
 
@@ -156,22 +158,16 @@ export class ElementRenderer {
           }
         }
 
-        // === 通用属性设置 (适用于 占位符Graphics 和 正式Sprite) ===
-        // 这里处理的是同步更新逻辑
+        // === 通用属性设置 ===
         if (graphic) {
           graphic.width = data.width
           graphic.height = data.height
 
-          // === 修复点 2：同步更新时区分 Sprite 和 Graphics 处理中心点 ===
           if (graphic instanceof PIXI.Sprite) {
-            // 修复：对于图片(Sprite)，使用 anchor 代替 pivot
-            // anchor 是相对值(0-1)，不受 texture 尺寸和 scale 影响，完美解决缩放错位问题
             graphic.anchor.set(0.5)
             graphic.position.set(data.x + data.width / 2, data.y + data.height / 2)
             graphic.rotation = data.rotation || 0
           } else {
-            // 对于占位符(Graphics)，它没有 anchor，只能用 pivot
-            // Graphics 是按 width/height 绘制的，所以 pivot 设置为中心像素值是正确的
             if (data.rotation !== undefined) {
               graphic.pivot.set(data.width / 2, data.height / 2)
               graphic.position.set(data.x + data.width / 2, data.y + data.height / 2)
@@ -185,22 +181,15 @@ export class ElementRenderer {
 
           // 应用滤镜
           const filters: PIXI.Filter[] = []
-          switch (data.filter) {
-            case 'blur':
-              filters.push(new PIXI.BlurFilter())
-              break
-            case 'brightness': {
-              const brightnessFilter = new PIXI.ColorMatrixFilter()
-              brightnessFilter.brightness(1.5, false)
-              filters.push(brightnessFilter)
-              break
-            }
-            case 'grayscale': {
-              const grayscaleFilter = new PIXI.ColorMatrixFilter()
-              grayscaleFilter.grayscale(1, false)
-              filters.push(grayscaleFilter)
-              break
-            }
+          if (data.filter === 'blur') filters.push(new PIXI.BlurFilter())
+          else if (data.filter === 'brightness') {
+            const f = new PIXI.ColorMatrixFilter()
+            f.brightness(1.5, false)
+            filters.push(f)
+          } else if (data.filter === 'grayscale') {
+            const f = new PIXI.ColorMatrixFilter()
+            f.grayscale(1, false)
+            filters.push(f)
           }
           graphic.filters = filters
         }
@@ -282,89 +271,117 @@ export class ElementRenderer {
         const fillColor = new PIXI.Color(data.fill)
         const alpha = data.alpha ?? 1
 
-        if (strokeWidth > 0) {
-          g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-        }
+        // ============================================
+        // [修复] 组元素的渲染逻辑 - 变"傻"，直接读取 Store
+        // ============================================
+        if (data.type === 'group') {
+          // 既然我们在创建组或调整组大小时已经计算好了 x,y,width,height
+          // 渲染器就应该直接信任这些数据，而不是每一帧都去递归重算。
+          // 这样可以确保渲染位置与 Store 中的坐标（以及 Transformer 的位置）完全一致。
 
-        if (data.type === 'rect') {
-          if (data.radius && data.radius > 0) {
-            g.roundRect(0, 0, data.width, data.height, data.radius)
-            if (strokeWidth > 0) {
-              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-            }
-            g.fill({ color: fillColor, alpha })
-          } else {
-            g.rect(0, 0, data.width, data.height)
-            if (strokeWidth > 0) {
-              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-            }
-            g.fill({ color: fillColor, alpha })
-          }
-        } else if (data.type === 'circle') {
-          g.ellipse(data.width / 2, data.height / 2, data.width / 2, data.height / 2)
-          if (strokeWidth > 0) {
-            g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-          }
-          g.fill({ color: fillColor, alpha })
-        } else if (data.type === 'triangle') {
-          g.poly([data.width / 2, 0, data.width, data.height, 0, data.height / 2])
-          if (strokeWidth > 0) {
-            g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-          }
-          g.fill({ color: fillColor, alpha })
-        } else if (data.type === 'diamond') {
-          g.poly([data.width / 2, 0, data.width, data.height / 2, data.width / 2, data.height, 0, data.height / 2])
-          if (strokeWidth > 0) {
-            g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
-          }
-          g.fill({ color: fillColor, alpha })
-        } else if (data.type === 'group') {
+          // 绘制组的蓝色标识框
           g.rect(0, 0, data.width, data.height)
           g.stroke({ width: 1, color: 0x0099ff, alpha: 0.7 })
-          g.fill({ color: 0x0099ff, alpha: 0.1 })
-        } else if (
-          (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
-          data.points &&
-          data.points.length > 0
-        ) {
-          g.moveTo(data.points[0][0], data.points[0][1])
-          for (let i = 1; i < data.points.length; i++) {
-            g.lineTo(data.points[i][0], data.points[i][1])
-          }
-          g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+          g.fill({ color: 0x0099ff, alpha: 0.04 })
 
-          if (data.type === 'arrow' && data.points.length >= 2) {
-            const start = data.points[0]
-            const end = data.points[data.points.length - 1]
-            const dx = end[0] - start[0]
-            const dy = end[1] - start[1]
-            const angle = Math.atan2(dy, dx)
-            const headLength = 15
-            const headAngle = Math.PI / 6
-            g.moveTo(end[0], end[1])
-            g.lineTo(
-              end[0] - headLength * Math.cos(angle - headAngle),
-              end[1] - headLength * Math.sin(angle - headAngle),
-            )
-            g.moveTo(end[0], end[1])
-            g.lineTo(
-              end[0] - headLength * Math.cos(angle + headAngle),
-              end[1] - headLength * Math.sin(angle + headAngle),
-            )
+          // 关键定位逻辑 (Pivot Alignment)
+          // 必须这样做才能保证旋转时框体不漂移
+
+          // A. 设置 Pivot (轴心) 为矩形的几何中心
+          g.pivot.set(data.width / 2, data.height / 2)
+
+          // B. 设置 Position (位置) 为矩形的世界中心
+          // data.x/y 是左上角，所以中心是 x + w/2, y + h/2
+          g.position.set(data.x + data.width / 2, data.y + data.height / 2)
+
+          // C. 应用旋转
+          g.rotation = data.rotation || 0
+        }
+        // ============================================
+        // [结束] 组元素渲染逻辑
+        // ============================================
+        else {
+          // 常规元素的渲染逻辑
+          if (strokeWidth > 0) {
             g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
           }
-        }
 
-        // 初始位置设置，如果 rotation 存在会被覆盖，但如果 rotation 为 undefined 则生效
-        g.position.set(data.x, data.y)
+          if (data.type === 'rect') {
+            if (data.radius && data.radius > 0) {
+              g.roundRect(0, 0, data.width, data.height, data.radius)
+              if (strokeWidth > 0) {
+                g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+              }
+              g.fill({ color: fillColor, alpha })
+            } else {
+              g.rect(0, 0, data.width, data.height)
+              if (strokeWidth > 0) {
+                g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+              }
+              g.fill({ color: fillColor, alpha })
+            }
+          } else if (data.type === 'circle') {
+            g.ellipse(data.width / 2, data.height / 2, data.width / 2, data.height / 2)
+            if (strokeWidth > 0) {
+              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+            }
+            g.fill({ color: fillColor, alpha })
+          } else if (data.type === 'triangle') {
+            g.poly([data.width / 2, 0, data.width, data.height, 0, data.height / 2])
+            if (strokeWidth > 0) {
+              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+            }
+            g.fill({ color: fillColor, alpha })
+          } else if (data.type === 'diamond') {
+            g.poly([data.width / 2, 0, data.width, data.height / 2, data.width / 2, data.height, 0, data.height / 2])
+            if (strokeWidth > 0) {
+              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+            }
+            g.fill({ color: fillColor, alpha })
+          } else if (
+            (data.type === 'line' || data.type === 'arrow' || data.type === 'pencil') &&
+            data.points &&
+            data.points.length > 0
+          ) {
+            g.moveTo(data.points[0][0], data.points[0][1])
+            for (let i = 1; i < data.points.length; i++) {
+              g.lineTo(data.points[i][0], data.points[i][1])
+            }
+            g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
 
-        if (data.rotation !== undefined) {
-          g.pivot.set(data.width / 2, data.height / 2)
-          g.position.set(data.x + data.width / 2, data.y + data.height / 2)
-          g.rotation = data.rotation
-        } else {
-          g.pivot.set(0, 0)
-          g.rotation = 0
+            if (data.type === 'arrow' && data.points.length >= 2) {
+              const start = data.points[0]
+              const end = data.points[data.points.length - 1]
+              const dx = end[0] - start[0]
+              const dy = end[1] - start[1]
+              const angle = Math.atan2(dy, dx)
+              const headLength = 15
+              const headAngle = Math.PI / 6
+              g.moveTo(end[0], end[1])
+              g.lineTo(
+                end[0] - headLength * Math.cos(angle - headAngle),
+                end[1] - headLength * Math.sin(angle - headAngle),
+              )
+              g.moveTo(end[0], end[1])
+              g.lineTo(
+                end[0] - headLength * Math.cos(angle + headAngle),
+                end[1] - headLength * Math.sin(angle + headAngle),
+              )
+              g.stroke({ width: strokeWidth, color: strokeColor, cap: 'round', join: 'round' })
+            }
+          }
+
+          // 初始位置设置，如果 rotation 存在会被覆盖，但如果 rotation 为 undefined 则生效
+          g.position.set(data.x, data.y)
+
+          if (data.rotation !== undefined) {
+            g.pivot.set(data.width / 2, data.height / 2)
+            g.position.set(data.x + data.width / 2, data.y + data.height / 2)
+            g.rotation = data.rotation
+          } else {
+            g.pivot.set(0, 0)
+            g.rotation = 0
+          }
         }
       }
     })
