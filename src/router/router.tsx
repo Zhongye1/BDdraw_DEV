@@ -10,6 +10,7 @@ import ErrorPage from '@/components/error-page'
 import { Header } from '@/components/header'
 import AnimatedRoutes from '@/components/AnimatedRoutes'
 import Settings from '@/components/settings/setting'
+import ProtectedRoute from '@/components/ProtectedRoute'
 
 // 自定义组件，用于处理默认画布路由
 const DefaultCanvasRoute: React.FC = () => {
@@ -78,7 +79,11 @@ const router = createBrowserRouter(
         },
         {
           path: '/rooms',
-          element: <RoomManagement />,
+          element: (
+            <ProtectedRoute>
+              <RoomManagement />
+            </ProtectedRoute>
+          ),
         },
         {
           path: '/home',
@@ -87,7 +92,11 @@ const router = createBrowserRouter(
         },
         {
           path: '/settings',
-          element: <Settings />,
+          element: (
+            <ProtectedRoute>
+              <Settings />
+            </ProtectedRoute>
+          ),
         },
       ],
     },

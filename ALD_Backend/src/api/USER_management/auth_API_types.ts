@@ -57,3 +57,9 @@ export const LoginResponseSchema = z.object({
 export const LoginErrorResponseSchema = z.object({
   error: z.string(),
 })
+
+// Token验证响应体（与登录响应体相同）
+export const ValidateTokenResponseSchema = LoginResponseSchema
+
+// Token验证错误响应体（与登录错误响应体相同）
+export const ValidateTokenErrorResponseSchema = LoginErrorResponseSchema

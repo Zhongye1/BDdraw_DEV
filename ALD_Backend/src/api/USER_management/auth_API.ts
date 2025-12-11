@@ -1,6 +1,6 @@
 import { OpenAPIHono, createRoute } from '@hono/zod-openapi'
 import db from '../../db'
-import { createToken, hashPassword, verifyPassword } from '../../auth'
+import { createToken, hashPassword, verifyPassword, verifyToken } from '../../auth'
 import {
   RegisterRequestSchema,
   RegisterResponseSchema,
@@ -8,6 +8,8 @@ import {
   LoginRequestSchema,
   LoginResponseSchema,
   LoginErrorResponseSchema,
+  ValidateTokenResponseSchema,
+  ValidateTokenErrorResponseSchema,
 } from './auth_API_types'
 
 type Variables = {
@@ -120,6 +122,60 @@ authApp.openapi(loginRoute, async (c) => {
 
   const token = await createToken({ id: user.id, username: user.username })
   return c.json({ token, user: { id: user.id, username: user.username } }, 200)
+})
+
+// 定义验证token路由和模式
+const validateTokenRoute = createRoute({
+  method: 'get',
+  path: '/api/auth/validate',
+  summary: '验证Token有效性',
+  description: '验证用户Token是否有效且未过期',
+  responses: {
+    200: {
+      description: 'Token有效',
+      content: {
+        'application/json': {
+          schema: ValidateTokenResponseSchema,
+        },
+      },
+    },
+    401: {
+      description: 'Token无效或已过期',
+      content: {
+        'application/json': {
+          schema: ValidateTokenErrorResponseSchema,
+        },
+      },
+    },
+  },
+  security: [{ Bearer: [] }],
+})
+
+// 验证Token有效性
+authApp.openapi(validateTokenRoute, async (c) => {
+  const authHeader = c.req.header('Authorization')
+  const token = authHeader?.split(' ')[1]
+
+  if (!token) {
+    return c.json({ error: 'Missing token' }, 401)
+  }
+
+  const user = await verifyToken(token)
+
+  if (!user) {
+    return c.json({ error: 'Invalid or expired token' }, 401)
+  }
+
+  return c.json(
+    {
+      token,
+      user: {
+        id: user.id,
+        username: user.username,
+      },
+    },
+    200,
+  )
 })
 
 export default authApp

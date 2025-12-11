@@ -16,7 +16,7 @@ import {
   Eraser,
   //Lock,
   //Unlock,
-  LayoutGrid, // 用作最后的那个库图标
+  //LayoutGrid,
   RotateCcw,
   RotateCw,
   Group,
@@ -254,18 +254,18 @@ export default function TopToolbar() {
       label: '导出画布',
       onClick: () => setExportModalVisible(true),
     },
-    {
-      id: 'library',
-      type: 'action',
-      icon: LayoutGrid,
-      label: 'Library',
-      onClick: () =>
-        Notification.error({
-          closable: false,
-          title: 'DEV',
-          content: 'lib功能还没完善',
-        }),
-    },
+    // {
+    //   id: 'library',
+    //   type: 'action',
+    //   icon: LayoutGrid,
+    //   label: 'Library',
+    //   onClick: () =>
+    //     Notification.error({
+    //       closable: false,
+    //       title: 'DEV',
+    //       content: 'lib功能还没完善',
+    //     }),
+    // },
   ]
 
   return (
@@ -346,7 +346,7 @@ export default function TopToolbar() {
 
         {/* 2. 下方的提示文字 (Hint)  */}
         <div className="pointer-events-none select-none text-xs text-gray-400">
-          按住鼠标中键或空格键拖动画布，或使用手形工具，且shift+数字键可快捷选择工具
+          按住鼠标中键或使用手形工具拖动画布，shift+数字键可快捷选择工具
         </div>
       </div>
 
