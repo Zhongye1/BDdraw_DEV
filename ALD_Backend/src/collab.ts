@@ -10,15 +10,28 @@ console.log('[Collab] Module loaded')
 // 辅助函数：从请求路径或文档名中提取纯 UUID
 // 例如: "collaboration/123-abc" -> "123-abc"
 function getRoomId(documentName: string): string {
+  console.log(`[getRoomId] Input documentName: ${documentName}`)
+
+  // 如果documentName已经是UUID格式，直接返回
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+  if (uuidRegex.test(documentName)) {
+    console.log(`[getRoomId] documentName is already a UUID: ${documentName}`)
+    return documentName
+  }
+
+  // 如果是路径格式，提取最后一部分
   const parts = documentName.split('/')
-  return parts[parts.length - 1] || documentName // 获取最后一部分作为 ID，如果为空则返回原始名称
+  const roomId = parts[parts.length - 1] || documentName
+
+  console.log(`[getRoomId] Extracted roomId: ${roomId}`)
+  return roomId
 }
 
 // 1. 数据库扩展
 const dbExtension = new HocuspocusDB({
   fetch: async ({ documentName }) => {
     const roomId = getRoomId(documentName)
-    console.log(`[Yjs] Fetching data for RoomID: ${roomId}`)
+    console.log(`[Yjs] Fetching data for RoomID: ${roomId}, Original documentName: ${documentName}`)
 
     const query = db.query('SELECT content FROM rooms WHERE id = $id')
     const row = query.get({ $id: roomId }) as { content: Uint8Array | null } | null
@@ -36,6 +49,9 @@ const dbExtension = new HocuspocusDB({
         console.log(`[Yjs] content is empty, creating new Yjs document`)
         // 创建一个新的空Yjs文档并返回其二进制表示
         const ydoc = new Y.Doc()
+        // 初始化共享数据类型，确保与前端一致
+        ydoc.getMap('elements') // 存储图形元素
+        //ydoc.getArray('history'); // 存储历史记录（如果需要）
         return Y.encodeStateAsUpdate(ydoc)
       }
     }
@@ -43,15 +59,30 @@ const dbExtension = new HocuspocusDB({
     console.log(`[Yjs] No valid data found, creating new Yjs document`)
     // 创建一个新的空Yjs文档并返回其二进制表示
     const ydoc = new Y.Doc()
+    // 初始化共享数据类型，确保与前端一致
+    ydoc.getMap('elements') // 存储图形元素
+    //ydoc.getArray('history'); // 存储历史记录（如果需要）
     return Y.encodeStateAsUpdate(ydoc)
   },
 
   store: async ({ documentName, state }) => {
     const roomId = getRoomId(documentName)
     try {
-      console.log(`[Yjs] Saving data for RoomID: ${roomId}, State size: ${state.length} bytes`)
+      console.log(
+        `[Yjs] Saving data for RoomID: ${roomId}, State size: ${state.length} bytes, Original documentName: ${documentName}`,
+      )
+
       // 确保只在有实际数据时才保存
       if (state.length > 0) {
+        // 在更新前先检查房间是否存在
+        const roomCheck = db.query('SELECT id FROM rooms WHERE id = $id')
+        const roomExists = roomCheck.get({ $id: roomId })
+
+        if (!roomExists) {
+          console.error(`[Yjs] Room ${roomId} does not exist, cannot save data`)
+          return
+        }
+
         const update = db.query('UPDATE rooms SET content = $blob WHERE id = $id')
         update.run({ $blob: state, $id: roomId })
         console.log(`[Yjs] Data saved successfully for RoomID: ${roomId}`)
@@ -67,9 +98,12 @@ const dbExtension = new HocuspocusDB({
 console.log('[Collab] DB Extension initialized')
 
 // 2. 服务器实例
-export const collabServer = new Hocuspocus({
+export const collServer = new Hocuspocus({
   // 端口配置不在这里设置，由 index.ts 的 http server 统一接管
   extensions: [dbExtension],
+
+  // 添加一个名称，确保所有连接使用相同的文档实例
+  name: 'collab-server',
 
   async onAuthenticate(data) {
     console.log('[Auth] Authentication started')
@@ -158,12 +192,15 @@ export const collabServer = new Hocuspocus({
 
   // 连接事件日志
   async onConnect(data) {
-    //console.log(`[WS] Connected: ${getRoomId(data.documentName)}`)
-    console.log('[WS] Connected')
+    const roomId = getRoomId(data.documentName)
+    console.log(`[WS] Connected to room ${roomId}, document: ${data.documentName}`)
   },
 
   async onDisconnect(data) {
-    console.log('[WS] Disconnected')
-    //console.log(`[WS] Disconnected: ${getRoomId(data.documentName)}`)
+    const roomId = getRoomId(data.documentName)
+    console.log(`[WS] Disconnected from room ${roomId}, document: ${data.documentName}`)
   },
 })
+
+// 导出兼容旧代码
+export const collabServer = collServer

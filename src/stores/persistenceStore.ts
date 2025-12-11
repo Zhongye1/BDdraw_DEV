@@ -64,7 +64,7 @@ export const initWsProvider = (roomId: string, token: string) => {
     roomData.wsProvider.destroy()
   }
 
-  // 创建新的 WebSocket 提供者
+  // 创建新的 WebSocket 提供者，并关联 Yjs 文档
   console.log(`[Room ${roomId}] Initializing WebSocket Provider with token: ${token}`)
 
   const wsProvider = new HocuspocusProvider({
@@ -72,6 +72,8 @@ export const initWsProvider = (roomId: string, token: string) => {
     url: `ws://localhost:3000/collaboration/${roomId}`,
     name: roomId, // Hocuspocus 会将其拼接为 /collaboration/{roomId}
     token: token,
+    // 明确指定要同步的文档
+    document: roomData.yDoc,
   })
   console.log(wsProvider)
 

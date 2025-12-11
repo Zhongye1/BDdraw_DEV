@@ -83,11 +83,16 @@ server.on('upgrade', (request, socket, head) => {
   // 这样无论 roomId 是不是 UUID 都能正常工作
   const isCollab = url.startsWith('/collaboration/')
 
+  console.log(`[Upgrade] Request URL: ${url}, Is collaboration request: ${isCollab}`)
+
   if (isCollab) {
     wss.handleUpgrade(request, socket, head, (ws) => {
+      console.log(`[Upgrade] Handling collaboration connection for URL: ${url}`)
+      // 传递完整的request对象，确保Hocuspocus能正确处理URL参数
       collabServer.handleConnection(ws, request)
     })
   } else {
+    console.log(`[Upgrade] Non-collaboration request, destroying socket`)
     socket.destroy()
   }
 })
