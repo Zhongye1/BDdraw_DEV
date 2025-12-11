@@ -5,6 +5,7 @@
       "name": "vite-react-tailwind-starter",
       "dependencies": {
         "@arco-design/web-react": "^2.66.8",
+        "@hocuspocus/provider": "^3.4.1",
         "@loadable/component": "^5.15.3",
         "@tanstack/react-query": "^4.29.3",
         "@tiptap/extension-color": "^3.11.0",
@@ -255,6 +256,10 @@
 
     "@floating-ui/utils": ["@floating-ui/utils@0.2.10", "https://registry.npmmirror.com/@floating-ui/utils/-/utils-0.2.10.tgz", {}, "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ=="],
 
+    "@hocuspocus/common": ["@hocuspocus/common@3.4.1", "https://registry.npmmirror.com/@hocuspocus/common/-/common-3.4.1.tgz", { "dependencies": { "lib0": "^0.2.87" } }, "sha512-29Dpa3nslBvM4dksIoskovYt/aecJomEeWE5Wmzr+lNFJje15P/L/47WcogguRd/IqYIu2auNTyKlouvSRrDAQ=="],
+
+    "@hocuspocus/provider": ["@hocuspocus/provider@3.4.1", "https://registry.npmmirror.com/@hocuspocus/provider/-/provider-3.4.1.tgz", { "dependencies": { "@hocuspocus/common": "^3.4.1", "@lifeomic/attempt": "^3.0.2", "lib0": "^0.2.87", "ws": "^8.17.1" }, "peerDependencies": { "y-protocols": "^1.0.6", "yjs": "^13.6.8" } }, "sha512-lFNxXf2NsyhT8fvxX/N6caki97hbUUGOM79tAoeJty/Y6hKfQyY6ythvkeVdqk+yvx/RiVogrW4PLjazRGprGg=="],
+
     "@humanwhocodes/config-array": ["@humanwhocodes/config-array@0.13.0", "https://registry.npmmirror.com/@humanwhocodes/config-array/-/config-array-0.13.0.tgz", { "dependencies": { "@humanwhocodes/object-schema": "^2.0.3", "debug": "^4.3.1", "minimatch": "^3.0.5" } }, "sha512-DZLEEqFWQFiyK6h5YIeynKx7JlvCYWL0cImfSRXZ9l4Sg2efkFGTuFf6vzXjK1cq6IYkU+Eg/JizXw+TD2vRNw=="],
 
     "@humanwhocodes/module-importer": ["@humanwhocodes/module-importer@1.0.1", "https://registry.npmmirror.com/@humanwhocodes/module-importer/-/module-importer-1.0.1.tgz", {}, "sha512-bxveV4V8v5Yb4ncFTT3rPSgZBOpCkjfK0y4oVVVJwIuDVBRMDXrPyXRL988i5ap9m9bnyEEjWfm5WkBmtffLfA=="],
@@ -272,6 +277,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "https://registry.npmmirror.com/@jridgewell/sourcemap-codec/-/sourcemap-codec-1.5.5.tgz", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "https://registry.npmmirror.com/@jridgewell/trace-mapping/-/trace-mapping-0.3.31.tgz", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@lifeomic/attempt": ["@lifeomic/attempt@3.1.0", "https://registry.npmmirror.com/@lifeomic/attempt/-/attempt-3.1.0.tgz", {}, "sha512-QZqem4QuAnAyzfz+Gj5/+SLxqwCAw2qmt7732ZXodr6VDWGeYLG6w1i/vYLa55JQM9wRuBKLmXmiZ2P0LtE5rw=="],
 
     "@loadable/component": ["@loadable/component@5.16.7", "https://registry.npmmirror.com/@loadable/component/-/component-5.16.7.tgz", { "dependencies": { "@babel/runtime": "^7.12.18", "hoist-non-react-statics": "^3.3.1", "react-is": "^16.12.0" }, "peerDependencies": { "react": "^16.3.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-XvkFixLUOTEaj8lI7uwc4nf8Wmq3IulYG7SZHCWcPm/Li5gjJDFfIkgWOLPnD7jqPJVtAG9bEz4SCek+SpHYYg=="],
 
@@ -1914,6 +1921,8 @@
     "wrappy": ["wrappy@1.0.2", "https://registry.npmmirror.com/wrappy/-/wrappy-1.0.2.tgz", {}, "sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ=="],
 
     "write-file-atomic": ["write-file-atomic@5.0.1", "https://registry.npmmirror.com/write-file-atomic/-/write-file-atomic-5.0.1.tgz", { "dependencies": { "imurmurhash": "^0.1.4", "signal-exit": "^4.0.1" } }, "sha512-+QU2zd6OTD8XWIJCbffaiQeH9U73qIqafo1x6V1snCWYGJf6cVE0cDR4D8xRzcEnfI21IFrUPzPGtcPf8AC+Rw=="],
+
+    "ws": ["ws@8.18.3", "https://registry.npmmirror.com/ws/-/ws-8.18.3.tgz", { "peerDependencies": { "bufferutil": "^4.0.1", "utf-8-validate": ">=5.0.2" }, "optionalPeers": ["bufferutil", "utf-8-validate"] }, "sha512-PEIGCY5tSlUt50cqyMXfCzX+oOPqN0vuGqWzbcJ2xvnkzkq46oOpz7dQaTDBdfICb4N14+GARUDw2XV2N4tvzg=="],
 
     "y-indexeddb": ["y-indexeddb@9.0.12", "https://registry.npmmirror.com/y-indexeddb/-/y-indexeddb-9.0.12.tgz", { "dependencies": { "lib0": "^0.2.74" }, "peerDependencies": { "yjs": "^13.0.0" } }, "sha512-9oCFRSPPzBK7/w5vOkJBaVCQZKHXB/v6SIT+WYhnJxlEC61juqG0hBrAf+y3gmSMLFLwICNH9nQ53uscuse6Hg=="],
 

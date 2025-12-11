@@ -1,7 +1,7 @@
 // @/stores/persistenceStore.ts
 import * as Y from 'yjs'
 import { IndexeddbPersistence } from 'y-indexeddb'
-import { WebsocketProvider } from 'y-websocket'
+import { HocuspocusProvider } from '@hocuspocus/provider'
 
 // 存储不同房间的 Yjs 文档和相关提供者
 const roomDocuments = new Map<
@@ -10,7 +10,7 @@ const roomDocuments = new Map<
     yDoc: Y.Doc
     yElements: Y.Map<any>
     indexeddbProvider: IndexeddbPersistence
-    wsProvider: WebsocketProvider | null
+    wsProvider: HocuspocusProvider | null
   }
 >()
 
@@ -65,9 +65,15 @@ export const initWsProvider = (roomId: string, token: string) => {
   }
 
   // 创建新的 WebSocket 提供者
-  const wsProvider = new WebsocketProvider('ws://localhost:1234', roomId, roomData.yDoc, {
-    params: { token },
+  console.log(`[Room ${roomId}] Initializing WebSocket Provider with token: ${token}`)
+
+  const wsProvider = new HocuspocusProvider({
+    // 确保 URL 结尾规范，方便拼接
+    url: `ws://localhost:3000/collaboration/${roomId}`,
+    name: roomId, // Hocuspocus 会将其拼接为 /collaboration/{roomId}
+    token: token,
   })
+  console.log(wsProvider)
 
   // 监听 WebSocket 连接状态
   wsProvider.on('status', (event: any) => {

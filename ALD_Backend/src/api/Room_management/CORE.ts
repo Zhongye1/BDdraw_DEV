@@ -64,6 +64,28 @@ roomsApp.onError((err, c) => {
 // 中间件：验证 Token
 roomsApp.use('/*', async (c, next) => {
   console.log('[DEBUG] Auth middleware - Start processing request')
+
+  // 检查是否为 WebSocket 升级请求，如果是则跳过认证
+  const upgradeHeader = c.req.header('upgrade')
+  if (upgradeHeader === 'websocket') {
+    console.log('[DEBUG] Auth middleware - WebSocket upgrade request, skipping authentication')
+    await next()
+    return
+  }
+
+  // 检查是否为协作相关路径，如果是则跳过认证
+  const url = new URL(c.req.url)
+  const isCollabEndpoint =
+    url.pathname.startsWith('/collaboration') ||
+    /^\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(url.pathname) ||
+    /^\/collaboration\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i.test(url.pathname)
+
+  if (isCollabEndpoint) {
+    console.log('[DEBUG] Auth middleware - Collaboration endpoint, skipping authentication')
+    await next()
+    return
+  }
+
   const authHeader = c.req.header('Authorization')
   console.log('[DEBUG] Auth middleware - Auth header:', authHeader)
 
