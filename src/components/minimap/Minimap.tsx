@@ -34,7 +34,7 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
   const initialized = useRef(false)
 
   // =================================================================================
-  // 2. 核心渲染循环 (Render Loop) - 完全脱离 React State
+  // 2. 核心渲染循环 (Render Loop)
   // =================================================================================
   useEffect(() => {
     let retryCount = 0
@@ -116,14 +116,93 @@ export const Minimap: React.FC<MinimapProps> = ({ stageManager, width = 240, hei
         // 4. 绘制所有元素
         if (hasElements) {
           Object.values(currentElements).forEach((el) => {
-            ctx.fillStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : '#cccccc'
-
             const mx = (el.x - bounds.x) * scale + offsetX
             const my = (el.y - bounds.y) * scale + offsetY
             const mw = el.width * scale
             const mh = el.height * scale
 
-            ctx.fillRect(mx, my, mw, mh)
+            // 根据元素类型选择不同的绘制方式
+            if ((el.type === 'line' || el.type === 'arrow') && el.points) {
+              // 对于线和箭头，绘制连接两点的线段
+              ctx.strokeStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : '#cccccc'
+              ctx.lineWidth = Math.max(1, 2 * scale) // 至少1像素宽
+
+              const startPoint = el.points[0]
+              const endPoint = el.points[1]
+
+              const startX = (el.x + startPoint[0] - bounds.x) * scale + offsetX
+              const startY = (el.y + startPoint[1] - bounds.y) * scale + offsetY
+              const endX = (el.x + endPoint[0] - bounds.x) * scale + offsetX
+              const endY = (el.y + endPoint[1] - bounds.y) * scale + offsetY
+
+              ctx.beginPath()
+              ctx.moveTo(startX, startY)
+              ctx.lineTo(endX, endY)
+              ctx.stroke()
+            } else if (el.type === 'pencil' && el.points) {
+              // 对于铅笔绘制的自由线条，绘制简化路径
+              ctx.strokeStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : '#cccccc'
+              ctx.lineWidth = Math.max(1, 2 * scale) // 至少1像素宽
+              ctx.beginPath()
+
+              // 简化路径点，避免在小地图中过于密集
+              const step = Math.max(1, Math.floor(el.points.length / 20)) // 最多20个点
+              let firstPoint = true
+
+              for (let i = 0; i < el.points.length; i += step) {
+                const point = el.points[i]
+                const x = (el.x + point[0] - bounds.x) * scale + offsetX
+                const y = (el.y + point[1] - bounds.y) * scale + offsetY
+
+                if (firstPoint) {
+                  ctx.moveTo(x, y)
+                  firstPoint = false
+                } else {
+                  ctx.lineTo(x, y)
+                }
+              }
+
+              // 确保最后一个点也被绘制
+              if (el.points.length > 0) {
+                const lastPoint = el.points[el.points.length - 1]
+                const x = (el.x + lastPoint[0] - bounds.x) * scale + offsetX
+                const y = (el.y + lastPoint[1] - bounds.y) * scale + offsetY
+                ctx.lineTo(x, y)
+              }
+
+              ctx.stroke()
+            } else if (el.type === 'group') {
+              // 对于组元素，只绘制边框
+              ctx.strokeStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : 'rgba(204, 204, 204, 0.5)'
+              ctx.lineWidth = 1
+              ctx.strokeRect(mx, my, mw, mh)
+            } else if (el.type === 'circle') {
+              // 对于圆形，绘制椭圆
+              ctx.fillStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : 'rgba(204, 204, 204, 0.5)'
+              ctx.beginPath()
+              const centerX = mx + mw / 2
+              const centerY = my + mh / 2
+              const radiusX = mw / 2
+              const radiusY = mh / 2
+              ctx.ellipse(centerX, centerY, radiusX, radiusY, 0, 0, Math.PI * 2)
+              ctx.fill()
+            } else if (el.type === 'diamond') {
+              // 对于菱形，绘制菱形路径
+              ctx.fillStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : 'rgba(204, 204, 204, 0.5)'
+              ctx.beginPath()
+              const centerX = mx + mw / 2
+              const centerY = my + mh / 2
+              ctx.moveTo(centerX, my) // 顶部
+              ctx.lineTo(mx + mw, centerY) // 右侧
+              ctx.lineTo(centerX, my + mh) // 底部
+              ctx.lineTo(mx, centerY) // 左侧
+              ctx.closePath()
+              ctx.fill()
+            } else {
+              // 对于其他元素类型（矩形、三角形等），保持原有绘制方式，但使用半透明灰色
+              ctx.fillStyle = currentSelectedIds.includes(el.id) ? '#8888ff' : 'rgba(204, 204, 204, 0.5)'
+              ctx.fillRect(mx, my, mw, mh)
+            }
           })
         }
 
