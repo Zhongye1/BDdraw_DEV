@@ -24,7 +24,7 @@ const authApp = new OpenAPIHono<{ Variables: Variables }>()
 // 定义注册路由和模式
 const registerRoute = createRoute({
   method: 'post',
-  path: '/api/auth/register',
+  path: '/register',
   summary: '用户注册',
   description: '注册新用户账号',
   request: {
@@ -79,7 +79,7 @@ authApp.openapi(registerRoute, async (c) => {
 // 定义登录路由和模式
 const loginRoute = createRoute({
   method: 'post',
-  path: '/api/auth/login',
+  path: '/login',
   summary: '用户登录',
   description: '使用已有账户登录',
   request: {
@@ -127,7 +127,7 @@ authApp.openapi(loginRoute, async (c) => {
 // 定义验证token路由和模式
 const validateTokenRoute = createRoute({
   method: 'get',
-  path: '/api/auth/validate',
+  path: '/validate',
   summary: '验证Token有效性',
   description: '验证用户Token是否有效且未过期',
   responses: {

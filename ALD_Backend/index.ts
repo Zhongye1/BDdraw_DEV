@@ -46,8 +46,9 @@ app.get('/swagger-ui', (c) =>
 `),
 )
 
-app.route('/', authApp)
-app.route('/', roomsApp)
+// 正确挂载认证和房间路由
+app.route('/api/auth', authApp)
+app.route('/api', roomsApp)
 
 // ---------------------------------------------------------
 // 2. 准备 WebSocket 服务器实例 (用于处理握手)
