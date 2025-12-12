@@ -12,7 +12,7 @@ import {
 // 定义邀请用户路由
 export const inviteUserRoute = createRoute({
   method: 'post',
-  path: '/api/rooms/{id}/invite',
+  path: '/rooms/{id}/invite',
   summary: '邀请用户加入房间',
   description: '房间创建者可以邀请其他用户加入房间',
   request: {
@@ -99,7 +99,7 @@ export const inviteUserHandler = async (c: any) => {
 // 定义获取房间成员路由
 export const getRoomMembersRoute = createRoute({
   method: 'get',
-  path: '/api/rooms/{id}/members',
+  path: '/rooms/{id}/members',
   summary: '获取房间成员列表',
   description: '获取指定房间的所有成员列表',
   request: {

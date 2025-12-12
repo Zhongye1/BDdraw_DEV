@@ -17,7 +17,7 @@ import {
 // 定义创建房间路由
 export const createRoomRoute = createRoute({
   method: 'post',
-  path: '/api/rooms',
+  path: '/rooms',
   summary: '创建房间',
   description: '创建一个新的协作绘图房间',
   request: {
@@ -64,7 +64,7 @@ export const createRoomHandler = async (c: any) => {
 // 定义获取房间详情路由
 export const getRoomRoute = createRoute({
   method: 'get',
-  path: '/api/rooms/{id}',
+  path: '/rooms/{id}',
   summary: '获取房间详情',
   description: '获取指定房间的详细信息',
   request: {
@@ -117,7 +117,7 @@ export const getRoomHandler = (c: any) => {
 // 定义删除房间路由
 export const deleteRoomRoute = createRoute({
   method: 'delete',
-  path: '/api/rooms/{id}',
+  path: '/rooms/{id}',
   summary: '删除房间',
   description: '房间创建者可以删除房间',
   request: {
@@ -167,7 +167,7 @@ export const deleteRoomHandler = (c: any) => {
 // 定义修改房间信息路由
 export const updateRoomRoute = createRoute({
   method: 'put',
-  path: '/api/rooms/{id}',
+  path: '/rooms/{id}',
   summary: '修改房间信息',
   description: '房间创建者可以修改房间信息',
   request: {

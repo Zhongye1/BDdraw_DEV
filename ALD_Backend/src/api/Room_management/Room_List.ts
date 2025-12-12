@@ -11,7 +11,7 @@ import {
 // 定义获取房间列表路由
 export const listRoomsRoute = createRoute({
   method: 'get',
-  path: '/api/rooms',
+  path: '/rooms',
   summary: '获取房间列表',
   description: '获取当前用户加入的所有房间列表',
   responses: {
@@ -30,11 +30,11 @@ export const listRoomsRoute = createRoute({
 // 获取房间列表处理器
 export const listRoomsHandler = (c: any) => {
   const user = c.get('user')
-  console.log('[DEBUG][GET /api/rooms] listRoomsHandler - Received request')
-  console.log('[DEBUG][GET /api/rooms] listRoomsHandler - User:', user)
+  console.log('[DEBUG][GET /rooms] listRoomsHandler - Received request')
+  console.log('[DEBUG][GET /rooms] listRoomsHandler - User:', user)
 
   try {
-    console.log('[DEBUG][GET /api/rooms] listRoomsHandler - Executing query with user ID:', user.id)
+    console.log('[DEBUG][GET /rooms] listRoomsHandler - Executing query with user ID:', user.id)
     // 获取我加入的房间
     const rooms: {
       id: string
@@ -56,9 +56,9 @@ export const listRoomsHandler = (c: any) => {
       )
       .all({ $uid: user.id })
       .map((room: any) => {
-        console.log('[DEBUG][GET /api/rooms] Processing room:', room)
-        console.log('[DEBUG][GET /api/rooms] Room ID type:', typeof room.id)
-        console.log('[DEBUG][GET /api/rooms] Room ID value:', room.id)
+        console.log('[DEBUG][GET /rooms] Processing room:', room)
+        console.log('[DEBUG][GET /rooms] Room ID type:', typeof room.id)
+        console.log('[DEBUG][GET /rooms] Room ID value:', room.id)
 
         return {
           id: String(room.id).trim(),
@@ -70,10 +70,10 @@ export const listRoomsHandler = (c: any) => {
         }
       })
 
-    console.log('[DEBUG][GET /api/rooms] listRoomsHandler - Query result:', rooms)
+    console.log('[DEBUG][GET /rooms] listRoomsHandler - Query result:', rooms)
     return c.json(rooms, 200)
   } catch (error) {
-    console.error('[ERROR][GET /api/rooms] listRoomsHandler - Error processing request:', error)
+    console.error('[ERROR][GET /rooms] listRoomsHandler - Error processing request:', error)
     return c.json({ error: 'Internal server error' }, 500)
   }
 }
@@ -81,7 +81,7 @@ export const listRoomsHandler = (c: any) => {
 // 定义浏览房间列表路由
 export const browseRoomsRoute = createRoute({
   method: 'get',
-  path: '/api/rooms/browse',
+  path: '/rooms/browse',
   summary: '浏览所有房间',
   description: '获取所有公开房间的列表，支持分页',
   request: {
@@ -102,24 +102,24 @@ export const browseRoomsRoute = createRoute({
 
 // 浏览所有房间处理器
 export const browseRoomsHandler = (c: any) => {
-  console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Start processing request')
+  console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Start processing request')
   const user = c.get('user')
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '10')
   const offset = (page - 1) * limit
 
-  console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - User:', user)
-  console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Page:', page, 'Limit:', limit, 'Offset:', offset)
+  console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - User:', user)
+  console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Page:', page, 'Limit:', limit, 'Offset:', offset)
 
   try {
     // 查询房间总数
-    console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Executing total rooms query')
+    console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Executing total rooms query')
     const totalResult = db.query('SELECT COUNT(*) as total FROM rooms').get() as { total: number }
-    console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Total rooms:', totalResult.total)
+    console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Total rooms:', totalResult.total)
 
     // 查询房间列表
     console.log(
-      '[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Executing rooms query with limit:',
+      '[DEBUG][GET /rooms/browse] browseRoomsHandler - Executing rooms query with limit:',
       limit,
       'offset:',
       offset,
@@ -139,16 +139,16 @@ export const browseRoomsHandler = (c: any) => {
     `)
 
     const roomsResult = roomsQuery.all({ $limit: limit, $offset: offset })
-    console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Raw rooms query result:', roomsResult)
+    console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Raw rooms query result:', roomsResult)
 
     const rooms = roomsResult.map((room: any) => {
-      console.log('[DEBUG][GET /api/rooms/browse] Processing room:', room)
-      console.log('[DEBUG][GET /api/rooms/browse] Room ID type:', typeof room.id)
-      console.log('[DEBUG][GET /api/rooms/browse] Room ID value:', room.id)
-      console.log('[DEBUG][GET /api/rooms/browse] Creator ID type:', typeof room.creator_id)
-      console.log('[DEBUG][GET /api/rooms/browse] Creator ID value:', room.creator_id)
-      console.log('[DEBUG][GET /api/rooms/browse] Creator name type:', typeof room.creator_name)
-      console.log('[DEBUG][GET /api/rooms/browse] Creator name value:', room.creator_name)
+      console.log('[DEBUG][GET /rooms/browse] Processing room:', room)
+      console.log('[DEBUG][GET /rooms/browse] Room ID type:', typeof room.id)
+      console.log('[DEBUG][GET /rooms/browse] Room ID value:', room.id)
+      console.log('[DEBUG][GET /rooms/browse] Creator ID type:', typeof room.creator_id)
+      console.log('[DEBUG][GET /rooms/browse] Creator ID value:', room.creator_id)
+      console.log('[DEBUG][GET /rooms/browse] Creator name type:', typeof room.creator_name)
+      console.log('[DEBUG][GET /rooms/browse] Creator name value:', room.creator_name)
 
       return {
         id: String(room.id).trim(),
@@ -160,7 +160,7 @@ export const browseRoomsHandler = (c: any) => {
       }
     })
 
-    console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Mapped rooms:', rooms)
+    console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Mapped rooms:', rooms)
 
     const response = {
       rooms: rooms,
@@ -171,10 +171,10 @@ export const browseRoomsHandler = (c: any) => {
       },
     }
 
-    console.log('[DEBUG][GET /api/rooms/browse] browseRoomsHandler - Final response:', response)
+    console.log('[DEBUG][GET /rooms/browse] browseRoomsHandler - Final response:', response)
     return c.json(response, 200)
   } catch (error) {
-    console.error('[ERROR][GET /api/rooms/browse] browseRoomsHandler - Error processing request:', error)
+    console.error('[ERROR][GET /rooms/browse] browseRoomsHandler - Error processing request:', error)
     return c.json({ error: 'Internal server error' }, 500)
   }
 }
@@ -182,7 +182,7 @@ export const browseRoomsHandler = (c: any) => {
 // 定义搜索房间路由
 export const searchRoomsRoute = createRoute({
   method: 'get',
-  path: '/api/rooms/search',
+  path: '/rooms/search',
   summary: '搜索房间',
   description: '根据关键词搜索房间',
   request: {
@@ -203,16 +203,16 @@ export const searchRoomsRoute = createRoute({
 
 // 搜索房间处理器
 export const searchRoomsHandler = (c: any) => {
-  console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - Start processing request')
+  console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - Start processing request')
   const user = c.get('user')
   const keyword = c.req.query('q') || ''
   const page = parseInt(c.req.query('page') || '1')
   const limit = parseInt(c.req.query('limit') || '10')
   const offset = (page - 1) * limit
 
-  console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - User:', user)
+  console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - User:', user)
   console.log(
-    '[DEBUG][GET /api/rooms/search] searchRoomsHandler - Keyword:',
+    '[DEBUG][GET /rooms/search] searchRoomsHandler - Keyword:',
     keyword,
     'Page:',
     page,
@@ -223,7 +223,7 @@ export const searchRoomsHandler = (c: any) => {
   )
 
   if (!keyword) {
-    console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - Empty keyword, returning empty result')
+    console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - Empty keyword, returning empty result')
     // 当关键字为空时，返回空的结果集而不是错误消息
     return c.json(
       {
@@ -241,7 +241,7 @@ export const searchRoomsHandler = (c: any) => {
   try {
     // 查询匹配的房间总数
     console.log(
-      '[DEBUG][GET /api/rooms/search] searchRoomsHandler - Executing total matching rooms query with keyword:',
+      '[DEBUG][GET /rooms/search] searchRoomsHandler - Executing total matching rooms query with keyword:',
       keyword,
     )
     const totalResult = db
@@ -254,11 +254,11 @@ export const searchRoomsHandler = (c: any) => {
       )
       .get({ $keyword: `%${keyword}%` }) as { total: number }
 
-    console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - Total matching rooms:', totalResult.total)
+    console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - Total matching rooms:', totalResult.total)
 
     // 查询匹配的房间列表
     console.log(
-      '[DEBUG][GET /api/rooms/search] searchRoomsHandler - Executing matching rooms query with keyword:',
+      '[DEBUG][GET /rooms/search] searchRoomsHandler - Executing matching rooms query with keyword:',
       keyword,
       'limit:',
       limit,
@@ -286,16 +286,16 @@ export const searchRoomsHandler = (c: any) => {
       $offset: offset,
     })
 
-    console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - Raw matching rooms query result:', roomsResult)
+    console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - Raw matching rooms query result:', roomsResult)
 
     const rooms = roomsResult.map((room: any) => {
-      console.log('[DEBUG][GET /api/rooms/search] Processing room:', room)
-      console.log('[DEBUG][GET /api/rooms/search] Room ID type:', typeof room.id)
-      console.log('[DEBUG][GET /api/rooms/search] Room ID value:', room.id)
-      console.log('[DEBUG][GET /api/rooms/search] Creator ID type:', typeof room.creator_id)
-      console.log('[DEBUG][GET /api/rooms/search] Creator ID value:', room.creator_id)
-      console.log('[DEBUG][GET /api/rooms/search] Creator name type:', typeof room.creator_name)
-      console.log('[DEBUG][GET /api/rooms/search] Creator name value:', room.creator_name)
+      console.log('[DEBUG][GET /rooms/search] Processing room:', room)
+      console.log('[DEBUG][GET /rooms/search] Room ID type:', typeof room.id)
+      console.log('[DEBUG][GET /rooms/search] Room ID value:', room.id)
+      console.log('[DEBUG][GET /rooms/search] Creator ID type:', typeof room.creator_id)
+      console.log('[DEBUG][GET /rooms/search] Creator ID value:', room.creator_id)
+      console.log('[DEBUG][GET /rooms/search] Creator name type:', typeof room.creator_name)
+      console.log('[DEBUG][GET /rooms/search] Creator name value:', room.creator_name)
 
       return {
         id: String(room.id).trim(),
@@ -316,10 +316,10 @@ export const searchRoomsHandler = (c: any) => {
       },
     }
 
-    console.log('[DEBUG][GET /api/rooms/search] searchRoomsHandler - Response:', response)
+    console.log('[DEBUG][GET /rooms/search] searchRoomsHandler - Response:', response)
     return c.json(response, 200)
   } catch (error) {
-    console.error('[ERROR][GET /api/rooms/search] searchRoomsHandler - Error processing request:', error)
+    console.error('[ERROR][GET /rooms/search] searchRoomsHandler - Error processing request:', error)
     return c.json({ error: 'Internal server error' }, 500)
   }
 }
