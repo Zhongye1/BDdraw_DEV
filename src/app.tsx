@@ -44,20 +44,14 @@ const AppContent: React.FC = () => {
       return true
     }
 
-    const handleContextMenu = (e: Event) => {
-      e.preventDefault()
-      e.stopPropagation()
-      return false
-    }
+    // 移除了对右键菜单的禁用逻辑，完全解除限制
 
     // 添加事件监听器
     document.addEventListener('keydown', handleKeyDown, true)
-    document.addEventListener('contextmenu', handleContextMenu, true)
 
     // 清理函数
     return () => {
       document.removeEventListener('keydown', handleKeyDown, true)
-      document.removeEventListener('contextmenu', handleContextMenu, true)
     }
   }, [])
 
