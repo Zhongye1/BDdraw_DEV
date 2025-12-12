@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { Button, Card, Typography, Modal, Table, Tag, Space, Message, Tooltip } from '@arco-design/web-react'
 import { IconEdit, IconAlignLeft as IconKeyboard, IconCloseCircle, IconRefresh } from '@arco-design/web-react/icon'
 import { useCanvasShortcuts } from '@/hooks/use_React_hotkeys_management'
+import { detectPlatform, getModifierKeyName } from '@/lib/platformUtils'
 
 const { Title, Text } = Typography
 
@@ -14,25 +15,30 @@ interface Shortcut {
 }
 
 // 默认快捷键配置（用于重置）
-const DEFAULT_SHORTCUTS: Shortcut[] = [
-  { id: 'undo', name: '撤销', key: 'Ctrl+Z', description: '撤销上一步操作' },
-  { id: 'redo', name: '重做', key: 'Ctrl+Y', description: '重做上一步操作' },
-  { id: 'delete', name: '删除', key: 'Delete', description: '删除选中的元素' },
-  { id: 'copy', name: '复制', key: 'Ctrl+C', description: '复制选中的元素' },
-  { id: 'paste', name: '粘贴', key: 'Ctrl+V', description: '粘贴元素' },
-  { id: 'group', name: '分组', key: 'Ctrl+G', description: '将多个元素分组' },
-  { id: 'ungroup', name: '取消分组', key: 'Ctrl+Shift+G', description: '取消元素分组' },
-  { id: 'select', name: '选择工具', key: 'Shift+1', description: '激活选择工具' },
-  { id: 'rectangle', name: '矩形工具', key: 'Shift+2', description: '激活矩形工具' },
-  { id: 'diamond', name: '菱形工具', key: 'Shift+3', description: '激活菱形工具' },
-  { id: 'circle', name: '圆形工具', key: 'Shift+4', description: '激活圆形工具' },
-  { id: 'arrow', name: '箭头工具', key: 'Shift+5', description: '激活箭头工具' },
-  { id: 'line', name: '直线工具', key: 'Shift+6', description: '激活直线工具' },
-  { id: 'pencil', name: '铅笔工具', key: 'Shift+7', description: '激活铅笔工具' },
-  { id: 'text', name: '文本工具', key: 'Shift+8', description: '激活文本工具' },
-  { id: 'image', name: '图片工具', key: 'Shift+9', description: '激活图片工具' },
-  { id: 'eraser', name: '橡皮擦工具', key: 'Shift+0', description: '激活橡皮擦工具' },
-]
+const getDefaultShortcuts = (): Shortcut[] => {
+  const platform = detectPlatform()
+  const modifierKeyName = getModifierKeyName(platform)
+
+  return [
+    { id: 'undo', name: '撤销', key: `${modifierKeyName}+Z`, description: '撤销上一步操作' },
+    { id: 'redo', name: '重做', key: `${modifierKeyName}+Y`, description: '重做上一步操作' },
+    { id: 'delete', name: '删除', key: 'Delete', description: '删除选中的元素' },
+    { id: 'copy', name: '复制', key: `${modifierKeyName}+C`, description: '复制选中的元素' },
+    { id: 'paste', name: '粘贴', key: `${modifierKeyName}+V`, description: '粘贴元素' },
+    { id: 'group', name: '分组', key: `${modifierKeyName}+G`, description: '将多个元素分组' },
+    { id: 'ungroup', name: '取消分组', key: `${modifierKeyName}+Shift+G`, description: '取消元素分组' },
+    { id: 'select', name: '选择工具', key: 'Shift+1', description: '激活选择工具' },
+    { id: 'rectangle', name: '矩形工具', key: 'Shift+2', description: '激活矩形工具' },
+    { id: 'diamond', name: '菱形工具', key: 'Shift+3', description: '激活菱形工具' },
+    { id: 'circle', name: '圆形工具', key: 'Shift+4', description: '激活圆形工具' },
+    { id: 'arrow', name: '箭头工具', key: 'Shift+5', description: '激活箭头工具' },
+    { id: 'line', name: '直线工具', key: 'Shift+6', description: '激活直线工具' },
+    { id: 'pencil', name: '铅笔工具', key: 'Shift+7', description: '激活铅笔工具' },
+    { id: 'text', name: '文本工具', key: 'Shift+8', description: '激活文本工具' },
+    { id: 'image', name: '图片工具', key: 'Shift+9', description: '激活图片工具' },
+    { id: 'eraser', name: '橡皮擦工具', key: 'Shift+0', description: '激活橡皮擦工具' },
+  ]
+}
 
 // 快捷键映射到hook中的键名
 const SHORTCUT_HOOK_MAP: Record<string, string> = {
@@ -68,6 +74,14 @@ const KeyTag = ({ k }: { k: string }) => {
     ArrowLeft: '←',
     ArrowRight: '→',
     ' ': 'Space',
+  }
+
+  // 根据平台动态决定显示的修饰键名称
+  const platform = detectPlatform()
+  if (k === 'Ctrl' && platform === 'mac') {
+    k = 'Cmd'
+  } else if (k === 'Cmd' && platform !== 'mac') {
+    k = 'Ctrl'
   }
 
   const label = displayMap[k] || k
@@ -115,7 +129,8 @@ const Settings: React.FC = () => {
       try {
         const parsed = JSON.parse(saved)
         // 合并默认配置和保存的配置，防止缺少某些键
-        return DEFAULT_SHORTCUTS.map((defaultItem) => {
+        const defaultShortcuts = getDefaultShortcuts()
+        return defaultShortcuts.map((defaultItem) => {
           const savedItem = parsed.find((item: Shortcut) => item.id === defaultItem.id)
           return savedItem || defaultItem
         })
@@ -123,7 +138,7 @@ const Settings: React.FC = () => {
         console.warn('Failed to parse custom shortcuts from localStorage', e)
       }
     }
-    return DEFAULT_SHORTCUTS
+    return getDefaultShortcuts()
   })
   const [visible, setVisible] = useState(false)
   const [editingItem, setEditingItem] = useState<Shortcut | null>(null)
@@ -154,15 +169,24 @@ const Settings: React.FC = () => {
 
   // 将显示格式转换为hook使用的格式
   const convertDisplayToHookFormat = (displayKey: string): string => {
-    return displayKey
+    const platform = detectPlatform()
+
+    // 根据平台转换修饰键
+    let converted = displayKey
       .toLowerCase()
-      .replace(/ctrl/g, 'ctrl')
-      .replace(/cmd/g, 'meta')
       .replace(/shift/g, 'shift')
       .replace(/alt/g, 'alt')
       .replace(/space/g, 'space')
       .replace(/delete/g, 'delete')
       .replace(/backspace/g, 'backspace')
+
+    if (platform === 'mac') {
+      converted = converted.replace(/cmd/g, 'meta').replace(/ctrl/g, 'ctrl')
+    } else {
+      converted = converted.replace(/ctrl/g, 'ctrl').replace(/cmd/g, 'meta')
+    }
+
+    return converted
   }
 
   // 打开编辑模态框
@@ -187,7 +211,8 @@ const Settings: React.FC = () => {
   // 重置单个快捷键
   const handleResetSingle = () => {
     if (editingItem) {
-      const defaultItem = DEFAULT_SHORTCUTS.find((s) => s.id === editingItem.id)
+      const defaultShortcuts = getDefaultShortcuts()
+      const defaultItem = defaultShortcuts.find((s) => s.id === editingItem.id)
       if (defaultItem) setRecordedKey(defaultItem.key)
     }
   }
@@ -223,9 +248,10 @@ const Settings: React.FC = () => {
       }
     }
 
+    const platform = detectPlatform()
     const modifiers = []
-    if (e.ctrlKey) modifiers.push('Ctrl')
-    if (e.metaKey) modifiers.push('Cmd')
+    if (e.ctrlKey && platform !== 'mac') modifiers.push('Ctrl')
+    if (e.metaKey && platform === 'mac') modifiers.push('Cmd')
     if (e.altKey) modifiers.push('Alt')
     if (e.shiftKey) modifiers.push('Shift')
 
@@ -305,8 +331,9 @@ const Settings: React.FC = () => {
 
   // 重置所有快捷键为默认值
   const handleResetAll = () => {
-    setShortcuts(DEFAULT_SHORTCUTS)
-    saveShortcutsToStorage(DEFAULT_SHORTCUTS)
+    const defaultShortcuts = getDefaultShortcuts()
+    setShortcuts(defaultShortcuts)
+    saveShortcutsToStorage(defaultShortcuts)
     Message.success('所有快捷键已恢复为默认设置')
   }
 

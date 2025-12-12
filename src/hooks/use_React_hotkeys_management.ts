@@ -4,26 +4,32 @@ import { Notification } from '@arco-design/web-react'
 import { RemoveElementCommand } from '@/lib/RemoveElementCommand'
 import { undoRedoManager } from '@/lib/UndoRedoManager'
 import { useRef } from 'react'
+import { detectPlatform, getModifierKeyCode } from '@/lib/platformUtils'
 
 // 默认快捷键配置
-const DEFAULT_SHORTCUTS = {
-  undo: 'ctrl+z',
-  redo: 'ctrl+y, ctrl+shift+z',
-  delete: 'delete, backspace',
-  copy: 'ctrl+c',
-  paste: 'ctrl+v',
-  group: 'ctrl+g',
-  ungroup: 'ctrl+shift+g',
-  selectTool: 'shift+1',
-  rectTool: 'shift+2',
-  diamondTool: 'shift+3',
-  circleTool: 'shift+4',
-  arrowTool: 'shift+5',
-  lineTool: 'shift+6',
-  pencilTool: 'shift+7',
-  textTool: 'shift+8',
-  imageTool: 'shift+9',
-  eraserTool: 'shift+0',
+const getDefaultShortcuts = () => {
+  const platform = detectPlatform()
+  const modifierKey = getModifierKeyCode(platform)
+
+  return {
+    undo: `${modifierKey}+z`,
+    redo: `${modifierKey}+y, ${modifierKey}+shift+z`,
+    delete: 'delete, backspace',
+    copy: `${modifierKey}+c`,
+    paste: `${modifierKey}+v`,
+    group: `${modifierKey}+g`,
+    ungroup: `${modifierKey}+shift+g`,
+    selectTool: 'shift+1',
+    rectTool: 'shift+2',
+    diamondTool: 'shift+3',
+    circleTool: 'shift+4',
+    arrowTool: 'shift+5',
+    lineTool: 'shift+6',
+    pencilTool: 'shift+7',
+    textTool: 'shift+8',
+    imageTool: 'shift+9',
+    eraserTool: 'shift+0',
+  }
 }
 
 // 从localStorage获取用户自定义快捷键配置
@@ -33,12 +39,12 @@ const getUserShortcuts = () => {
     if (saved) {
       const parsed = JSON.parse(saved)
       // 合并默认配置和用户配置，防止缺少某些键
-      return { ...DEFAULT_SHORTCUTS, ...parsed }
+      return { ...getDefaultShortcuts(), ...parsed }
     }
   } catch (e) {
     console.warn('Failed to parse custom shortcuts from localStorage', e)
   }
-  return DEFAULT_SHORTCUTS
+  return getDefaultShortcuts()
 }
 
 export const useCanvasShortcuts = () => {
